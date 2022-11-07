@@ -102,7 +102,26 @@ public:
   output_grad.clear();
   iot_id.clear();
   count = 0;
+  training = true;
 }
+ static void print_cuda_use()
+    {
+        size_t free_byte;
+        size_t total_byte;
+    
+        cudaError_t cuda_status = cudaMemGetInfo(&free_byte, &total_byte);
+    
+        if (cudaSuccess != cuda_status) {
+            printf("Error: cudaMemGetInfo fails, %s \n", cudaGetErrorString(cuda_status));
+            exit(1);
+        }
+    
+        double free_db = (double)free_byte;
+        double total_db = (double)total_byte;
+        double used_db_1 = (total_db - free_db) / 1024.0 / 1024.0;
+        std::cout << "Now used GPU memory " << used_db_1 << "  MB\n";
+    }
+
   template <typename GOPT>
   NtsVar runGraphOp(PartitionedGraph* partitioned_graph, VertexSubset *active,
         NtsVar &f_input){//graph op
@@ -111,18 +130,128 @@ public:
 
     nts::op::ntsGraphOp * curr=new GOPT(partitioned_graph,active);
     NtsVar f_output=curr->forward(f_input);
-    NtsVar ig;
-    op.push(GRAPHOP);
-    output.push(f_output);
-    input.push(f_input);
-    ntsOp.push(ntsOperator(curr,GRAPHOP));
-    iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
-    // pre-alloc space to save graident
-    output_grad.push_back(ig);
-    count++;
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
     return f_output;
 }
-  
+  template <typename GOPT>
+  NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+        NtsVar &f_input){//graph op
+      
+    static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                "template must be a type of graph op!");
+    nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_);
+    NtsVar f_output=curr->forward(f_input);
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
+    return f_output;
+}  
+
+    template <typename GOPT>
+  NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+        NtsVar &f_input,Cuda_Stream* cuda_stream){//graph op
+      
+    static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                "template must be a type of graph op!");
+    nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_,cuda_stream);
+    NtsVar f_output=curr->forward(f_input);
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
+    return f_output;
+}  
+
+  template <typename GOPT>
+  NtsVar runGraphOp(FastSampler *sampler,SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+        NtsVar &f_input){//graph op
+      
+    static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                "template must be a type of graph op!");
+    nts::op::ntsGraphOp * curr=new GOPT(sampler,subgraphs_,graph_, layer_);
+    NtsVar f_output=curr->forward(f_input);
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
+    return f_output;
+} 
+
+  template <typename GOPT>
+  NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,ValueType *f_embedding, int layer_,
+        NtsVar &f_input){//graph op
+      
+    static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                "template must be a type of graph op!");
+    nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_,f_embedding,layer_);
+    NtsVar f_output=curr->forward(f_input);
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
+    return f_output;
+}  
+
+  template <typename GOPT>
+  void PushdownGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+        NtsVar &f_output, NtsVar &f_input){//graph op
+      
+    static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                "template must be a type of graph op!");
+    nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_);
+    // NtsVar f_output_t = curr->forward(f_input);
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
+}  
+
 template <typename NOPT>
   NtsVar runSelfNNOp(std::function<NtsVar(NtsVar &, int)> vertexforward,NtsVar& f_input,int layer_){//graph op
       
@@ -133,64 +262,77 @@ template <typename NOPT>
         return vertexforward(v_tensor,layer_);
     },layer_);
     NtsVar f_output=curr->forward(f_input);
-    NtsVar ig;
-    op.push(SELFNNOP);
-    output.push(f_output);
-    input.push(f_input);
-    ntsOp.push(ntsOperator(curr,SELFNNOP));
-    iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
-    // pre-alloc space to save graident
-    output_grad.push_back(ig);
-    count++;
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(SELFNNOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,SELFNNOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+    }
     return f_output;
 }  
   
   template <typename GOPT>
   NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
-        NtsVar &f_input){//graph op
+        NtsVar &f_input,std::vector<VertexId> cacheflag){//graph op
       
     static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
                 "template must be a type of graph op!");
     
     nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_,layer_);
-    NtsVar f_output=curr->forward(f_input);
-    NtsVar ig;
-    op.push(GRAPHOP);
-    output.push(f_output);
-    input.push(f_input);
-    ntsOp.push(ntsOperator(curr,GRAPHOP));
-    iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
-    // pre-alloc space to save graident
-    output_grad.push_back(ig);
-    count++;
+    NtsVar f_output=curr->forward(f_input,cacheflag);
+    if (this->training == true) {
+      NtsVar ig;
+      op.push(GRAPHOP);
+      output.push(f_output);
+      input.push(f_input);
+      ntsOp.push(ntsOperator(curr,GRAPHOP));
+      iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+      // pre-alloc space to save graident
+      output_grad.push_back(ig);
+      count++;
+      if(layer_ == 1)
+        cachecount = count + 1;
+    }
     return f_output;
 }  
-  
+
  NtsVar runVertexForward(std::function<NtsVar(NtsVar &, NtsVar &)> vertexforward,
             NtsVar &nbr_input,NtsVar &vtx_input){//NNOP
 //     LOG_INFO("call run vertex forward");
-    NtsVar f_output=vertexforward(nbr_input,vtx_input); 
-    appendNNOp(nbr_input, f_output);
+    NtsVar f_output=vertexforward(nbr_input,vtx_input);
+    if (this->training == true) { 
+      appendNNOp(nbr_input, f_output);
+    }
 //    printf("tese %ld\n",(long)(&f_output));
     return f_output;
 }
  NtsVar runVertexForward(std::function<NtsVar(NtsVar &)> vertexforward,
             NtsVar &nbr_input){//NNOP
 //     LOG_INFO("call run vertex forward");
-    NtsVar f_output=vertexforward(nbr_input); 
-    appendNNOp(nbr_input, f_output);
+    NtsVar f_output=vertexforward(nbr_input);
+    if (this->training == true) { 
+      appendNNOp(nbr_input, f_output);
+    }
     return f_output;
 }
  
  NtsVar runEdgeForward(std::function<NtsVar(NtsVar &)> edgeforward,
             NtsVar &edge_input){//NNOP
 //     LOG_INFO("call run vertex forward");
-    NtsVar f_output=edgeforward(edge_input); 
-    appendNNOp(edge_input, f_output);
+    NtsVar f_output=edgeforward(edge_input);
+    if (this->training == true) { 
+      appendNNOp(edge_input, f_output);
+    }
     return f_output;
 } 
   
   void appendNNOp(NtsVar &input_t, NtsVar &output_t){
+    assert(this->training);
     NtsVar ig;
 
     // we will chain the NNOP together, because torch lib will handle the backward propagation
@@ -235,6 +377,71 @@ template <typename NOPT>
     count--;
   }
   void self_backward(bool retain_graph = true){
+    assert(this->training);
+    output.top().backward(torch::ones_like(output.top()), retain_graph);
+    output_grad[top_idx()-1]= input.top().grad();// grad of loss
+    pop_one_op();
+    //LOG_INFO("FINISH LOSS");
+      while (count > 1 || (count == 1 && NNOP == op.top())) {
+    // NNOP means we are using torch lib to do the forward computation
+    // thus we can use auto diff framework in libtorch
+         
+    if (GRAPHOP == op.top()) {
+      double graph_time = 0;
+      graph_time -= get_time();
+      int preop_id=top_idx(); 
+      if(output_grad[top_idx()].dim()<2){
+          output_grad[top_idx()]=output.top().grad();
+      }//determine o grad
+      for(preop_id=top_idx();preop_id>=0;preop_id--){
+          if(iot_id[preop_id].o_id==iot_id[top_idx()].i_id1)
+              break;
+      }// where to write i grad
+      //LOG_INFO("input id %ld %d %d",preop_id,top_idx(),output_grad[top_idx()].dim());
+      output_grad[preop_id]=ntsOp.top().get_graphop()->backward(output_grad[top_idx()]);
+      // printf("output_grad size:%d\n",output_grad[preop_id].size(0));
+//stable      
+//      output_grad[top_idx()-1]=ntsOp.top().op->backward(output_grad[top_idx()]);
+      pop_one_op();
+      graph_time += get_time();
+      //printf("#graph_time=%lf(s)\n", graph_time * 10);
+    }else if (SELFNNOP == op.top()) { // test
+      int preop_id=top_idx(); 
+      if(output_grad[top_idx()].dim()<2){
+          output_grad[top_idx()]=output.top().grad();
+      }//determine o grad
+      for(preop_id=top_idx();preop_id>=0;preop_id--){
+          if(iot_id[preop_id].o_id==iot_id[top_idx()].i_id1)
+              break;
+      }// where to write i grad
+      output_grad[preop_id]=ntsOp.top().get_nnop()->backward(output_grad[top_idx()]);
+//stable      
+//      output_grad[top_idx()-1]=ntsOp.top().op->backward(output_grad[top_idx()]);
+      pop_one_op();
+    }  else if (NNOP == op.top()) {// directly use pytorch
+      if(output_grad[top_idx()].dim()<2){
+        //printf("1\n");
+          output_grad[top_idx()]=output.top().grad();
+      }//determine o grad
+      if(output_grad[top_idx()].dim()>1){
+        //printf("2\n");
+        assert(output_grad[top_idx()].size(1)==output.top().size(1));
+        // printf("output_grad[top_idx()].size(0):%d output.top().size(0):%d\n",output_grad[top_idx()].size(0),output.top().size(0));
+        assert(output_grad[top_idx()].size(0)==output.top().size(0)); 
+        output.top().backward(output_grad[top_idx()], retain_graph);
+      }
+
+      pop_one_op();
+    //LOG_INFO("FINISH NN OP");
+    } else {
+      LOG_INFO("NOT SUPPORT OP");
+      assert(true);
+    }
+  }
+    reset();  
+  }
+    void self_backward_cache(bool retain_graph, std::vector<VertexId> cacheflag,std::vector<VertexId>& dst,Graph<Empty> *graph_){
+      assert(this->training);
     output.top().backward(torch::ones_like(output.top()), retain_graph);
     output_grad[top_idx()-1]= input.top().grad();// grad of loss
     pop_one_op();
@@ -277,6 +484,17 @@ template <typename NOPT>
       }//determine o grad
       assert(output_grad[top_idx()].size(1)==output.top().size(1));
       assert(output_grad[top_idx()].size(0)==output.top().size(0)); 
+      if(count == cachecount){
+        ValueType * f_output_buffer = graph_->Nts->getWritableBuffer(X_grad_c, torch::DeviceType::CPU);
+        ValueType * f_input_buffer = graph_->Nts->getWritableBuffer(output_grad[top_idx()], torch::DeviceType::CPU);
+        for(int id = 0; id < dst.size(); id++) {
+            int vertex_c = dst[id];
+            if(cacheflag[vertex_c]){
+                //memcpy(f_output_buffer+vertex_c*256, f_input_buffer+id*256, 256*sizeof(ValueType));
+                nts::op::nts_acc(f_output_buffer+vertex_c*256,f_input_buffer+id*256,256);
+            }
+        }
+      }
       output.top().backward(output_grad[top_idx()], retain_graph);
 
       pop_one_op();
@@ -288,6 +506,34 @@ template <typename NOPT>
   }
     reset();  
   }
+    void self_backward_test(bool retain_graph = true){
+    pop_one_op();
+      while (count > 1 || (count == 1 && NNOP == op.top())) {
+    if (GRAPHOP == op.top()) {
+      pop_one_op();
+    }else if (SELFNNOP == op.top()) { 
+      pop_one_op();
+    } else if (NNOP == op.top()) {
+      pop_one_op();
+    } else {
+      LOG_INFO("NOT SUPPORT OP");
+      assert(true);
+    }
+  }
+    reset();  
+  }
+  void train() {
+    this->training = true;
+  }
+
+  void eval() {
+    this->training = false;
+  }
+
+  bool is_train() {
+    return this->training;
+  }
+  
   void debug(){
     printf("ADDEBUG input.size()%d\n", input.size());
     // for(int i=0;i<count;i++){
@@ -317,6 +563,9 @@ template <typename NOPT>
     return count - 1;
   }
 
+  NtsVar cache_grad(){
+    return output_grad[cachecount];
+  }
 //private:
   std::stack<OpType> op;
   std::stack<NtsVar> output;
@@ -325,6 +574,9 @@ template <typename NOPT>
   std::vector<NtsVar> output_grad;
   std::vector<IOTensorId> iot_id;
   int count;
+  bool training; 
+  int cachecount;
+  NtsVar X_grad_c;
 //  GraphOperation *gt;
 //  std::vector<CSC_segment_pinned *> subgraphs;
 //  bool bi_direction;

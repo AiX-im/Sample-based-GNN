@@ -36,6 +36,7 @@ public:
     graph_ = graph;
   }
   virtual NtsVar forward(NtsVar &f_input)=0;
+  virtual NtsVar forward(NtsVar &f_input, std::vector<VertexId> cacheflag)=0;
   virtual NtsVar backward(NtsVar &output_grad)=0;
 };
 

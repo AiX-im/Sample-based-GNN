@@ -82,6 +82,10 @@ public:
     return f_output;
   }
   
+   NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({graph_->gnnctx->l_v_num, 
@@ -157,7 +161,10 @@ public:
         });    
       return f_output;
   }
-  
+    NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({partitioned_graph_->owned_mirrors, 
@@ -214,7 +221,10 @@ public:
         });    
       return f_output;
   }
-  
+    NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({graph_->gnnctx->l_v_num, 
@@ -274,7 +284,10 @@ public:
         });    
       return f_output;
   }
-  
+    NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({partitioned_graph_->owned_edges, 
@@ -343,7 +356,10 @@ public:
         });    
       return f_output;
   }
-  
+    NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({partitioned_graph_->owned_edges, 
@@ -411,7 +427,10 @@ public:
         });    
       return f_output;
   }
-  
+    NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({partitioned_graph_->owned_edges, 
@@ -470,7 +489,10 @@ public:
     IntermediateResult=f_output;        
     return f_output;
   }
-  
+    NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){// input vtx grad; output edge grad
     int feature_size=f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor({partitioned_graph_->owned_edges, 

@@ -35,6 +35,9 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "ntsSingleGPUFusedGraphOp.hpp"
 #include "ntsSingleCPUGraphOp.hpp"
 #include "ntsMiniBatchGraphOp.hpp"
+#include "ntsSingleGPUSampleGraphOp.hpp"
+#include "ntsPushdownGraphOp.hpp"
+#include "ntsSingleGPUShareGraphOp.hpp"
 //#include "ntsSubLinearNNOP.hpp"
 //#include "ntsNNOP.hpp"
 

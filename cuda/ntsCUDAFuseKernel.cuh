@@ -200,7 +200,7 @@ __global__ void aggregate_kernel_from_src_with_weight_optim_nts(const VertexId_C
            totalNumEdges-=(totalNumEdges>VtxPerBlock) ? VtxPerBlock : totalNumEdges;
         }
         __syncthreads();
-        if(tidDiv<VtxPerBlock&&tidDiv+blkColStart<=batch_size_){
+        if(tidDiv<VtxPerBlock&&tidDiv+blkColStart<batch_size_){
             new_feature[(blkColStart)*feature_size_+threadIdx.x]=acc_h[threadIdx.x];
         
         }
@@ -261,7 +261,7 @@ __global__ void aggregate_kernel_from_src_without_weight_optim_nts(const VertexI
            totalNumEdges-=(totalNumEdges>VtxPerBlock) ? VtxPerBlock : totalNumEdges;
         }
         __syncthreads();
-        if(tidDiv<VtxPerBlock&&tidDiv+blkColStart<=batch_size_){
+        if(tidDiv<VtxPerBlock&&tidDiv+blkColStart<batch_size_){
             atomicAdd(&new_feature[(blkColStart)*feature_size_+threadIdx.x],acc_h[threadIdx.x]);
         
         }
@@ -277,15 +277,59 @@ __global__ void aggregate_kernel_from_src_with_weight(const T_l *row_indices,con
 	int large_size=blockDim.x;
 	int threadId = blockIdx.x *blockDim.x + threadIdx.x;
 
-	for(long i=threadId;i<feature_size_*batch_size_;i+=blockDim.x*gridDim.x){
-		T_l local_dst=i/feature_size_;
-		T_l rank=i%feature_size_;
-		for(int i_i=column_offset[local_dst];i_i<column_offset[local_dst+1];i_i++){
+	for(long i = threadId; i < feature_size_*batch_size_; i += blockDim.x*gridDim.x){
+		T_l local_dst = i / feature_size_;
+		T_l rank = i % feature_size_;
+		for(int i_i = column_offset[local_dst]; i_i < column_offset[local_dst + 1]; i_i++){
 			int local_src=row_indices[i_i]-src_s_;
 			 atomicAdd(&new_feature[feature_size_*local_dst+rank],
 			 	old_feature[feature_size_*local_src+rank]*weight[i_i]);
 	 	}
 		
+	}
+}
+
+template <typename T_v,typename T_l>
+__global__ void push_kernel_from_dst_with_weight(const T_l *row_indices,const  T_l *column_offset,
+ 		const T_v* old_feature, T_v* new_feature,const T_v* weight,
+ 		T_l src_s_,T_l dst_s_,
+ 		T_l batch_size_, T_l feature_size_){
+	int large_size = blockDim.x;
+	int threadId = blockIdx.x *blockDim.x + threadIdx.x;
+
+	for(long i = threadId; i < feature_size_ * batch_size_; i += blockDim.x*gridDim.x){
+		T_l local_dst = i / feature_size_;
+		T_l rank = i % feature_size_;
+		for(int i_i = column_offset[local_dst]; i_i < column_offset[local_dst + 1]; i_i++){
+			int local_src = row_indices[i_i] - src_s_;
+			 atomicAdd(&new_feature[feature_size_*local_src + rank], old_feature[feature_size_*local_dst + rank] * weight[i_i]);
+            //  atomicAdd(&new_feature[feature_size_*local_dst+rank],
+			//  	old_feature[feature_size_*local_src+rank]*weight[i_i]);
+	 	}
+		
+	}
+}
+
+//for dimension larger than 512
+template <typename T_v,typename T_l>
+__global__ void aggregate_kernel_from_src_with_weight_cache(const T_l *cacheflag,const T_l *destination, const T_l *row_indices,const  T_l *column_offset,
+ 		const T_v* old_feature, T_v* new_feature,const T_v* weight,
+ 		T_l src_s_,T_l dst_s_,
+ 		T_l batch_size_, T_l feature_size_){
+	int large_size=blockDim.x;
+	int threadId = blockIdx.x *blockDim.x + threadIdx.x;
+
+	for(long i=threadId;i<feature_size_*batch_size_;i+=blockDim.x*gridDim.x){
+		T_l local_dst=i/feature_size_;
+        T_l dst = destination[local_dst];
+		T_l rank=i%feature_size_;
+        if(cacheflag[dst] != 1){
+            for(int i_i=column_offset[local_dst];i_i<column_offset[local_dst+1];i_i++){
+                int local_src=row_indices[i_i]-src_s_;
+                atomicAdd(&new_feature[feature_size_*local_dst+rank],
+                    old_feature[feature_size_*local_src+rank]*weight[i_i]);
+            }
+        }
 	}
 }
 
@@ -537,7 +581,7 @@ __global__ void scatter_grad_back_to_messaage_nts(const VertexId_CUDA *row_indic
                     blkRowEnd=rowIdxEnd;
             }
         acc_h[threadIdx.x]=0.0f;
-        if(tidDiv<VtxPerBlock&&tidDiv+blkColStart<=batch_size_){
+        if(tidDiv<VtxPerBlock&&tidDiv+blkColStart<batch_size_){
             acc_h[threadIdx.x]=input_grad[(blkColStart)*feature_size_+threadIdx.x];
         }
         __syncthreads();
