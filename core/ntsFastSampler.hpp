@@ -124,7 +124,7 @@ public:
         //move_bytes_in(dev_row_indices, whole_graph->row_indices, ((whole_graph->global_edges)*sizeof(VertexId)));
         memcpy(row_indices, whole_graph->row_indices,(whole_graph->global_edges)*sizeof(VertexId));
         //memcpy(edge_weight, whole_graph->edge_weight,(whole_graph->global_edges)*sizeof(ValueType));
-        
+
         dev_row_indices=(VertexId *)getDevicePointer(row_indices);
         //dev_edge_weight=(ValueType *)getDevicePointer(edge_weight);
             pre_pro_time=0.0;
