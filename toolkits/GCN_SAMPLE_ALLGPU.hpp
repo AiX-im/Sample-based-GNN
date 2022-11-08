@@ -270,21 +270,13 @@ public:
                       },
                     Y_i,
                     X[l]);
-<<<<<<< HEAD
           }
-=======
-           }
->>>>>>> a40014c30cd23c7f6e84a7992914eccda23051b7
           Loss(X[graph->gnnctx->layer_size.size()-1],target_lab);
           if (ctx->training) {
             training_time_step -= get_time();
             ctx->self_backward(false);
             training_time_step += get_time();
-<<<<<<< HEAD
           //printf("#training_time_step = %lf(s)\n", training_time_step * 10);
-=======
-          //printf("#training_time_step=%lf(s)\n", training_time_step * 10);
->>>>>>> a40014c30cd23c7f6e84a7992914eccda23051b7
             Update();
             for (int i = 0; i < P.size(); i++) {
               P[i]->zero_grad();
@@ -376,15 +368,10 @@ public:
 
     exec_time += get_time();
     printf("#run_time=%lf(s)\n", exec_time * 10);
-<<<<<<< HEAD
     printf("all:%lf(s) prepro:%lf(s) pro:%lf(s) post:%lf(s) copy:%lf(s)\n",train_sampler->all_time * 10,train_sampler->pre_pro_time * 10, train_sampler->pro_time * 10,train_sampler->post_pro_time * 10,train_sampler->copy_gpu_time * 10);
     printf("test_time:%lf(s)\n",train_sampler->test_time * 10);
     printf("#sample_time=%lf(s)\n", (sample_time)  * 10);
     printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time) * 10);
-=======
-    printf("#sample_time=%lf(s)\n", (sample_time - train_sampler->copy_gpu_time)  * 10);
-    printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time + train_sampler->copy_gpu_time) * 10);
->>>>>>> a40014c30cd23c7f6e84a7992914eccda23051b7
     printf("#training_time=%lf(s)\n", training_time * 10);
     printf("#gather_feature_time=%lf(s)\n", gather_feature_time * 10);
     delete active;

@@ -277,7 +277,6 @@ __global__ void sample_processing_traverse_gpu_kernel_stage2(
 	const int WARPSIZE = 32;
 	size_t laneId = threadId % WARPSIZE;
 	size_t warp_id = threadId / WARPSIZE;
-
 	for(long i = threadId; i < (long)vtx_size * WARPSIZE; i += blockDim.x*gridDim.x){
        	VertexId_CUDA dst_pos = i / WARPSIZE;
 		VertexId_CUDA dst = destination[dst_pos];
