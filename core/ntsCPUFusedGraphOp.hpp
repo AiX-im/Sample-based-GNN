@@ -109,6 +109,11 @@ public:
         subgraphs, feature_size, active_);
     return f_output;
   }
+  
+  NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad) {
     NtsVar f_input_grad=graph_->Nts->NewLeafTensor(f_output_grad, torch::DeviceType::CPU);
   ValueType *output_grad_buffer =

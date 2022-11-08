@@ -29,6 +29,11 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "GCN_EAGER.hpp"
 #include "GCN_EAGER_single.hpp"
 #include "GIN_GPU.hpp"
+#include "GCN_SAMPLE_GPU.hpp"
+#include "GCN_GPU_PD.hpp"
+#include "GCN_SAMPLE_PD.hpp"
+#include "GCN_GPU_SHARE.hpp"
+#include "GCN_SAMPLE_ALLGPU.hpp"
 #endif
 
 int main(int argc, char **argv) {
@@ -41,12 +46,15 @@ int main(int argc, char **argv) {
   double exec_time = 0;
   exec_time -= get_time();
 
+  double run_time = 0;
+
   Graph<Empty> *graph;
   graph = new Graph<Empty>();
   graph->config->readFromCfgFile(argv[1]);
   if (graph->partition_id == 0)
     graph->config->print();
 
+  //int iterations = graph->config->epochs;
   int iterations = graph->config->epochs;
   graph->replication_threshold = graph->config->repthreshold;
 
@@ -70,7 +78,12 @@ int main(int argc, char **argv) {
         GCN_CPU_SAMPLE_impl *ntsGIN = new GCN_CPU_SAMPLE_impl(graph, iterations);
     ntsGIN->init_graph();
     ntsGIN->init_nn();
+    run_time -= get_time();
     ntsGIN->run();
+    run_time += get_time();
+    if (graph->partition_id == 0) {
+    printf("run_time=%lf(s)\n", run_time);
+    }
   } else if (graph->config->algorithm == std::string("GCNCPUEAGER")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
     graph->generate_backward_structure();
@@ -92,7 +105,7 @@ int main(int argc, char **argv) {
     ntsGAT->init_graph();
     ntsGAT->init_nn();
     ntsGAT->run();
-  }else if (graph->config->algorithm == std::string("GATCPUDIST")) {
+  } else if (graph->config->algorithm == std::string("GATCPUDIST")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
     graph->generate_backward_structure();
     GAT_CPU_DIST_impl *ntsGAT = new GAT_CPU_DIST_impl(graph, iterations);
@@ -115,7 +128,7 @@ int main(int argc, char **argv) {
     ntsGAT->init_nn();
     ntsGAT->run();
   }
- 
+
 #if CUDA_ENABLE
   else if (graph->config->algorithm == std::string("test_getdep")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
@@ -124,14 +137,27 @@ int main(int argc, char **argv) {
     ntsGAT->init_graph();
     ntsGAT->init_nn();
     ntsGAT->run();
-  }
-    else if (graph->config->algorithm == std::string("GATGPUDIST")) {
+    } else if (graph->config->algorithm == std::string("GATGPUDIST")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
     graph->generate_backward_structure();
     GAT_GPU_DIST_impl *ntsGAT = new GAT_GPU_DIST_impl(graph, iterations);
     ntsGAT->init_graph();
     ntsGAT->init_nn();
     ntsGAT->run();
+    } else if (graph->config->algorithm == std::string("GCNGPUPD")) {
+    graph->load_directed(graph->config->edge_file, graph->config->vertices);
+    graph->generate_backward_structure();
+    GCN_GPU_PD_impl *ntsGCN = new GCN_GPU_PD_impl(graph, iterations);
+    ntsGCN->init_graph();
+    ntsGCN->init_nn();
+    ntsGCN->run();
+    } else if (graph->config->algorithm == std::string("GCNGPUSHARE")) {
+    graph->load_directed(graph->config->edge_file, graph->config->vertices);
+    graph->generate_backward_structure();
+    GCN_SHARE_GPU_impl *ntsGCN = new GCN_SHARE_GPU_impl(graph, iterations);
+    ntsGCN->init_graph();
+    ntsGCN->init_nn();
+    ntsGCN->run();
     } else if (graph->config->algorithm == std::string("COMMNETGPU")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
     graph->generate_backward_structure();
@@ -167,6 +193,30 @@ int main(int argc, char **argv) {
     graph->generate_backward_structure();
     GCN_EAGER_single_impl *ntsGCN =
         new GCN_EAGER_single_impl(graph, iterations);
+    ntsGCN->init_graph();
+    ntsGCN->init_nn();
+    ntsGCN->run();
+  } else if (graph->config->algorithm == std::string("GCNSAMPLEGPU")) {
+    graph->load_directed(graph->config->edge_file, graph->config->vertices);
+    graph->generate_backward_structure();
+    GCN_SAMPLE_GPU_impl *ntsGCN =
+        new GCN_SAMPLE_GPU_impl(graph, iterations);
+    ntsGCN->init_graph();
+    ntsGCN->init_nn();
+    ntsGCN->run();
+  } else if (graph->config->algorithm == std::string("GCNSAMPLEALLGPU")) {
+    graph->load_directed(graph->config->edge_file, graph->config->vertices);
+    graph->generate_backward_structure();
+    GCN_SAMPLE_ALLGPU_impl *ntsGCN =
+        new GCN_SAMPLE_ALLGPU_impl(graph, iterations);
+    ntsGCN->init_graph();
+    ntsGCN->init_nn();
+    ntsGCN->run();
+  } else if (graph->config->algorithm == std::string("GCNSAMPLEPD")) {
+    graph->load_directed(graph->config->edge_file, graph->config->vertices);
+    graph->generate_backward_structure();
+    GCN_SAMPLE_PD_impl *ntsGCN =
+        new GCN_SAMPLE_PD_impl(graph, iterations);
     ntsGCN->init_graph();
     ntsGCN->init_nn();
     ntsGCN->run();

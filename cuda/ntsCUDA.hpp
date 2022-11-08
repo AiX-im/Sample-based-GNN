@@ -35,6 +35,8 @@ void move_edge_in(VertexId_CUDA *d_pointer, VertexId_CUDA *h_pointer,
                   bool sync = true);
 void move_bytes_in(void *d_pointer, void *h_pointer, long bytes,
                    bool sync = true);
+void move_bytes_out(void *h_pointer, void *d_pointer, long bytes,
+                   bool sync = true);
 void allocate_gpu_buffer(float **input, int size);
 void allocate_gpu_edge(VertexId_CUDA **input, int size);
 void aggregate_comm_result(float *aggregate_buffer, float *input_buffer,
@@ -126,14 +128,29 @@ public:
       float *input, float *output, float *weight_forward,       // data
       VertexId_CUDA *row_indices, VertexId_CUDA *column_offset, // graph
       VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
-      VertexId_CUDA dst_end, VertexId_CUDA edges, VertexId_CUDA batch_size,
+      VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
+      VertexId_CUDA feature_size, bool with_weight = false,
+      bool tensor_weight = false);
+  void Push_From_Dst_To_Src(
+      float *input, float *output, float *weight_forward,       // data
+      VertexId_CUDA *row_indices, VertexId_CUDA *column_offset, // graph
+      VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
+      VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
+      VertexId_CUDA feature_size, bool with_weight = false,
+      bool tensor_weight = false);
+  void Gather_By_Dst_From_Src_with_cache(
+      float *input, float *output, float *weight_forward,       // data
+      VertexId_CUDA *cacheflag, VertexId_CUDA *destination,
+      VertexId_CUDA *row_indices, VertexId_CUDA *column_offset, // graph
+      VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
+      VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
       VertexId_CUDA feature_size, bool with_weight = false,
       bool tensor_weight = false);
   void Gather_By_Dst_From_Src_Optim(
       float *input, float *output, float *weight_forward, // data
       VertexId_CUDA *row_indices, VertexId_CUDA *column_offset,
       VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
-      VertexId_CUDA dst_end, VertexId_CUDA edges, VertexId_CUDA batch_size,
+      VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
       VertexId_CUDA feature_size, bool with_weight = false,
       bool tensor_weight = false);
   void Gather_By_Src_From_Dst_Optim(
@@ -178,9 +195,77 @@ public:
         float* msg_cached,
         VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
         VertexId_CUDA batch_size, VertexId_CUDA feature_size);
+  void sample_processing_get_co_gpu(VertexId_CUDA *dst, VertexId_CUDA *local_column_offset,
+                                   VertexId_CUDA *global_column_offset,
+                                   VertexId_CUDA dst_size, 
+                                   VertexId_CUDA* tmp_data_buffer,
+                                   VertexId_CUDA src_index_size,
+					               VertexId_CUDA* src_count,
+					               VertexId_CUDA* src_index,
+                                   VertexId_CUDA fanout);
+  void sample_processing_update_ri_gpu(VertexId_CUDA *r_i,
+								 	VertexId_CUDA *src_index,
+                                   	VertexId_CUDA edge_size,
+                                    VertexId_CUDA src_index_size);
+  void sample_processing_traverse_gpu(VertexId_CUDA *destination,
+                                      VertexId_CUDA *c_o,
+                                      VertexId_CUDA *r_i,
+                                      VertexId_CUDA *global_c_o,
+                                      VertexId_CUDA *global_r_i,
+                                      VertexId_CUDA *src_index,
+                                      VertexId_CUDA vtx_size,
+                                      VertexId_CUDA edge_size,
+                                      VertexId_CUDA src_index_size,
+                                      VertexId_CUDA* src,
+                                      VertexId_CUDA* src_count,
+                                      VertexId_CUDA layer,
+                                      double &test_time);
 
-  
-  
+  void zero_copy_feature_move_gpu(float *dev_feature,
+						float *pinned_host_feature,
+						VertexId_CUDA *src_vertex,
+                        VertexId_CUDA feature_size,
+						VertexId_CUDA vertex_size);
+  void global_copy_label_move_gpu(long *dev_label,
+                    long *global_dev_label,
+                    VertexId_CUDA *dst_vertex,
+                    VertexId_CUDA vertex_size);
+  void dev_updata_share_embedding(float *dev_embedding,
+                    float *share_embedding,
+                    VertexId_CUDA *dev_cacheflag,
+                    VertexId_CUDA *dev_cacheepoch,
+                    VertexId_CUDA current_epoch,
+                    VertexId_CUDA feature_size,
+                    VertexId_CUDA *destination_vertex,
+				    VertexId_CUDA vertex_size);
+  void dev_load_share_embedding(float *dev_embedding,
+                    float *share_embedding,
+                    VertexId_CUDA *dev_cacheflag,
+                    VertexId_CUDA feature_size,
+                    VertexId_CUDA *destination_vertex,
+				    VertexId_CUDA vertex_size);
+  void zero_copy_embedding_move_gpu(float *dev_feature,
+						float *pinned_host_feature,
+                        VertexId_CUDA feature_size,
+						VertexId_CUDA vertex_size);
+  void ReFreshDegree(VertexId_CUDA *out_degree,
+				                  VertexId_CUDA *in_degree,
+				                  VertexId_CUDA vertices);
+  void UpdateDegree(VertexId_CUDA *out_degree,
+				                 VertexId_CUDA *in_degree,
+				                 VertexId_CUDA vertices,
+                                 VertexId_CUDA *destination,
+                                 VertexId_CUDA *source,
+                                 VertexId_CUDA *column_offset,
+				                 VertexId_CUDA *row_indices);
+  void GetWeight(float *edge_weight,
+                 VertexId_CUDA *out_degree,
+				 VertexId_CUDA *in_degree,
+				 VertexId_CUDA vertices,
+                 VertexId_CUDA *destination,
+                 VertexId_CUDA *source,
+                 VertexId_CUDA *column_offset,
+				 VertexId_CUDA *row_indices);
   
   
   void Gather_By_Dst_From_Message(

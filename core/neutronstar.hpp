@@ -20,5 +20,6 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "core/ntsContext.hpp"
 #include "core/NtsEdgeTensor.hpp"
 #include "core/PartitionedGraph.hpp"
-#include "core/ntsSampler.hpp"
+#include "core/ntsFastSampler.hpp"
+#include <c10/cuda/CUDAStream.h>
 #endif

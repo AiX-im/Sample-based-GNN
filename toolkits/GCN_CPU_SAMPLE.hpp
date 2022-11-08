@@ -1,7 +1,4 @@
 #include "core/neutronstar.hpp"
-#include "core/ntsPeerRPC.hpp"
-
-#include <functional>
 
 class GCN_CPU_SAMPLE_impl {
 public:
@@ -31,7 +28,6 @@ public:
   std::vector<Parameter *> P;
   std::vector<NtsVar> X;
   nts::ctx::NtsContext* ctx;
-  Sampler* sampler;
   FullyRepGraph* fully_rep_graph;
   
   NtsVar F;
@@ -39,10 +35,7 @@ public:
   NtsVar tt;
   float acc;
   int batch;
-  int max_batch_num;
-  int min_batch_num;
-  int curr_epoch;
-  ntsPeerRPC<ValueType, VertexId> rpc;
+  long correct;
   torch::nn::Dropout drpmodel;
 
   GCN_CPU_SAMPLE_impl(Graph<Empty> *graph_, int iterations_,
@@ -66,32 +59,13 @@ public:
     graph->rtminfo->lock_free = graph->config->lock_free;
   }
   void init_graph() {
-
-      // 持有完整的图
+    
       fully_rep_graph=new FullyRepGraph(graph);
       fully_rep_graph->GenerateAll();
       fully_rep_graph->SyncAndLog("read_finish");
-
-      // 初始化采样器
-
-        VertexId max_vertex = 0;
-        VertexId min_vertex = std::numeric_limits<VertexId>::max();
-        for(int i = 0; i < graph->partitions; i++){
-            max_vertex = std::max(graph->partition_offset[i+1] - graph->partition_offset[i], max_vertex);
-            min_vertex = std::min(graph->partition_offset[i+1] - graph->partition_offset[i], min_vertex);
-        }
-        max_batch_num = max_vertex / graph->config->batch_size;
-        min_batch_num = min_vertex / graph->config->batch_size;
-        if(max_vertex % graph->config->batch_size != 0) {
-            max_batch_num++;
-        }
-        if(min_vertex % graph->config->batch_size != 0) {
-            min_batch_num++;
-        }
-//      sampler=new Sampler(fully_rep_graph,0,graph->vertices);
-      sampler=new Sampler(fully_rep_graph,graph->partition_offset[graph->partition_id],graph->partition_offset[graph->partition_id+1]);
-
-      //cp = new nts::autodiff::ComputionPath(gt, subgraphs);
+      // sampler=new Sampler(fully_rep_graph,0,graph->vertices);
+      
+    //cp = new nts::autodiff::ComputionPath(gt, subgraphs);
     ctx=new nts::ctx::NtsContext();
   }
   void init_nn() {
@@ -105,7 +79,7 @@ public:
     beta1 = 0.9;
     beta2 = 0.999;
     epsilon = 1e-9;
-    GNNDatum *gnndatum = new GNNDatum(graph->gnnctx, graph);
+    gnndatum = new GNNDatum(graph->gnnctx, graph);
     // gnndatum->random_generate();
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
@@ -118,13 +92,13 @@ public:
     // creating tensor to save Label and Mask
     gnndatum->registLabel(L_GT_C);
     gnndatum->registMask(MASK);
-
     // initializeing parameter. Creating tensor with shape [layer_size[i],
     // layer_size[i + 1]]
     for (int i = 0; i < graph->gnnctx->layer_size.size() - 1; i++) {
-      P.push_back(new Parameter(graph->gnnctx->layer_size[i],
-                                graph->gnnctx->layer_size[i + 1], alpha, beta1,
-                                beta2, epsilon, weight_decay));
+      // P.push_back(new Parameter(graph->gnnctx->layer_size[i],
+      //                           graph->gnnctx->layer_size[i + 1], alpha, beta1,
+      //                           beta2, epsilon, weight_decay));
+      P.push_back(new Parameter(graph->gnnctx->layer_size[i], graph->gnnctx->layer_size[i + 1], alpha, beta1, beta2, epsilon, weight_decay));
     }
 
     // synchronize parameter with other processes
@@ -148,35 +122,18 @@ public:
     }
     
     X[0] = F.set_requires_grad(true);
+  }
 
-    // 设置rpc相关
-    rpc.set_comm_num(graph->partitions - 1);
-    rpc.register_function("get_feature", [&](std::vector<VertexId> vertexs){
-        int start = graph->partition_offset[graph->partition_id];
-        int feature_size = F.size(1);
-        ValueType* ntsVarBuffer = graph->Nts->getWritableBuffer(F, torch::DeviceType::CPU);
-        std::vector<std::vector<ValueType>> result_vector;
-        result_vector.resize(vertexs.size());
+  long getCorrect(NtsVar &input, NtsVar &target) {
+    // NtsVar predict = input.log_softmax(1).argmax(1);
+    NtsVar predict = input.argmax(1);
+    NtsVar output = predict.to(torch::kLong).eq(target).to(torch::kLong);
+    return output.sum(0).item<long>();
+  }
 
-#pragma omp parallel for
-        for(int i = 0; i < vertexs.size(); i++) {
-            result_vector[i].resize(feature_size);
-            memcpy(result_vector[i].data(), ntsVarBuffer + (vertexs[i] - start) * feature_size,
-                   feature_size * sizeof(ValueType));
-        }
-        return result_vector;
-    });
-
-//     // 测试接收
-//    int start = graph->partition_offset[graph->partition_id];
-//    for(int i = 0; i < F.size(0); i++) {
-//        auto sum = F[i].sum().item<float>();
-//        std::printf("%u sum %f\n", start + i, sum);
-//    }
-//    if(start >= 0) {
-//        exit(3);
-//    }
-
+  void shuffle_vec(std::vector<VertexId>& vec) {
+    unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count();
+    std::shuffle (vec.begin(), vec.end(), std::default_random_engine(seed));
   }
 
   void Test(long s) { // 0 train, //1 eval //2 test
@@ -212,20 +169,12 @@ public:
  
   void Loss(NtsVar &left,NtsVar &right) {
     //  return torch::nll_loss(a,L_GT_C);
-
     torch::Tensor a = left.log_softmax(1);
     NtsVar loss_; 
     loss_= torch::nll_loss(a,right);
-    NtsVar local_acc=a.argmax(1).to(torch::kLong).eq(right).sum(0)/a.size(0);
-    // 传进来的left就是nan，导致a变成nan
-//      if(curr_epoch == 0) {
-//          std::printf("process %d left: %f, a: %f, right: %f, loss: %f, local acc: %f\n", graph->partition_id, left.sum().item<float>(), a.sum().item<float>(),
-//                      right.sum().item<float>(), loss_.item<float>(), local_acc.item<float>());
-//      }
-//    std::cout<<"training_correct:"<<local_acc.item<float>()<<std::endl;
-    ctx->appendNNOp(left, loss_);
-    float * lacc=local_acc.data_ptr<float>();
-    acc+=(*lacc);
+    if (ctx->training == true) {
+      ctx->appendNNOp(left, loss_);
+    }
   }
 
   void Update() {
@@ -238,81 +187,70 @@ public:
     }
   }
 
-  void UpdateZero() {
-      for(int l=0;l<(graph->gnnctx->layer_size.size()-1);l++){
-//          std::printf("process %d epoch %d last before\n", graph->partition_id, curr_epoch);
-          P[l]->all_reduce_to_gradient(torch::zeros({P[l]->row, P[l]->col}, torch::kFloat));
-//          std::printf("process %d epoch %d last after\n", graph->partition_id, curr_epoch);
-          P[l]->learnC2C_with_decay_Adam();
-          P[l]->next();
-      }
-  }
-  
-  void Forward() {
-    graph->rtminfo->forward = true;
-      while(sampler->sample_not_finished()){
-            sampler->reservoir_sample(graph->gnnctx->layer_size.size()-1,
-                                      graph->config->batch_size,
-                                      graph->gnnctx->fanout);
-      }
 
+
+   void Forward(FastSampler* sampler, int type=0) {
+    //void Forward(Sampler* sampler, int type=0) {
+    graph->rtminfo->forward = true;
+    shuffle_vec(sampler->sample_nids);
+    // while(sampler->sample_not_finished()){
+    //       sampler->reservoir_sample_c(graph->gnnctx->layer_size.size()-1,
+    //                                 graph->config->batch_size,
+    //                                 graph->gnnctx->fanout);
+    // }
       SampledSubgraph *sg;
-      acc=0.0;
+      // acc=0.0;
+      correct = 0;
       batch=0;
-      if(min_batch_num == 0) {
-          rpc.keep_running();
-      }
-      while(sampler->has_rest()){
-           sg=sampler->get_one();
+      while(sampler->sample_not_finished()){
+           sg=sampler->sample_fast(graph->config->batch_size);
+      //  while(sampler->has_rest()){
+      //      sg=sampler->get_one();
            std::vector<NtsVar> X;
            NtsVar d;
            X.resize(graph->gnnctx->layer_size.size(),d);
-//           std::printf("process %d epoch %d before get feature\n", graph->partition_id, curr_epoch);
-           X[0] = nts::op::get_feature_from_global(rpc, sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->src(), F, graph);
-//          std::printf("process %d epoch %d after get feature\n", graph->partition_id, curr_epoch);
+           X[0]=nts::op::get_feature(sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->src(),F,graph);
            NtsVar target_lab=nts::op::get_label(sg->sampled_sgs[0]->dst(),L_GT_C,graph);
-
            for(int l=0;l<(graph->gnnctx->layer_size.size()-1);l++){//forward
-               
-               int hop=(graph->gnnctx->layer_size.size()-2)-l;
-               if(l!=0){
-                    X[l] = drpmodel(X[l]);
-               }
+              int hop=(graph->gnnctx->layer_size.size()-2)-l;
+              if(graph->config->up_degree){
+                sg->update_degrees(graph,hop);
+              }
+              //  if(l!=0){
+              //       X[l] = drpmodel(X[l]);
+              //  } 
                NtsVar Y_i=ctx->runGraphOp<nts::op::MiniBatchFuseOp>(sg,graph,hop,X[l]);
                X[l + 1]=ctx->runVertexForward([&](NtsVar n_i){
                    if (l==(graph->gnnctx->layer_size.size()-2)) {
                         return P[l]->forward(n_i);
                     }else{
-                       return torch::relu(P[l]->forward(n_i));
+                       //return torch::relu(P[l]->forward(n_i));
+                        return torch::dropout(torch::relu(P[l]->forward(n_i)), drop_rate, ctx->is_train());
                     }
                 },
                 Y_i);
-
-           }
+           } 
            Loss(X[graph->gnnctx->layer_size.size()-1],target_lab);
-           ctx->self_backward(false);
-//           std::printf("\tprocess %d epoch %d before update\n", graph->partition_id, curr_epoch);
-           Update();
-//          std::printf("\tprocess %d epoch %d after update\n", graph->partition_id, curr_epoch);
-          for (int i = 0; i < P.size(); i++) {
+          if (ctx->training) {
+            ctx->self_backward(false);
+            Update();
+            for (int i = 0; i < P.size(); i++) {
               P[i]->zero_grad();
+            }
           }
+           correct += getCorrect(X[graph->gnnctx->layer_size.size()-1], target_lab);
            batch++;
-           if(batch == min_batch_num) {
-               rpc.keep_running();
-           }
       }
-
-         LOG_INFO("epoch %d epoch_acc:\t%f", curr_epoch, acc/batch);
-      // 为了防止allreduce卡死，添加了下面这一行
-
-      while(batch!=max_batch_num){
-        UpdateZero();
-          batch++;
+      //sampler->clear_queue();
+      sampler->restart();
+      acc = 1.0 * correct / sampler->work_range[1];
+      if (type == 0) {
+        LOG_INFO("Train Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+      } else if (type == 1) {
+        LOG_INFO("Eval Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+      } else if (type == 2) {
+        LOG_INFO("Test Acc: %f %d %d", acc, correct, sampler->work_range[1]);
       }
-      rpc.stop_running();
-       sampler->clear_queue();
-       sampler->restart();
   }
 
   void run() {
@@ -320,18 +258,59 @@ public:
       LOG_INFO("GNNmini::[Dist.GPU.GCNimpl] running [%d] Epoches\n",
                iterations);
     }
+    // get train/val/test node index. (may be move this to GNNDatum)
+    std::vector<VertexId> train_nids, val_nids, test_nids;
+    for (int i = 0; i < graph->gnnctx->l_v_num; ++i) {
+      int type = gnndatum->local_mask[i];
+      if (type == 0) {
+        train_nids.push_back(i);
+      } else if (type == 1) {
+        val_nids.push_back(i);
+      } else if (type == 2) {
+        test_nids.push_back(i);
+      }
+    }
+
+    shuffle_vec(train_nids);
+    shuffle_vec(val_nids);
+    shuffle_vec(test_nids);
+    // Sampler* train_sampler = new Sampler(fully_rep_graph, train_nids);
+    // Sampler* eval_sampler = new Sampler(fully_rep_graph, val_nids);
+    // Sampler* test_sampler = new Sampler(fully_rep_graph, test_nids);
+
+    FastSampler* train_sampler = new FastSampler(graph,fully_rep_graph, 
+        train_nids,graph->gnnctx->layer_size.size()-1,
+            graph->gnnctx->fanout,graph->config->batch_size,true);
+
+    FastSampler* eval_sampler = new FastSampler(graph,fully_rep_graph, 
+        val_nids,graph->gnnctx->layer_size.size()-1,
+            graph->gnnctx->fanout,graph->config->batch_size,true);
+
+    FastSampler* test_sampler = new FastSampler(graph,fully_rep_graph,
+        test_nids,graph->gnnctx->layer_size.size()-1,
+            graph->gnnctx->fanout,graph->config->batch_size,true);
 
     for (int i_i = 0; i_i < iterations; i_i++) {
-        curr_epoch = i_i;
+      double per_epoch_time = 0.0;
+      per_epoch_time -= get_time();
       graph->rtminfo->epoch = i_i;
+      LOG_INFO("epoch %d", i_i);
       if (i_i != 0) {
         for (int i = 0; i < P.size(); i++) {
           P[i]->zero_grad();
         }
       }
       
-      Forward();
-
+      ctx->train();
+      Forward(train_sampler, 0);
+      
+      // ctx->eval();
+      // Forward(eval_sampler, 1);
+      // Forward(test_sampler, 2);
+       per_epoch_time += get_time();
+  //      if (graph->partition_id == 0)
+      std::cout << "GNNmini::Running.Epoch[" << i_i << "]:Times["
+                  << per_epoch_time << "(s)]:loss\t" << loss << std::endl;
     }
     delete active;
   }

@@ -224,6 +224,7 @@ void InputInfo::readFromCfgFile(std::string config_file) {
   std::ifstream inFile;
   inFile.open(config_file.c_str(), std::ios::in);
   while (getline(inFile, cfg_oneline)) {
+    if (cfg_oneline.empty() || cfg_oneline[0] == '#') continue;
     std::string cfg_k;
     std::string cfg_v;
     int dlim = cfg_oneline.find(':');
@@ -255,10 +256,22 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       this->process_local = false;
       if (1 == std::atoi(cfg_v.c_str()))
         this->process_local = true;
+    } else if (0 == cfg_k.compare("PUSHDOWN")) {
+      this->pushdown = false;
+      if (1 == std::atoi(cfg_v.c_str()))
+        this->pushdown = true;
     } else if (0 == cfg_k.compare("PROC_CUDA")) {
       this->with_cuda = false;
       if (1 == std::atoi(cfg_v.c_str()))
         this->with_cuda = true;
+    } else if (0 == cfg_k.compare("UP_DEGREE")) {
+      this->up_degree = false;
+      if (1 == std::atoi(cfg_v.c_str()))
+        this->up_degree = true;
+    } else if (0 == cfg_k.compare("CACHE")) {
+      this->cacheflag = false;
+      if (1 == std::atoi(cfg_v.c_str()))
+        this->cacheflag = true;
     } else if (0 == cfg_k.compare("PROC_REP")) {
       this->repthreshold = std::atoi(cfg_v.c_str());
 
@@ -282,7 +295,37 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       this->optim_kernel_enable = true;
       if (1 == std::atoi(cfg_v.c_str()))
         this->optim_kernel_enable = true;
+    } else if (0 == cfg_k.compare("BATCH_TYPE")) {
+      if (0 == cfg_v.compare("sequence")) {
+        this->batch_type = SEQUENCE;
+      } else if (0 == cfg_v.compare("random")) { 
+        this->batch_type = RANDOM;
+      } else if (0 == cfg_v.compare("shuffle")) { 
+        this->batch_type = SHUFFLE;
+      } else if (0 == cfg_v.compare("dellow")) { 
+        this->batch_type = DELLOW;
+      } else if (0 == cfg_v.compare("delhigh")) { 
+        this->batch_type = DELHIGH;
+      } else {
+        this->batch_type = SHUFFLE;
+      }
+    } else if (0 == cfg_k.compare("CLASSES")) {
+      this->classes = std::atoi(cfg_v.c_str());
+    } else if (0 == cfg_k.compare("DEL_FRAC")) {
+      this->del_frac = std::atof(cfg_v.c_str());
+      assert(this->del_frac <= 1.0);
+    } else if (0 == cfg_k.compare("BATCH_NORM")) {
+      this->batch_norm = std::atoi(cfg_v.c_str());
+    } else if (0 == cfg_k.compare("TIME_SKIP")) {
+      this->time_skip = std::atoi(cfg_v.c_str());
+    } else if (0 == cfg_k.compare("RUNS")) {
+      this->runs = std::atoi(cfg_v.c_str());
+      // std::cout << "runs " << this->runs << std::endl;
+      // assert(false);
+    } else if (0 == cfg_k.compare("MINI_PULL")) {
+      this->mini_pull = std::atoi(cfg_v.c_str());
     }
+
 
     else {
       printf("not supported configure\n");
@@ -298,7 +341,23 @@ void InputInfo::print() {
   std::cout << "epochs\t\t:\t" << epochs << std::endl;
   std::cout << "layers\t\t:\t" << layer_string << std::endl;
   std::cout << "fanout\t\t:\t" << fanout_string << std::endl;
-  std::cout << "batch_size\t\t:\t" << batch_size << std::endl;
+  std::cout << "batch_size\t:\t" << batch_size << std::endl;
+  // std::cout << "batch_type\t\t:\t" << batch_type << std::endl;
+  std::cout << "batch_type\t:\t";
+  if (batch_type == SHUFFLE) {
+    std::cout << "shuffle" << std::endl;
+  } else if (batch_type == RANDOM) {
+    std::cout << "random" << std::endl;
+  } else if (batch_type == SEQUENCE) {
+    std::cout << "sequence" << std::endl;
+  } else if (batch_type == DELLOW) {
+    std::cout << "dellow" << std::endl;
+  } else if (batch_type == DELHIGH) {
+    std::cout << "delhigh" << std::endl;
+  } else {
+    std::cout << "ERROR" << std::endl;
+  }
+  std::cout << "del_frac\t:\t" << del_frac << std::endl;
   std::cout << "edge_file\t:\t" << edge_file << std::endl;
   std::cout << "feature_file\t:\t" << feature_file << std::endl;
   std::cout << "label_file\t:\t" << label_file << std::endl;
@@ -314,6 +373,8 @@ void InputInfo::print() {
   std::cout << "decay_rate\t:\t" << decay_rate << std::endl;
   std::cout << "decay_epoch\t:\t" << decay_epoch << std::endl;
   std::cout << "drop_rate\t:\t" << drop_rate << std::endl;
+  std::cout << "classes\t\t:\t" << classes << std::endl;
+  std::cout << "batch_norm\t:\t" << batch_norm << std::endl;
   std::cout <<"------------------input info--------------"<<std::endl;
 }
 

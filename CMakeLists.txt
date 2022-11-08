@@ -4,7 +4,7 @@ add_definitions(-w)
 set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 # please change this to the path where you put libtorch
 # TODO: torch path should not hard coded in cmake file
-list(APPEND CMAKE_PREFIX_PATH "/home/toao/code/GNN/NeutronStarLite/GPU_libtorch/libtorch-1-9/libtorch/")
+list(APPEND CMAKE_PREFIX_PATH "/home/aix/libtorch/")
 
 project(GNNmini)
 set(ENV{LANG} "C")

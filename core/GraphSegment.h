@@ -49,6 +49,14 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 
 const bool NOT_SUPPORT_DEVICE_TYPE = false;
 
+enum BatchType {
+  SHUFFLE,
+  SEQUENCE,
+  RANDOM,
+  DELLOW,
+  DELHIGH
+};
+
 class CSC_segment_pinned {
 public:
   VertexId *column_offset; // VertexNumber
@@ -164,7 +172,16 @@ public:
   std::string edge_file;
   std::string label_file;
   std::string mask_file;
+  float del_frac = 0;
   bool with_cuda;
+  bool up_degree;
+  bool cacheflag;
+  bool sample;
+  bool pushdown;
+  int batch_norm = 0;
+  int time_skip = 3;
+  int runs = 1;
+  int mini_pull = 0;
 
   // algorithm related:
   VertexId batch_size;
@@ -173,6 +190,8 @@ public:
   ValueType decay_rate;
   ValueType decay_epoch;
   ValueType drop_rate;
+  BatchType batch_type;
+  int classes = 1;
 
   void readFromCfgFile(std::string config_file);
   void print();

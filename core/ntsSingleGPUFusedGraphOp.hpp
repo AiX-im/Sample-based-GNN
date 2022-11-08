@@ -59,7 +59,10 @@ public:
     graph_->forward_single<int, ValueType>(f_input, subgraphs, f_output, feature_size);
     return f_output;
   }
-  
+  NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        
+      NtsVar f_output = graph_->Nts->NewKeyTensor(f_input, torch::DeviceType::CPU); 
+    return f_output;
+  }
   NtsVar backward(NtsVar &f_output_grad){
     int feature_size = f_output_grad.size(1);
     NtsVar f_input_grad=graph_->Nts->NewKeyTensor(f_output_grad,torch::DeviceType::CUDA);

@@ -23,7 +23,7 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
-
+#include <sstream>
 #include "core/graph.hpp"
 
 class GNNDatum {
@@ -31,8 +31,17 @@ public:
   GNNContext *gnnctx;
   Graph<Empty> *graph;
   ValueType *local_feature; // features of local partition
+  ValueType *dev_local_feature;
+  ValueType *local_embedding; // features of local partition
+  ValueType *dev_local_embedding;
+
+  ValueType *dev_share_embedding; //share computation
+  ValueType *dev_share_grad;
+
   long *local_label;        // labels of local partition
-  int *local_mask; // mask(indicate whether data is for train, eval or test) of
+  int *local_mask;
+  long *dev_local_label;
+   // mask(indicate whether data is for train, eval or test) of
                    // local partition
 
   // GNN datum world
@@ -49,11 +58,22 @@ public:
  */
 GNNDatum(GNNContext *_gnnctx, Graph<Empty> *graph_) {
   gnnctx = _gnnctx;
-  local_feature = new ValueType[gnnctx->l_v_num * gnnctx->layer_size[0]];
+  //local_feature = new ValueType[gnnctx->l_v_num * gnnctx->layer_size[0]];
+  local_feature=(ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*gnnctx->layer_size[0]*sizeof(ValueType));
+  local_embedding = (ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*gnnctx->layer_size[0]*sizeof(ValueType));
   local_label = new long[gnnctx->l_v_num];
   local_mask = new int[gnnctx->l_v_num];
-  memset(local_mask, 0, sizeof(int) * gnnctx->l_v_num);
+  memset(local_mask, 1, sizeof(int) * gnnctx->l_v_num);
   graph = graph_;
+}
+void genereate_gpu_data(){
+  dev_local_label=(long*)cudaMallocGPU(gnnctx->l_v_num*sizeof(long));
+  dev_local_feature=(ValueType*)getDevicePointer(local_feature);
+  dev_local_embedding=(ValueType*)getDevicePointer(local_embedding);
+  move_bytes_in(dev_local_label,local_label,gnnctx->l_v_num*sizeof(long));
+
+  dev_share_embedding = (ValueType*)cudaMallocGPU(gnnctx->l_v_num * gnnctx->layer_size[1] * sizeof(ValueType));
+  dev_share_grad = (ValueType*)cudaMallocGPU(gnnctx->l_v_num * gnnctx->layer_size[1] * sizeof(ValueType));
 }
 
 /**
@@ -219,6 +239,89 @@ void readFeature_Label_Mask(std::string inputF, std::string inputL,
   input_ftr.close();
   input_lbl.close();
 }
+
+void readFeature_Label_Mask_OGB(std::string inputF, std::string inputL,
+                                      std::string inputM) {
+
+  // logic here is exactly the same as read feature and label from file
+  std::string str;
+  std::ifstream input_ftr(inputF.c_str(), std::ios::in);
+  std::ifstream input_lbl(inputL.c_str(), std::ios::in);
+  // ID    F   F   F   F   F   F   F   L
+  std::cout<<inputF<<std::endl;
+  if (!input_ftr.is_open()) {
+    std::cout << "open feature file fail!" << std::endl;
+    return;
+  }
+  if (!input_lbl.is_open()) {
+    std::cout << "open label file fail!" << std::endl;
+    return;
+  }
+  ValueType *con_tmp = new ValueType[gnnctx->layer_size[0]];
+  std::string la;
+  std::string featStr;
+  for (VertexId id = 0;id<graph->vertices;id++) {
+    VertexId size_0 = gnnctx->layer_size[0];
+    VertexId id_trans = id - gnnctx->p_v_s;
+    if ((gnnctx->p_v_s <= id) && (gnnctx->p_v_e > id)) {
+        getline(input_ftr,featStr);
+        std::stringstream ss(featStr);
+        std::string feat_u;
+        int i=0;
+        while(getline(ss,feat_u,',')){
+            local_feature[size_0 * id_trans + i]=std::atof(feat_u.c_str());
+          //  if(id==0){
+          //      std::cout<<std::atof(feat_u.c_str())<<std::endl;
+          //  }
+            i++;
+        }assert(i==size_0);       
+      //input_lbl >> la;
+      input_lbl >> local_label[id_trans];
+
+    } else {
+      getline(input_ftr,featStr);
+      input_lbl >> la;
+    }
+  }
+  
+  std::string inputM_train=inputM;
+  inputM_train.append("/train.csv");
+  std::string inputM_val=inputM;
+  inputM_val.append("/valid.csv");
+  std::string inputM_test=inputM;
+  inputM_test.append("/test.csv");
+  std::ifstream input_msk_train(inputM_train.c_str(), std::ios::in);
+  if (!input_msk_train.is_open()) {
+    std::cout << "open input_msk_train file fail!" << std::endl;
+    return;
+  }
+  std::ifstream input_msk_val(inputM_val.c_str(), std::ios::in);
+  if (!input_msk_val.is_open()) {
+    std::cout <<inputM_val<< "open input_msk_val file fail!" << std::endl;
+    return;
+  }
+  std::ifstream input_msk_test(inputM_test.c_str(), std::ios::in);
+  if (!input_msk_test.is_open()) {
+    std::cout << "open input_msk_test file fail!" << std::endl;
+    return;
+  }
+  VertexId vtx=0;
+  while(input_msk_train>>vtx){//train
+      local_mask[vtx] = 0;
+  }
+  while(input_msk_val>>vtx){//val
+      local_mask[vtx] = 1;
+  }
+  while(input_msk_test>>vtx){//test
+      local_mask[vtx] = 2;
+  }
+  
+  
+  delete[] con_tmp;
+  input_ftr.close();
+  input_lbl.close();
+}
+
 };
 
 #endif

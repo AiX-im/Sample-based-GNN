@@ -690,6 +690,7 @@ public:
         __sync_fetch_and_add(&out_degree[dst], 1);
       }
     }
+    printf("partition_id:%d,out_degree[0]:%d,out_degree[1]:%d\n",partition_id,out_degree[0],out_degree[1]);
     MPI_Allreduce(MPI_IN_PLACE, out_degree, vertices, vid_t, MPI_SUM,
                   MPI_COMM_WORLD);
 
@@ -1177,8 +1178,12 @@ public:
         __sync_fetch_and_add(&out_degree[src], 1);
       }
     }
+
+    //printf("partition_id:%d,out_degree[0]:%d,out_degree[1]:%d\n",partition_id,out_degree[0],out_degree[1]);
     MPI_Allreduce(MPI_IN_PLACE, out_degree, vertices, vid_t, MPI_SUM,
                   MPI_COMM_WORLD);
+
+    //printf("partition_id:%d,out_degree[0]:%d,out_degree[1]:%d\n",partition_id,out_degree[0],out_degree[1]);
     //*************************************************************************************Gather
     // all vertex count before this stage.
 
@@ -3800,8 +3805,57 @@ public:
     return global_reducer;
   }
 
+    template <typename R, typename M>
+  R forward_single(NtsVar &input_gpu_or_cpu,
+                   CSC_segment_pinned* &graph_partitions,
+                   NtsVar &Y, int feature_size) {
+    int layer_ = rtminfo->curr_layer;
 
-  
+    //    if (partition_id == 0)
+    //    {
+    //      printf("SyncComputeDecoupled:layer(%d).process_local(%d).dimension(%d).reduce_comm(%d).overlap(%d)\n",
+    //      layer_, process_local ? replication_threshold : -1, feature_size,
+    //      process_local, process_overlap);
+    //    }
+    double stream_time = 0;
+    stream_time -= MPI_Wtime();
+    Nts->ZeroVarMem(Y);
+    Nts->InitBlockSimple(graph_partitions, rtminfo, feature_size,
+                         feature_size, 0, layer_);
+    Nts->GatherByDstFromSrc(Y, input_gpu_or_cpu, input_gpu_or_cpu);
+    rtminfo->device_sync();
+    stream_time += MPI_Wtime();
+
+    R global_reducer;
+    return global_reducer;
+  }
+
+  template <typename R, typename M>
+  R backward_single(NtsVar &input_gpu_or_cpu,
+                    CSC_segment_pinned* &graph_partitions,
+                    NtsVar &Y, int feature_size) // backward
+  {
+    int layer_ = rtminfo->curr_layer;
+    //    if (partition_id == 0)
+    //    {
+    //      printf("ComputeSync:layer(%d).process_local(%d).dimension(%d).reduce_comm(%d).overlap(%d)\n",
+    //      layer_, process_local ? replication_threshold : -1, feature_size,
+    //      process_local, process_overlap);
+    //    }
+    double stream_time = 0;
+    stream_time -= MPI_Wtime();
+    Nts->ZeroVarMem(Y, GPU_T);
+    Nts->InitBlockSimple(graph_partitions, rtminfo, feature_size,
+                         feature_size, 0, layer_);
+    Nts->GatherBySrcFromDst(Y, input_gpu_or_cpu, input_gpu_or_cpu);
+
+    Nts->DeviceSynchronize();
+
+    R global_reducer;
+    stream_time += MPI_Wtime();
+    return global_reducer;
+  }
+
   template <typename R, typename M>
   R forward_single(NtsVar &input_gpu_or_cpu,
                    std::vector<CSC_segment_pinned *> &graph_partitions,
@@ -3816,12 +3870,10 @@ public:
     //    }
     double stream_time = 0;
     stream_time -= MPI_Wtime();
-
     Nts->ZeroVarMem(Y);
     Nts->InitBlockSimple(graph_partitions[0], rtminfo, feature_size,
                          feature_size, 0, layer_);
     Nts->GatherByDstFromSrc(Y, input_gpu_or_cpu, input_gpu_or_cpu);
-
     rtminfo->device_sync();
     stream_time += MPI_Wtime();
 
@@ -3847,6 +3899,7 @@ public:
     Nts->InitBlockSimple(graph_partitions[0], rtminfo, feature_size,
                          feature_size, 0, layer_);
     Nts->GatherBySrcFromDst(Y, input_gpu_or_cpu, input_gpu_or_cpu);
+
     Nts->DeviceSynchronize();
 
     R global_reducer;
