@@ -768,6 +768,12 @@ struct Parameter : torch::nn::Module {
     W_gradient.set_data(from);
     network_simple->all_reduce_sum(W_gradient.accessor<ValueType, 2>().data());
   }
+
+  void set_gradient(NtsVar from) {
+    W_gradient.set_data(from);
+  }
+
+
   void set_decay(ValueType decay_rate_, ValueType decay_epoch_) {
     decay_rate = decay_rate_;
     decay_epoch = decay_epoch_;
@@ -786,7 +792,7 @@ struct Parameter : torch::nn::Module {
   }
   NtsVar forward(NtsVar x) {
 
-    NtsVar x1 = x.mm(W);
+    NtsVar x1 = x.matmul(W);
     return x1;
   }
   void learnC2C_with_decay_Adam() {

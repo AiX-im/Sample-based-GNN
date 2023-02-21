@@ -4,3 +4,7 @@ build/
 
 # no editor files
 .vscode/
+
+# toao spacify
+.gitignore
+CMakeLists.txt

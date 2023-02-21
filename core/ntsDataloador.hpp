@@ -61,6 +61,7 @@ GNNDatum(GNNContext *_gnnctx, Graph<Empty> *graph_) {
   //local_feature = new ValueType[gnnctx->l_v_num * gnnctx->layer_size[0]];
   local_feature=(ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*gnnctx->layer_size[0]*sizeof(ValueType));
   local_embedding = (ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*gnnctx->layer_size[0]*sizeof(ValueType));
+  // local_label = (long*)cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(long));
   local_label = new long[gnnctx->l_v_num];
   local_mask = new int[gnnctx->l_v_num];
   memset(local_mask, 1, sizeof(int) * gnnctx->l_v_num);

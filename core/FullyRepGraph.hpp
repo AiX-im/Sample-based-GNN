@@ -25,6 +25,8 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include <vector>
 #include "core/graph.hpp"
 #include "core/coocsc.hpp"
+
+
 class SampledSubgraph{
 public:    
 
@@ -34,7 +36,8 @@ public:
         //threads = std::max(numa_num_configured_cpus() - 1, 1);
         threads = 32;
     }
-    SampledSubgraph(int layers_, int batch_size_,std::vector<int>& feature_size,std::vector<int>& fanout_,Graph<Empty> *graph){
+    SampledSubgraph(int layers_, int batch_size_,std::vector<int>& feature_size,std::vector<int>& fanout_,
+                    Graph<Empty> *graph){
         layers=layers_;
         batch_size=batch_size_;
         fanout=fanout_;
@@ -98,17 +101,35 @@ public:
         allocate_gpu_edge(&(src_index[i]), all_vertices);
         }
         global_buffer_used=0;
-        global_buffer_capacity=1024*1024*128*2;
+//        global_buffer_capacity=1024*1024*128*2;
+        global_buffer_capacity=1024*1024*10*2;
         global_value_used = 0;
-        global_value_capacity = 1024*1024*128;
+//        global_value_capacity = 1024*1024*128;
+        global_value_capacity = 1024*1024*10;
 
-        allocate_gpu_buffer(&global_value_buffer, global_value_capacity);//for weight
-        allocate_gpu_edge(&global_data_buffer, global_buffer_capacity);
-        allocate_gpu_edge(&queue_count, 1);
+        // std::printf("线程: %d 分配了1：%ld, stream: %p\n", omp_get_thread_num(), sizeof(float)*(global_value_capacity), cs->stream);
+        allocate_gpu_buffer_async(&global_value_buffer, global_value_capacity, cs->stream);//for weight
+        // std::printf("线程: %d 分配了2：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(global_buffer_capacity));
+        allocate_gpu_edge_async(&global_data_buffer, global_buffer_capacity, cs->stream);
+        allocate_gpu_edge_async(&queue_count, 1, cs->stream);
 
-        allocate_gpu_edge(&outdegree, all_vertices);
-        allocate_gpu_edge(&indegree, all_vertices);
-    } 
+
+        // std::printf("线程: %d 分配了3：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(all_vertices));
+        allocate_gpu_edge_async(&outdegree, all_vertices, cs->stream);
+        // std::printf("线程: %d 分配了4：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(all_vertices));
+        allocate_gpu_edge_async(&indegree, all_vertices, cs->stream);         
+        threads = std::max(numa_num_configured_cpus() - 1, 1);
+
+    }
+
+//     template<class DevType> void free_gpu_memory(DevType* dev_ptr) {
+// #if CUDA_ENABLE
+//     CHECK_CUDA_RESULT(cudaFree(dev_ptr));
+// #else
+//         printf("CUDA DISABLED free_gpu_memory\n");
+//         exit(0);
+// #endif
+//     }
 
     ~SampledSubgraph(){
         fanout.clear();
@@ -116,6 +137,13 @@ public:
             delete sampled_sgs[i];
         }
         sampled_sgs.clear();
+
+        cudaFree(global_data_buffer);
+        cudaFree(global_data_buffer);
+        cudaFree(queue_count);
+        cudaFree(outdegree);
+        cudaFree(indegree);
+
     }
     void update_degrees(Graph<Empty> *graph, int layer) {
 
@@ -162,6 +190,13 @@ public:
         //sampled_sgs.resize(layers,new sampCSC(0));
     }
     
+    /**
+     * @brief  初始化第一层采样
+     * @note   
+     * @param  destination: 需要采样的节点数组开始的位置
+     * @param  batch_size_: 采样的batch大小，节点的数量
+     * @retval None
+     */
     void gpu_init_first_layer(VertexId* destination, int batch_size_){
         curr_layer = 0;
         curr_dst_size = batch_size_;
@@ -175,9 +210,18 @@ public:
         sampled_sgs[curr_layer]->dev_column_offset = global_data_buffer + global_buffer_used;
         //sampled_sgs[curr_layer]->size_dev_co = curr_dst_size + 1;
         global_buffer_used += curr_dst_size+1;
-        move_bytes_in(sampled_sgs[curr_layer]->dev_destination, destination, (curr_dst_size) * sizeof(VertexId));
+        // 将顶点数据移动到设备端
+        // move_bytes_in(sampled_sgs[curr_layer]->dev_destination, destination, (curr_dst_size) * sizeof(VertexId));
+        move_bytes_in_async(sampled_sgs[curr_layer]->dev_destination, destination, (curr_dst_size) * sizeof(VertexId), cs->stream);
     }
 
+    /**
+     * @brief  初始化其它层的参数
+     * @note   
+     * @param  layer: 该层是第几层
+     * @retval None
+     *
+    **/
     void gpu_init_proceeding_layer(int layer){
         curr_layer = layer;
         curr_dst_size = sampled_sgs[curr_layer-1]->src_size;
@@ -190,7 +234,16 @@ public:
         //sampled_sgs[curr_layer]->size_dev_co = curr_dst_size + 1;
         global_buffer_used += curr_dst_size + 1;
     }
-
+    
+    /**
+     * @description: 初始化column_offset
+     * @param {int} layer 当前层
+     * @param {VertexId} src_index_size 传进来的是所有节点
+     * @param {VertexId*} global_column_offset 全局的column_offset
+     * @param {VertexId*} tmp_data_buffer 用于暂存数据的GPU缓存
+     * @param {Cuda_Stream*} cs 运行该操作的GPU流
+     * @return {*}
+     */
     void gpu_sampling_init_co(
                     int layer,
                     VertexId src_index_size,
@@ -234,7 +287,8 @@ public:
         global_buffer_used += sampled_sgs[layer]->e_size;
         sampled_sgs[layer]->dev_source = global_data_buffer + global_buffer_used;
         test_time -= get_time();
-        move_bytes_in(queue_count, edge_size + 1, sizeof(VertexId)); //clear queue_count
+        // move_bytes_in(queue_count, edge_size + 1, sizeof(VertexId)); //clear queue_count
+        move_bytes_in_async(queue_count, edge_size + 1, sizeof(VertexId), cs->stream);
         
         
         cs->sample_processing_traverse_gpu(
@@ -250,11 +304,12 @@ public:
                 sampled_sgs[layer]->dev_source,
                 queue_count,
                 layer,
-                test_time);
+                fanout[layer]);
         
         //get src_size;
         
-        move_bytes_out(edge_size + 1, queue_count, sizeof(VertexId)); 
+        // move_bytes_out(edge_size + 1, queue_count, sizeof(VertexId)); 
+        move_bytes_out_async(edge_size + 1, queue_count, sizeof(VertexId), cs->stream); 
         test_time += get_time();
          
         sampled_sgs[layer]->src_size=edge_size[1];
@@ -338,6 +393,9 @@ public:
           omp_set_num_threads(threads);
 #pragma omp parallel for
             for (VertexId begin_v_i = 0;begin_v_i < curr_dst_size;begin_v_i += 1) {
+                // if(omp_get_thread_num() == 0) {
+                //     std::printf("线程数量: %d\n", omp_get_num_threads());
+                // }
             // for every vertex, apply the sparse_slot at the partition
             // corresponding to the step
              vertex_sample(fanout[layer_],
@@ -363,6 +421,7 @@ public:
                               std::vector<VertexId>& row_indices)>sparse_slot,VertexId layer){
         
         {
+            std::printf("threads: %d\n", threads);
             omp_set_num_threads(threads);
 #pragma omp parallel for num_threads(threads)
             for (VertexId begin_v_i = 0;

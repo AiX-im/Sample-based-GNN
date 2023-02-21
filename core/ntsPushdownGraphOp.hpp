@@ -50,13 +50,16 @@ public:
 
   NtsVar forward(NtsVar &f_input){
     int feature_size = f_input.size(1);
+    std::printf("forward size (%lu, %lu)\n", subgraphs->sampled_sgs[layer]->dst().size(), feature_size);
     NtsVar f_output=graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->dst().size(), 
-                feature_size},torch::DeviceType::CPU);
+                feature_size},torch::DeviceType::CPU);     
+    std::printf("debug 1\n");
     ValueType *f_input_buffer =
       graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CPU);
     ValueType *f_output_buffer = 
       graph_->Nts->getWritableBuffer(f_output, torch::DeviceType::CPU);  
     // memset(f_embedding_output,0,(long)(subgraphs->sampled_sgs[layer]->dst().size())*feature_size*sizeof(ValueType));
+    std::printf("debug 2\n");
     this->subgraphs->compute_one_layer(
             [&](VertexId local_dst, std::vector<VertexId>& column_offset, 
                 std::vector<VertexId>& row_indices){

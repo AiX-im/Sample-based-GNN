@@ -25,6 +25,7 @@ public:
   NtsVar MASK_gpu;
   //GraphOperation *gt;
   Cuda_Stream* cuda_stream;
+  std::vector<at::cuda::CUDAStream> torch_stream;
 
   nts::ctx::NtsContext *ctx;
   // Variables
@@ -39,6 +40,8 @@ public:
   float acc;
   int batch;
   long correct;
+  int pipeline_num;
+
   double training_time = 0;
   double training_cpu_time = 0;
   double exec_time = 0;
@@ -78,6 +81,8 @@ public:
     graph->rtminfo->with_weight = true;
     graph->rtminfo->with_cuda = true;
     graph->rtminfo->copy_data = false;
+
+    pipeline_num = 1;
   }
   void init_graph() {
 
@@ -100,6 +105,9 @@ public:
     beta1 = 0.9;
     beta2 = 0.999;
     epsilon = 1e-9;
+
+
+
 
     gnndatum = new GNNDatum(graph->gnnctx, graph);
     if (0 == graph->config->feature_file.compare("random")) {
@@ -234,7 +242,7 @@ public:
       target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size}, torch::DeviceType::CUDA); 
       while(sampler->sample_not_finished()){
            sample_time -= get_time();
-           sg=sampler->sample_fast(graph->config->batch_size);
+           sg=sampler->sample_fast(graph->config->batch_size, pipeline_num - 1);
            sample_time += get_time();
            gather_feature_time -= get_time();
           // X[0]=nts::op::get_feature(sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->src(),F,graph);
@@ -250,6 +258,7 @@ public:
            transfer_feature_time -= get_time();
            sampler->load_label_gpu(target_lab,gnndatum->dev_local_label);
            //Y_i = Y_i.cuda();
+           at::cuda::setCurrentCUDAStream(torch_stream[pipeline_num - 1]);
            NtsVar Y_i = graph->Nts->NewKeyTensor({sg->sampled_sgs[0]->src_size,F.size(1)},torch::DeviceType::CUDA); 
            sampler->load_embedding_gpu_local(Y_i, gnndatum->dev_local_embedding);
            transfer_feature_time += get_time();
@@ -329,7 +338,7 @@ public:
     },CPU_T);
     ctx->eval();
     Y_PD = ctx->runGraphOp<nts::op::ForwardCPUfuseOp>(partitioned_graph,active,X[0]);
-    delete partitioned_graph;
+    delete partitioned_graph;  
     
     
 
@@ -339,6 +348,21 @@ public:
     // Sampler* train_sampler = new Sampler(fully_rep_graph, train_nids,graph->gnnctx->layer_size.size()-1,graph->config->batch_size,graph->gnnctx->fanout);
     // Sampler* eval_sampler = new Sampler(fully_rep_graph, val_nids,graph->gnnctx->layer_size.size()-1,graph->config->batch_size,graph->gnnctx->fanout);
     // Sampler* test_sampler = new Sampler(fully_rep_graph, test_nids,graph->gnnctx->layer_size.size()-1,graph->config->batch_size,graph->gnnctx->fanout);
+    // cuda_stream = new Cuda_Stream();  
+    cuda_stream = new Cuda_Stream[pipeline_num];
+    auto default_stream = at::cuda::getDefaultCUDAStream();
+    for(int i = 0; i < pipeline_num; i++) {
+      torch_stream.push_back(at::cuda::getStreamFromPool(true));
+      auto stream = torch_stream[i].stream();
+      cuda_stream[i].setNewStream(stream);
+      for(int j = 0; j < i; j++) {
+        if(cuda_stream[j].stream == stream|| stream == default_stream) {
+          std::printf("stream i:%p is repeat with j: %p, default: %p\n", stream, cuda_stream[j].stream, default_stream);
+          exit(3);
+        }
+      }
+    }
+
 
     int layer = graph->gnnctx->layer_size.size()-1;
     if(graph->config->pushdown)
@@ -346,6 +370,7 @@ public:
     FastSampler* train_sampler = new FastSampler(graph,fully_rep_graph, 
         train_nids,layer,
             graph->gnnctx->fanout,graph->config->batch_size,true);
+    train_sampler->set_ssg_num(pipeline_num, cuda_stream);
 
     FastSampler* eval_sampler = new FastSampler(graph,fully_rep_graph, 
         val_nids,layer,
@@ -356,7 +381,8 @@ public:
             graph->gnnctx->fanout,graph->config->batch_size,true);
 
     exec_time -= get_time();
-    cuda_stream = new Cuda_Stream();
+
+
     for (int i_i = 0; i_i < iterations; i_i++) {
       double per_epoch_time = 0.0;
       per_epoch_time -= get_time();

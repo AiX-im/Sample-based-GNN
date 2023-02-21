@@ -9,11 +9,14 @@
 #define CUDA_ENABLE 1
 #if CUDA_ENABLE
 #include "cuda_runtime.h"
+#include "cusparse.h"
+#include "cublas_v2.h"
 #endif
 
 #ifndef TEST_HPP
 #define TEST_HPP
 #include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include <string.h>
 #include <vector>
@@ -35,15 +38,25 @@ void move_edge_in(VertexId_CUDA *d_pointer, VertexId_CUDA *h_pointer,
                   bool sync = true);
 void move_bytes_in(void *d_pointer, void *h_pointer, long bytes,
                    bool sync = true);
+void move_bytes_in_async(void * d_pointer,void* h_pointer, long bytes, cudaStream_t cs);
 void move_bytes_out(void *h_pointer, void *d_pointer, long bytes,
                    bool sync = true);
+void move_bytes_out_async(void * h_pointer,void* d_pointer, long bytes, cudaStream_t cs);
 void allocate_gpu_buffer(float **input, int size);
 void allocate_gpu_edge(VertexId_CUDA **input, int size);
+
+void allocate_gpu_buffer_async(float **input, int size, cudaStream_t cs);
+void allocate_gpu_edge_async(VertexId_CUDA **input, int size, cudaStream_t cs);
+
 void aggregate_comm_result(float *aggregate_buffer, float *input_buffer,
                            int data_size, int feature_size,
                            int partition_offset, bool sync = true);
 void FreeBuffer(float *buffer);
 void FreeEdge(VertexId_CUDA *buffer);
+
+void FreeBufferAsync(float *buffer, cudaStream_t cs);
+void FreeEdgeAsync(VertexId_CUDA *buffer, cudaStream_t cs);
+
 void zero_buffer(float *buffer, int size);
 void CUDA_DEVICE_SYNCHRONIZE();
 void ResetDevice();
@@ -98,11 +111,23 @@ void release(){
 
 class Cuda_Stream {
 public:
+    // toao debug
+    double cpu_inclusiveTime = 0.0;
+  double inclusiveTime = 0;
+
   Cuda_Stream();
   void destory_Stream();
   cudaStream_t getStream();
+  void setNewStream(cudaStream_t cudaStream);
   void CUDA_DEVICE_SYNCHRONIZE();
   cudaStream_t stream;
+  cusparseHandle_t sparse_handle = NULL;
+  cublasHandle_t blas_handle;
+  void* cuda_buffer = NULL;
+  size_t cuda_buffer_size = 0;
+  unsigned char* cpu_buffer = NULL;
+  size_t cpu_buffer_size = 0;
+
   void move_result_out(float *output, float *input, VertexId_CUDA src,
                        VertexId_CUDA dst, int feature_size, bool sync = true);
   void move_data_in(float *d_pointer, float *h_pointer, VertexId_CUDA start,
@@ -131,6 +156,15 @@ public:
       VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
       VertexId_CUDA feature_size, bool with_weight = false,
       bool tensor_weight = false);
+
+  void Gather_By_Dst_From_Src_Spmm(
+      float *input, float *output, float *weight_forward,       // data
+      VertexId_CUDA *row_indices, VertexId_CUDA *column_offset, VertexId_CUDA column_num, // graph
+      VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
+      VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
+      VertexId_CUDA feature_size, bool with_weight = false,
+      bool tensor_weight = false);
+
   void Push_From_Dst_To_Src(
       float *input, float *output, float *weight_forward,       // data
       VertexId_CUDA *row_indices, VertexId_CUDA *column_offset, // graph
@@ -167,6 +201,13 @@ public:
       VertexId_CUDA dst_end, VertexId_CUDA edges, VertexId_CUDA batch_size,
       VertexId_CUDA feature_size, bool with_weight = false,
       bool tensor_weight = false);
+  void Gather_By_Src_From_Dst_Spmm(
+      float *input, float *output, float *weight_forward,       // data
+      VertexId_CUDA *row_offset, VertexId_CUDA *column_indices, VertexId_CUDA column_num, // graph
+      VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
+      VertexId_CUDA dst_end, VertexId_CUDA edges, VertexId_CUDA batch_size,
+      VertexId_CUDA feature_size, bool with_weight = false,
+      bool tensor_weight = false);
   
   void Scatter_Src_Mirror_to_Msg(float* message,float* src_mirror_feature,//data 
         VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
@@ -195,6 +236,7 @@ public:
         float* msg_cached,
         VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
         VertexId_CUDA batch_size, VertexId_CUDA feature_size);
+
   void sample_processing_get_co_gpu(VertexId_CUDA *dst, VertexId_CUDA *local_column_offset,
                                    VertexId_CUDA *global_column_offset,
                                    VertexId_CUDA dst_size, 
@@ -219,7 +261,7 @@ public:
                                       VertexId_CUDA* src,
                                       VertexId_CUDA* src_count,
                                       VertexId_CUDA layer,
-                                      double &test_time);
+                                      VertexId_CUDA max_sample_num);
 
   void zero_copy_feature_move_gpu(float *dev_feature,
 						float *pinned_host_feature,

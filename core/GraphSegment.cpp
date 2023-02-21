@@ -324,6 +324,8 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       // assert(false);
     } else if (0 == cfg_k.compare("MINI_PULL")) {
       this->mini_pull = std::atoi(cfg_v.c_str());
+    } else if (0 == cfg_k.compare("PIPELINE_NUM")) {
+      this->pipeline_num = std::atoi(cfg_v.c_str());
     }
 
 

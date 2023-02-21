@@ -211,6 +211,54 @@ public:
         }
 
     }
+    void allocate_dev_array_async(cudaStream_t stream){
+        if(column_offset.size()>size_dev_dst_max){
+            if(size_dev_dst_max!=0){
+                FreeEdgeAsync(dev_column_offset, stream);
+                FreeEdgeAsync(dev_destination, stream);
+            }      
+            size_dev_dst_max = column_offset.size() * 1.2;
+            allocate_gpu_edge_async(&dev_column_offset, size_dev_dst_max, stream);
+            allocate_gpu_edge_async(&dev_destination, size_dev_dst_max, stream);
+            size_dev_dst = column_offset.size() - 1;
+        }
+        else{
+            size_dev_dst = column_offset.size() - 1;
+        }
+
+        if(row_indices.size()>size_dev_edge_max){
+            if(size_dev_edge_max != 0){
+                FreeEdgeAsync(dev_row_indices, stream);
+                FreeEdgeAsync(dev_column_indices, stream);
+                FreeBufferAsync(dev_edge_weight_backward, stream);
+                FreeBufferAsync(dev_edge_weight_forward, stream);
+            }      
+            size_dev_edge_max = row_indices.size() * 1.2;
+            allocate_gpu_edge_async(&dev_row_indices, size_dev_edge_max, stream);
+            allocate_gpu_edge_async(&dev_column_indices, size_dev_edge_max, stream);
+            allocate_gpu_buffer_async(&dev_edge_weight_backward, size_dev_edge_max, stream);
+            allocate_gpu_buffer_async(&dev_edge_weight_forward, size_dev_edge_max, stream);
+            size_dev_edge = row_indices.size();
+        }
+        else{
+            size_dev_edge = row_indices.size();
+        }
+
+        if(row_offset.size()>size_dev_src_max){
+            if(size_dev_src_max!=0){
+                FreeEdge(dev_row_offset);
+                FreeEdge(dev_source);
+            }      
+            size_dev_src_max = row_offset.size() * 1.2;
+            allocate_gpu_edge(&dev_row_offset, size_dev_src_max);
+            allocate_gpu_edge(&dev_source, size_dev_src_max);
+            size_dev_src = row_offset.size() - 1;
+        }
+        else{
+            size_dev_src = row_offset.size() - 1;
+        }
+
+    }
     void copy_data_to_device(){
         // printf("copy_size %d %d %d %d %d %d \n",size_dev_co,size_dev_ri,size_dev_ewf,size_dev_ci,size_dev_ro,size_dev_ewb);
         // printf("host size:%d %d %d %d %d %d \n",column_offset.size(),row_indices.size(),edge_weight_forward.size(),column_indices.size(),row_offset.size(),edge_weight_backward.size());
@@ -222,6 +270,25 @@ public:
         move_bytes_in(dev_edge_weight_backward, &(edge_weight_backward[0]) , size_dev_edge * sizeof(ValueType));
         move_bytes_in(dev_source, &(source[0]), size_dev_src * sizeof(VertexId));
         move_bytes_in(dev_destination, &(destination[0]) , size_dev_dst * sizeof(VertexId));
+        // dev_column_offset = (VertexId *)getDevicePointer(column_offset);
+        // dev_row_indices = (VertexId *)getDevicePointer(row_indices);
+        // dev_edge_weight_forward = (ValueType *)getDevicePointer(edge_weight_forward);
+
+        // dev_row_offset = (VertexId *)getDevicePointer(row_offset);         ///
+        // dev_column_indices = (VertexId *)getDevicePointer(column_indices); ///
+        // dev_edge_weight_backward = (ValueType *)getDevicePointer(edge_weight_backward); ///
+    }
+    void copy_data_to_device_async(cudaStream_t stream){
+        // printf("copy_size %d %d %d %d %d %d \n",size_dev_co,size_dev_ri,size_dev_ewf,size_dev_ci,size_dev_ro,size_dev_ewb);
+        // printf("host size:%d %d %d %d %d %d \n",column_offset.size(),row_indices.size(),edge_weight_forward.size(),column_indices.size(),row_offset.size(),edge_weight_backward.size());
+        move_bytes_in_async(dev_column_offset, &(column_offset[0]), (size_dev_dst + 1) * sizeof(VertexId), stream);
+        move_bytes_in_async(dev_row_indices, &(row_indices[0]), size_dev_edge * sizeof(VertexId), stream);
+        move_bytes_in_async(dev_edge_weight_forward, &(edge_weight_forward[0]), size_dev_edge * sizeof(ValueType), stream);
+        move_bytes_in_async(dev_column_indices, &(column_indices[0]), size_dev_edge * sizeof(VertexId), stream);
+        move_bytes_in_async(dev_row_offset, &(row_offset[0]), (size_dev_src + 1) * sizeof(VertexId), stream);
+        move_bytes_in_async(dev_edge_weight_backward, &(edge_weight_backward[0]) , size_dev_edge * sizeof(ValueType), stream);
+        move_bytes_in_async(dev_source, &(source[0]), size_dev_src * sizeof(VertexId), stream);
+        move_bytes_in_async(dev_destination, &(destination[0]) , size_dev_dst * sizeof(VertexId), stream);
         // dev_column_offset = (VertexId *)getDevicePointer(column_offset);
         // dev_row_indices = (VertexId *)getDevicePointer(row_indices);
         // dev_edge_weight_forward = (ValueType *)getDevicePointer(edge_weight_forward);

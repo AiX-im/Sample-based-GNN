@@ -172,6 +172,7 @@ public:
   std::string edge_file;
   std::string label_file;
   std::string mask_file;
+  int pipeline_num;
   float del_frac = 0;
   bool with_cuda;
   bool up_degree;

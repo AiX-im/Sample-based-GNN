@@ -4,10 +4,11 @@ add_definitions(-w)
 set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 # please change this to the path where you put libtorch
 # TODO: torch path should not hard coded in cmake file
-list(APPEND CMAKE_PREFIX_PATH "/home/aix/libtorch/")
+list(APPEND CMAKE_PREFIX_PATH "/home/toao/lib/libtorch/")
 
 project(GNNmini)
 set(ENV{LANG} "C")
+set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda)
 option (CUDA_ENABLE "DEFAULT ENABLE CUDA" ON)
 message(STATUS "NeutronStar buid with CUDA " ${CUDA_ENABLE})
 
@@ -101,7 +102,7 @@ ${MPI_INCLUDE_PATH}
 # setting debug flags
 set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++14 -g -fopenmp -march=native")
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fopenmp -march=native -O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fopenmp -march=native -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fopenmp -O0 -march=native -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
@@ -118,6 +119,7 @@ set(NEUTRONSTAR_TEST_SRC_FILES
         "comm/network.cpp"
 )
 
+message(STATUS "CUDA_LIBRARIES = ${CUDA_LIBRARIES}.")
 
 add_executable(nts ${NEUTRONSTAR_SRC_FILES})
 if (CUDA_ENABLE)

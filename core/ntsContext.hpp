@@ -399,6 +399,7 @@ template <typename NOPT>
       }// where to write i grad
       //LOG_INFO("input id %ld %d %d",preop_id,top_idx(),output_grad[top_idx()].dim());
       output_grad[preop_id]=ntsOp.top().get_graphop()->backward(output_grad[top_idx()]);
+
       // printf("output_grad size:%d\n",output_grad[preop_id].size(0));
 //stable      
 //      output_grad[top_idx()-1]=ntsOp.top().op->backward(output_grad[top_idx()]);
@@ -425,8 +426,10 @@ template <typename NOPT>
       }//determine o grad
       if(output_grad[top_idx()].dim()>1){
         //printf("2\n");
+        // std::printf("top_idx(): %d\n",top_idx());
+        // std::printf("output_grad[top_idx()].size(1):%d, output.top().size(1):%d\n", output_grad[top_idx()].size(1), output.top().size(1));
         assert(output_grad[top_idx()].size(1)==output.top().size(1));
-        // printf("output_grad[top_idx()].size(0):%d output.top().size(0):%d\n",output_grad[top_idx()].size(0),output.top().size(0));
+        //  printf("output_grad[top_idx()].size(0):%d output.top().size(0):%d\n",output_grad[top_idx()].size(0),output.top().size(0));
         assert(output_grad[top_idx()].size(0)==output.top().size(0)); 
         output.top().backward(output_grad[top_idx()], retain_graph);
       }
