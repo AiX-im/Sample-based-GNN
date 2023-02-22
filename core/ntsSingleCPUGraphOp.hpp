@@ -91,7 +91,7 @@ public:
       },
       subgraphs, feature_size, active_);
       return f_input_grad;
-  }    
+  }
 
 };
 

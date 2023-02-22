@@ -248,7 +248,8 @@ public:
                     int layer,
                     VertexId src_index_size,
                     VertexId* global_column_offset,
-                    VertexId* tmp_data_buffer, Cuda_Stream* cs){  
+                    VertexId* tmp_data_buffer, Cuda_Stream* cs,
+                    VertexId& edge_size){
         cs->sample_processing_get_co_gpu(sampled_sgs[curr_layer]->dev_destination,
                                          sampled_sgs[curr_layer]->dev_column_offset,
                                          global_column_offset,
@@ -257,7 +258,8 @@ public:
                                          src_index_size,
                                          queue_count,
                                          src_index[layer],
-                                         fanout[layer]);
+                                         fanout[layer],
+                                         edge_size);
     }
 
     void gpu_sampling(int layer,
@@ -269,7 +271,7 @@ public:
        
         //move_bytes_out(edge_size, global_data_buffer + global_buffer_used - 1, sizeof(VertexId)); //edge_size
         //sampled_sgs[layer]->e_size = edge_size[0];
-        sampled_sgs[layer]->e_size = fanout[layer] * sampled_sgs[layer]->v_size;//
+//        sampled_sgs[layer]->e_size = fanout[layer] * sampled_sgs[layer]->v_size;//
         edge_size[1] = 0;
         
         // if(sampled_sgs[layer]->e_size > sampled_sgs[layer]->size_dev_edge_max){

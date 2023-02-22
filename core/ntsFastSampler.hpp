@@ -354,7 +354,8 @@ public:
                 whole_graph->global_vertices,
                 column_offset,
                 tmp_data_buffer,
-            ssg->cs);
+                ssg->cs,
+                ssg->sampled_sgs[i]->e_size);
             init_co_time += MPI_Wtime();
             }
             tmp_pre_pro_time+=MPI_Wtime();

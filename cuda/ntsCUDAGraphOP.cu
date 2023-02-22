@@ -42,6 +42,13 @@
     }                                                                          \
 }
 
+template<typename T>
+T get_cuda_array_num(T* arr, int index) {
+    T value;
+    cudaMemcpy(&value, arr+index, sizeof(T), cudaMemcpyDeviceToHost);
+    return value;
+}
+
 void* getDevicePointer(void* host_data_to_device){
 #if CUDA_ENABLE
     void* dev_host_data_to_device;
@@ -255,6 +262,7 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
 	VertexId_CUDA edges,VertexId_CUDA batch_size,
         VertexId_CUDA feature_size,bool with_weight,bool tensor_weight){
 #if CUDA_ENABLE
+//    std::printf("real edges: %d, record edges: %d\n", get_cuda_array_num(column_offset, batch_size), edges);
 //         if(with_weight){
 //             if(tensor_weight){
 // //		aggregate_kernel_from_src_tensor_weight<float,VertexId_CUDA><<<BLOCK_SIZE,THREAD_SIZE,0,stream>>>(
@@ -310,7 +318,8 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
        // TODO: 查看column_num在原实现中的体现
        if(!with_weight){
               // CHECK_CUDA_RESULT(cudaMallocAsync(&weight_forward, edges*sizeof(float), stream));
-              CHECK_CUDA_RESULT(cudaMemsetAsync(&weight_forward, 1.0f, column_num, stream));
+           // 0x0000803F 即1.0
+           CHECK_CUDA_RESULT(cudaMemsetAsync(&weight_forward, 0x0000803F, sizeof(float) * edges, stream));
        }
 //     cusparseHandle_t     sparse_handle = NULL;
 //     CHECK_CUSPARSE( cusparseCreate(&sparse_handle) )
@@ -347,7 +356,7 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-              CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize
+              CUSPARSE_SPMM_CSR_ALG2, &bufferSize
        ));
        total_size += bufferSize;
        if(buffer_cur + bufferSize < cuda_buffer_size) {
@@ -363,7 +372,7 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-              CUSPARSE_SPMM_ALG_DEFAULT, dBuffer
+              CUSPARSE_SPMM_CSR_ALG2, dBuffer
        ));
        // 矩阵行列转换
        // CHECK_CUBLAS(cublasSgeam( blas_handle, CUBLAS_OP_T, CUBLAS_OP_N, feature_size, batch_size, &alpha, output_tran, batch_size, &beta, output_tran, feature_size, output, feature_size));
@@ -441,6 +450,153 @@ void Cuda_Stream::Push_From_Dst_To_Src(float* input,float* output,float* weight_
         
 }
 
+void Cuda_Stream::Push_From_Dst_To_Src_Spmm(float* input,float* output,float* weight_forward,//data
+                                       VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,int column_num,//graph
+                                       VertexId_CUDA src_start, VertexId_CUDA src_end,
+                                       VertexId_CUDA dst_start, VertexId_CUDA dst_end,
+                                       VertexId_CUDA edges,VertexId_CUDA batch_size,
+                                       VertexId_CUDA feature_size,bool with_weight,bool tensor_weight){
+#if CUDA_ENABLE
+    auto total_size = 0;
+//    edges = get_cuda_array_num(column_offset, batch_size);
+    if(!with_weight) {
+        total_size += edges*sizeof(float);
+    }
+    if(cuda_buffer_size < total_size){
+        auto new_size = total_size * 2;
+        if(cuda_buffer_size != 0) {
+            cudaFree(cuda_buffer);
+        }
+        cudaMalloc((void**)&cuda_buffer, new_size);
+        cuda_buffer_size = new_size;
+    }
+
+    // 为需要的空间分配buffer
+    size_t buffer_cur = 0;
+    if(!with_weight){
+        weight_forward = (float*)cuda_buffer;
+        buffer_cur += edges*sizeof(float);
+    }
+    // float* input_tran = (float*)(cuda_buffer + buffer_cur);
+    // buffer_cur += feature_size * column_num * sizeof(float);
+    // float* output_tran = (float*)(cuda_buffer + buffer_cur);
+    // buffer_cur += batch_size*feature_size*sizeof(float);
+
+    assert(src_start == 0);
+    assert(sparse_handle != NULL);
+    cusparseSpMatDescr_t matA;
+    cusparseDnMatDescr_t matB, matC;
+    void* dBuffer = NULL;
+    size_t bufferSize = 0;
+    float alpha = 1.0f;
+    float beta  = 0.0f;
+    // std::printf("edges: %d\n", edges);
+    // std::printf("row: %d, column: %d\n", batch_size, column_num);
+    if(!with_weight){
+        // CHECK_CUDA_RESULT(cudaMallocAsync(&weight_forward, edges*sizeof(float), stream));
+        // 0x0000803F 即1.0
+        CHECK_CUDA_RESULT(cudaMemsetAsync(&weight_forward, 0x0000803F, sizeof(float) * edges, stream));
+    }
+//     cusparseHandle_t     sparse_handle = NULL;
+//     CHECK_CUSPARSE( cusparseCreate(&sparse_handle) )
+//     cusparseSetStream(sparse_handle, 0);
+
+    // cudaStreamSynchronize(stream);
+    // std::printf("column num: %d\n", column_num);
+    // print_cuda_sum(row_indices, edges, "row_indices");
+    // print_cuda_sum(column_offset, batch_size+1, "column offset");
+    // print_cuda_sum(column_offset, batch_size+1, "column offset", 0);
+    // print_cuda_sum(column_offset, batch_size+1, "column offset", batch_size);
+    // print_cuda_sum(weight_forward, edges, "weight_forward");
+    // print_cuda_sum(input, column_num*feature_size, "input");
+    // print_cuda_sum(output, batch_size * feature_size, "output");
+    // std::printf("CUDA v%d.%d\n", CUDART_VERSION/1000, CUDART_VERSION/10%100);
+//    std::printf("column num: %d, batch size: %d, feature size: %d, edges: %d\n", column_num, batch_size, feature_size, edges);
+//    print_cuda_sum(column_offset, batch_size + 1, "column_offset");
+//    print_cuda_sum(row_indices,edges, "row_indices");
+    CHECK_CUSPARSE(cusparseCreateCsr(&matA, batch_size, column_num, edges, column_offset, row_indices, weight_forward,
+                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+    // float* input_tran;
+    //  float *B = NULL;
+    //  CHECK_CUDA_RESULT(cudaMalloc((void**)&input_tran, feature_size * column_num * sizeof(float)));
+    // CHECK_CUBLAS(cublasSgeam( blas_handle, CUBLAS_OP_T, CUBLAS_OP_N, column_num, feature_size, &alpha, input, feature_size, &beta, input, column_num, input_tran, column_num));
+    // float* output_tran;
+    // cudaMallocAsync((void**)&output_tran, batch_size*feature_size*sizeof(float), stream);
+    // cudaMalloc((void**)&input_tran, column_num*feature_size*sizeof(float));
+    // cudaMalloc((void**)&output_tran, batch_size*feature_size*sizeof(float));
+
+    // print_cuda_sum(input_tran, column_num*feature_size, "input_tran");
+
+    CHECK_CUSPARSE(cusparseCreateDnMat(&matB, batch_size, feature_size, feature_size, input, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+    // CHECK_CUSPARSE(cusparseCreateDnMat(&matB, column_num, feature_size, feature_size, input, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+    CHECK_CUSPARSE(cusparseCreateDnMat(&matC, column_num, feature_size, feature_size, output, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+    CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+            sparse_handle,
+            CUSPARSE_OPERATION_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
+            &alpha, matA, matB, &beta, matC, CUDA_R_32F,
+            CUSPARSE_SPMM_CSR_ALG2, &bufferSize
+    ));
+    total_size += bufferSize;
+    if(buffer_cur + bufferSize < cuda_buffer_size) {
+        dBuffer = cuda_buffer + buffer_cur;
+        buffer_cur += bufferSize;
+    } else {
+        CHECK_CUDA_RESULT(cudaMallocAsync(&dBuffer, bufferSize, stream));
+//        CHECK_CUDA_RESULT(cudaMalloc(&dBuffer, bufferSize));
+    }
+
+
+    CHECK_CUSPARSE(cusparseSpMM(
+            sparse_handle,
+            CUSPARSE_OPERATION_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
+            &alpha, matA, matB, &beta, matC, CUDA_R_32F,
+            CUSPARSE_SPMM_CSR_ALG2, dBuffer
+    ));
+    // 矩阵行列转换
+    // CHECK_CUBLAS(cublasSgeam( blas_handle, CUBLAS_OP_T, CUBLAS_OP_N, feature_size, batch_size, &alpha, output_tran, batch_size, &beta, output_tran, feature_size, output, feature_size));
+
+
+    CHECK_CUSPARSE(cusparseDestroySpMat(matA));
+    CHECK_CUSPARSE(cusparseDestroyDnMat(matB));
+    CHECK_CUSPARSE(cusparseDestroyDnMat(matC));
+    //     CHECK_CUSPARSE( cusparseDestroy(sparse_handle) )
+
+    // cudaFreeAsync(dBuffer, stream);
+    // cudaFreeAsync(input_tran, stream);
+    // cudaFreeAsync(output_tran, stream);
+    // if(!with_weight){
+    //        cudaFreeAsync(weight_forward, stream);
+    // }
+
+    if(cuda_buffer_size < total_size){
+        auto new_size = total_size * 2;
+        cudaFreeAsync(dBuffer, stream);
+        if(cuda_buffer_size != 0) {
+            cudaFree(cuda_buffer);
+        }
+        cudaMalloc((void**)&cuda_buffer, new_size);
+        cuda_buffer_size = new_size;
+    }
+
+    // std::printf("edges: %d\n", edges);
+    // print_cuda_sum(weight_forward, edges, "After Matrix weight_forward");
+
+    // cudaStreamSynchronize(stream);
+    // print_cuda_sum(weight_forward, edges, "weight_forward");
+    // print_cuda_sum(input_tran, column_num* feature_size, "input_tran");
+    // print_cuda_sum(output_tran, batch_size * feature_size, "result");
+
+//     print_cuda_sum(output, column_num * feature_size, "result");
+
+//     cudaStreamSynchronize(stream);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Gather_By_Dst_From_Src\n");
+       exit(0);
+#endif
+
+}
 void Cuda_Stream::Gather_By_Dst_From_Src_with_cache(float* input,float* output,float* weight_forward,//data 
        VertexId_CUDA* cacheflag, VertexId_CUDA* destination,
         VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,//graph
@@ -615,7 +771,8 @@ void Cuda_Stream::Gather_By_Src_From_Dst_Spmm(float* input,float* output,float* 
        // TODO: 查看column_num在原实现中的体现
        if(!with_weight){
               // CHECK_CUDA_RESULT(cudaMallocAsync(&weight_forward, edges*sizeof(float), stream));
-              CHECK_CUDA_RESULT(cudaMemsetAsync(&weight_forward, 1.0f, column_num, stream));
+           // 0x0000803F 即1.0
+           CHECK_CUDA_RESULT(cudaMemsetAsync(&weight_forward, 0x0000803F, sizeof(float) * edges, stream));
        }
 //     cusparseHandle_t     sparse_handle = NULL;
 //     CHECK_CUSPARSE( cusparseCreate(&sparse_handle) )
@@ -652,7 +809,7 @@ void Cuda_Stream::Gather_By_Src_From_Dst_Spmm(float* input,float* output,float* 
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-              CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize
+              CUSPARSE_SPMM_CSR_ALG2, &bufferSize
        ));
        total_size += bufferSize;
        if(buffer_cur + bufferSize < cuda_buffer_size) {
@@ -668,7 +825,7 @@ void Cuda_Stream::Gather_By_Src_From_Dst_Spmm(float* input,float* output,float* 
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-              CUSPARSE_SPMM_ALG_DEFAULT, dBuffer
+              CUSPARSE_SPMM_CSR_ALG2, dBuffer
        ));
        // 矩阵行列转换
        // CHECK_CUBLAS(cublasSgeam( blas_handle, CUBLAS_OP_T, CUBLAS_OP_N, feature_size, batch_size, &alpha, output_tran, batch_size, &beta, output_tran, feature_size, output, feature_size));
@@ -797,13 +954,6 @@ void Cuda_Stream::Gather_Msg_to_Dst(float* dst_feature,float* message,//data
 #endif      
 }
 
-template<typename T>
-T get_cuda_array_num(T* arr, int index) {
-    T value;
-    cudaMemcpy(&value, arr+index, sizeof(T), cudaMemcpyDeviceToHost);
-    return value;
-}
-
 void Cuda_Stream::sample_processing_get_co_gpu(VertexId_CUDA *dst, 
                                    VertexId_CUDA *local_column_offset,
                                    VertexId_CUDA *global_column_offset,
@@ -812,7 +962,8 @@ void Cuda_Stream::sample_processing_get_co_gpu(VertexId_CUDA *dst,
                                    VertexId_CUDA src_index_size,
 					VertexId_CUDA* src_count,
 					VertexId_CUDA* src_index,
-                                   VertexId_CUDA fanout){
+                                   VertexId_CUDA fanout,
+                                   VertexId_CUDA & edge_size){
 #if CUDA_ENABLE
        // 确定每个节点需要采的数量，方便为数组分配空间
     sample_processing_get_co_gpu_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
@@ -865,6 +1016,7 @@ void Cuda_Stream::sample_processing_get_co_gpu(VertexId_CUDA *dst,
     for(int i = 1; i < dst_size + 1; i++) {
         cpu_column_offset[i] = cpu_data_buffer[i] + cpu_column_offset[i-1];
     }
+    edge_size = cpu_column_offset[dst_size];
     cudaMemcpyAsync(local_column_offset, cpu_column_offset, arr_size, cudaMemcpyHostToDevice, stream);
 //    delete []cpu_data_buffer;
 //    delete []cpu_column_offset;

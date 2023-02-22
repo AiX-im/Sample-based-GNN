@@ -172,6 +172,13 @@ public:
       VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
       VertexId_CUDA feature_size, bool with_weight = false,
       bool tensor_weight = false);
+    void Push_From_Dst_To_Src_Spmm(
+            float *input, float *output, float *weight_forward,       // data
+            VertexId_CUDA *row_indices, VertexId_CUDA *column_offset, int column_num, // graph
+            VertexId_CUDA src_start, VertexId_CUDA src_end, VertexId_CUDA dst_start,
+            VertexId_CUDA dst_end,VertexId_CUDA edges, VertexId_CUDA batch_size,
+            VertexId_CUDA feature_size, bool with_weight = false,
+            bool tensor_weight = false);
   void Gather_By_Dst_From_Src_with_cache(
       float *input, float *output, float *weight_forward,       // data
       VertexId_CUDA *cacheflag, VertexId_CUDA *destination,
@@ -244,7 +251,8 @@ public:
                                    VertexId_CUDA src_index_size,
 					               VertexId_CUDA* src_count,
 					               VertexId_CUDA* src_index,
-                                   VertexId_CUDA fanout);
+                                   VertexId_CUDA fanout,
+                                    VertexId_CUDA& edge_size);
   void sample_processing_update_ri_gpu(VertexId_CUDA *r_i,
 								 	VertexId_CUDA *src_index,
                                    	VertexId_CUDA edge_size,

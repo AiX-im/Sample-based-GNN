@@ -348,6 +348,7 @@ public:
                                                    Y_i,
                                                    tmp_X0[thread_id]);
                   } else {
+
                     NtsVar Y_i=ctx->runGraphOp<nts::op::SingleGPUSampleGraphOp>(sg[thread_id],graph,hop,X[l],&cuda_stream[thread_id]);
                     X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
                                                         // std::printf("vertexForward, size:(%d, %d)\n", v_i.size(0), v_i.size(1));

@@ -295,10 +295,10 @@ public:
               sample_time += get_time();
               sample_lock.unlock();
 
-              wait_times[thread_id] -= get_time();
-              std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
-              transfer_lock.lock();
-              wait_times[thread_id] += get_time();
+//              wait_times[thread_id] -= get_time();
+//              std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
+//              transfer_lock.lock();
+//              wait_times[thread_id] += get_time();
               transfer_feature_time -= get_time();
               // sampler->load_label_gpu(target_lab,gnndatum->dev_local_label);
               // sampler->load_feature_gpu(X[0],gnndatum->dev_local_feature);
@@ -306,7 +306,7 @@ public:
               sampler->load_feature_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_X0[thread_id],gnndatum->dev_local_feature);
               cudaStreamSynchronize(cuda_stream[thread_id].stream);
               transfer_feature_time += get_time();
-              transfer_lock.unlock();
+//              transfer_lock.unlock();
 
               wait_times[thread_id] -= get_time();
               std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);

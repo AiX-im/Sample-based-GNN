@@ -207,11 +207,16 @@ public:
           row_indices, column_offset, 0, 0, 0, 0,
             edge_size, batch_size,feature_size, true, false);
     }else{
+//        cuda_stream->Gather_By_Dst_From_Src(
+//                f_input_buffer, f_output_buffer, weight_forward, // data
+//                row_indices, column_offset,0, 0, 0, 0,
+//                edge_size, batch_size,feature_size, true, false);
       cuda_stream->Gather_By_Dst_From_Src_Spmm(
         f_input_buffer, f_output_buffer, weight_forward, // data
           row_indices, column_offset, column_num,0, 0, 0, 0,
             edge_size, batch_size,feature_size, true, false);
     }
+
      
 //    cuda_stream->CUDA_DEVICE_SYNCHRONIZE();
       return f_output;
@@ -235,16 +240,39 @@ public:
     ValueType *weight_backward = subgraphs->sampled_sgs[layer]->dev_e_w();
     VertexId edge_size=subgraphs->sampled_sgs[layer]->e_size;
     VertexId batch_size=subgraphs->sampled_sgs[layer]->v_size;
+      assert(f_output_grad.size(0) == batch_size);
+      int column_num = f_input_grad.size(0);
+//      std::printf("grad size: (%d, %d)\n", f_output_grad.size(0), f_output_grad.size(1));
+//      std::printf("batch size: %d, column num: %d\n", batch_size, column_num);
+//      std::printf("return grad size: (%d, %d)\n", f_input_grad.size(0), f_input_grad.size(1));
+//      NtsVar f_input_grad_tmp = graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->src_size,feature_size},torch::DeviceType::CUDA);
+//      ValueType *f_input_grad_buffer_tmp =
+//              graph_->Nts->getWritableBuffer(f_input_grad_tmp, torch::DeviceType::CUDA);
     if (feature_size <= 512 && false) {
        cuda_stream->Gather_By_Dst_From_Src_Optim(f_output_grad_buffer, f_input_grad_buffer, weight_backward,
                                                   row_indices, column_offset, 0, 0, 0, 0, edge_size, batch_size,
                                                   feature_size, true, false);
     } else {
-      cuda_stream->Push_From_Dst_To_Src(f_output_grad_buffer, f_input_grad_buffer, weight_backward, row_indices,
-                                            column_offset,  // graph
+//        cuda_stream->Push_From_Dst_To_Src(f_output_grad_buffer, f_input_grad_buffer, weight_backward, row_indices,
+//                                                column_offset, // graph
+//                                                0, 0, 0, 0, edge_size, batch_size, feature_size, true, false);
+      cuda_stream->Push_From_Dst_To_Src_Spmm(f_output_grad_buffer, f_input_grad_buffer, weight_backward, row_indices,
+                                            column_offset, column_num, // graph
                                             0, 0, 0, 0, edge_size, batch_size, feature_size, true, false);
     }
 //    cuda_stream->CUDA_DEVICE_SYNCHRONIZE();
+//    std::printf("real: %.4f, compute: %.4f\n", f_input_grad.abs().sum().item<float>(), f_input_grad_tmp.abs().sum().item<float>());
+//    auto f_input_cpu = f_input_grad.cpu();
+//    auto f_input_cpu_tmp = f_input_grad_tmp.cpu();
+//    auto* f_input_ptr = f_input_cpu.accessor<float, 2>().data();
+//    auto* f_input_tmp_ptr = f_input_cpu_tmp.accessor<float, 2>().data();
+//    long diff_cout = 0;
+//    for(int i = 0; i < f_input_cpu.size(0) * f_input_cpu.size(1); i++) {
+//        if(std::abs(f_input_ptr[i] - f_input_tmp_ptr[i]) > 1e-2) {
+//            diff_cout++;
+//        }
+//    }
+//    std::printf("两个结果不同的个数: %ld\n", diff_cout);
     return f_input_grad;
   }    
 
