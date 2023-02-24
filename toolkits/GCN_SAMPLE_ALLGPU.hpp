@@ -473,14 +473,14 @@ public:
     for(int i = 0; i < pipeline_num; i++) {
       wait_time += wait_times[i];
     }
-    printf("#run_time=%lf(s)\n", exec_time * 10);
-    printf("all:%lf(s) prepro:%lf(s) pro:%lf(s) post:%lf(s) copy:%lf(s)\n",train_sampler->all_time * 10,train_sampler->pre_pro_time * 10, train_sampler->pro_time * 10,train_sampler->post_pro_time * 10,train_sampler->copy_gpu_time * 10);
-    printf("test_time:%lf(s)\n",train_sampler->test_time * 10);
+    printf("#run_time=%lf(s)\n", exec_time);
+    printf("all:%lf(s) prepro:%lf(s) pro:%lf(s) post:%lf(s) copy:%lf(s)\n",train_sampler->all_time,train_sampler->pre_pro_time, train_sampler->pro_time,train_sampler->post_pro_time,train_sampler->copy_gpu_time );
+    printf("test_time:%lf(s)\n",train_sampler->test_time);
     printf("#wait time: %lf(s)\n", wait_time);
-    printf("#sample_time=%lf(s)\n", (sample_time)  * 10);
-    printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time) * 10);
-    printf("#training_time=%lf(s)\n", training_time * 10);
-    printf("#gather_feature_time=%lf(s)\n", gather_feature_time * 10);
+    printf("#sample_time=%lf(s)\n", (sample_time));
+    printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time));
+    printf("#training_time=%lf(s)\n", training_time);
+    printf("#gather_feature_time=%lf(s)\n", gather_feature_time);
       std::printf("cpu inclusiveTime: %lf\n", train_sampler->cs->cpu_inclusiveTime);
     std::printf("inclusiveTime: %lf\n", train_sampler->cs->inclusiveTime);
     std::printf("init layer time: %lf\n", train_sampler->init_layer_time);

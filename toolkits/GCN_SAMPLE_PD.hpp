@@ -404,12 +404,12 @@ public:
     }
 
     exec_time += get_time();
-    printf("#run_time=%lf(s)\n", exec_time * 10);
-    printf("#sample_time=%lf(s)\n", (sample_time - train_sampler->copy_gpu_time)  * 10);
-    printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time + train_sampler->copy_gpu_time) * 10);
-    printf("training_cpu_time:%lf(s)\n",training_cpu_time * 10);
-    printf("#training_time=%lf(s)\n", training_time * 10);
-    printf("#gather_feature_time=%lf(s)\n", gather_feature_time * 10);
+    printf("#run_time=%lf(s)\n", exec_time);
+    printf("#sample_time=%lf(s)\n", (sample_time - train_sampler->copy_gpu_time));
+    printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time + train_sampler->copy_gpu_time));
+    printf("training_cpu_time:%lf(s)\n",training_cpu_time);
+    printf("#training_time=%lf(s)\n", training_time);
+    printf("#gather_feature_time=%lf(s)\n", gather_feature_time);
 
     delete active;
   }

@@ -345,8 +345,23 @@ public:
             init_layer_time -= MPI_Wtime();
             if(i == 0){
                 ssg->gpu_init_first_layer(&(sample_nids[work_offset]),actual_batch_size);
+//                std::printf("理论第0层采样节点:\n");
+//                for(int j = 0; j < actual_batch_size; j++) {
+//                    std::printf("%u ", sample_nids[work_offset + j]);
+//                }
+//                std::printf("\n");
             }else{
                 ssg->gpu_init_proceeding_layer(i);
+//                auto data_num = ssg->sampled_sgs[i]->v_size;
+//                VertexId * data = new VertexId[data_num];
+//                cudaMemcpy(data, ssg->sampled_sgs[i]->dev_destination, sizeof(VertexId) * data_num, cudaMemcpyDeviceToHost);
+//                std::printf("理论第%d层采样节点:\n", i);
+//                for(int j = 0; j < data_num; j++){
+//                    std::printf("%u ", data[j]);
+//                }
+//                std::printf("\n");
+//                delete[] data;
+
             }
             init_layer_time += MPI_Wtime();
             init_co_time -= MPI_Wtime();
@@ -536,8 +551,10 @@ public:
             ssg->sampled_sgs[i]->csc_to_csr();
             tmp_post_pro_time = 0.0;
             tmp_post_pro_time -= MPI_Wtime();
-            if(graph->config->up_degree)
+            if(graph->config->up_degree){
                 ssg->update_degrees(graph,i);
+
+            }
             ssg->sampled_sgs[i]->WeightCompute([&](VertexId src, VertexId dst) {
                       return nts::op::nts_norm_degree(graph,src,dst);});
             tmp_post_pro_time += MPI_Wtime();

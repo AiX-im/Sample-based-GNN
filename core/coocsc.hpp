@@ -17,6 +17,7 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <limits>
 #ifndef COOCSC_HPP
 #define COOCSC_HPP
 
@@ -438,6 +439,19 @@ VertexId e_size; // edge size
 VertexId src_size;//distinct src size
 };
 
-
+template<typename T>
+void print_cpu_array_sum(T* data, size_t len, char* msg, int pIndex = -1) {
+    double sum;
+    T max = std::numeric_limits<T>::min();
+    for(int i = 0; i < len; i++) {
+        sum += data[i];
+        max = std::max(max, data[i]);
+    }
+    if(pIndex == -1) {
+        pIndex = len - 1;
+    }
+    std::cout << msg << "第" << pIndex << "个元素: " << data[pIndex] << ", 最大值为："
+              << max << ", 总和: " << sum << ", 均值: " << sum / len << std::endl;
+}
 
 #endif

@@ -206,6 +206,9 @@ public:
         assert(global_buffer_used < global_buffer_capacity);
         sampled_sgs[curr_layer]->v_size = curr_dst_size;
         sampled_sgs[curr_layer]->dev_destination = global_data_buffer + global_buffer_used;
+
+        VertexId* tmp_ptr = global_data_buffer + curr_dst_size;
+//        std::printf("curr dis size: %d, need: %d, global data buffer before: %p, after: %p\n", curr_dst_size, sizeof(VertexId) * curr_dst_size, global_data_buffer, tmp_ptr);
         global_buffer_used += curr_dst_size;
         sampled_sgs[curr_layer]->dev_column_offset = global_data_buffer + global_buffer_used;
         //sampled_sgs[curr_layer]->size_dev_co = curr_dst_size + 1;

@@ -190,8 +190,8 @@ __global__ void up_date_degree(VertexId_CUDA *out_degree,
 	size_t warp_id=threadId/WARPSIZE;
 	
 	for(long i = threadId;i < (long)vertices; i += blockDim.x*gridDim.x){
-        long begin_edge = column_offset[i],
-             end_edge = column_offset[i + 1];
+        long begin_edge = column_offset[i];
+        long end_edge = column_offset[i + 1];
 		VertexId_CUDA dst = destination[i];
         in_degree[dst] = end_edge - begin_edge;
 
@@ -211,15 +211,15 @@ __global__ void get_weight(float *edge_weight,
                            VertexId_CUDA *column_offset,
 				   		   VertexId_CUDA *row_indices){
 	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
-	const int WARPSIZE = 32;
-	size_t laneId = threadId%WARPSIZE;
-	size_t warp_id = threadId/WARPSIZE;
+	size_t laneId = threadId%WARP_SIZE;
+	size_t warpId = threadId/WARP_SIZE;
+    size_t warp_num = gridDim.x * blockDim.x / WARP_SIZE;
 
-	if(warp_id < vertices) {
+    for(size_t warp_id = warpId; warp_id < vertices; warp_id += warp_num){
         const uint64_t start = column_offset[warp_id];
         const uint64_t end = column_offset[warp_id+1];
 
-        for(uint64_t i = start + laneId; i < end; i += 32) {
+        for(uint64_t i = start + laneId; i < end; i += WARP_SIZE) {
                 long src = row_indices[i];
 				edge_weight[i] = 1 / (sqrtf(out_degree[source[src]]) * sqrtf(in_degree[destination[warp_id]]));
         }
@@ -335,7 +335,7 @@ __global__ void sample_processing_traverse_gpu_kernel_stage2(VertexId_CUDA* samp
                                     VertexId_CUDA input_node_count,
                                     VertexId_CUDA * global_column_offset,
                                     VertexId_CUDA* global_row_indices,
-                                    VertexId_CUDA* src_index,
+                                    VertexId_CUDA* src_index,   // 下一层需要采样的节点，即这一层采到的顶点
                                     VertexId_CUDA max_sample_count,
                                     VertexId_CUDA layer,
                                     unsigned long long random_seed) {
@@ -492,6 +492,34 @@ __global__ void sample_processing_traverse_gpu_kernel_stage2(VertexId_CUDA* samp
 }
 
 
+__global__ void check_sample(VertexId_CUDA* local_column_offset, VertexId_CUDA* local_row_indices,
+                             VertexId_CUDA* global_column_offset, VertexId_CUDA* global_row_indices,
+                             VertexId_CUDA vtx_num, VertexId_CUDA* destination, VertexId_CUDA* count) {
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    for(int i = tid; i < vtx_num ; i+=blockDim.x * blockIdx.x) {
+        auto start = local_column_offset[i];
+        auto end = local_column_offset[i+1];
+        auto global_id = destination[i];
+        auto global_start = global_column_offset[global_id];
+        auto global_end = global_column_offset[global_id + 1];
+        std::printf("global start: %u, global end: %u\n", global_start, global_end);
+        for(auto j = start; j < end; j++) {
+            auto neighbor = local_row_indices[j];
+            auto find = false;
+            for(auto k = global_start; k < global_end; k++) {
+                if(global_row_indices[k] == neighbor) {
+                    find = true;
+                    break;
+                }
+            }
+            if(!find){
+                atomicAdd(count, 1);
+//                std::printf("有邻居没有找到，采样有问题\n");
+//                return;
+            }
+        }
+    }
+}
 
 __global__ void sample_processing_traverse_gpu_kernel_stage3(
 									VertexId_CUDA *src_index,

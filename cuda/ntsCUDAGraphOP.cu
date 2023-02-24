@@ -237,20 +237,21 @@ void Cuda_Stream::Gather_By_Dst_From_Src(float* input,float* output,float* weigh
 }
 
 template<typename T>
-inline void print_cuda_sum(T* data, size_t size, char* msg, int pIndex = -1) {
-       T* tmp_result = new T[size];
+inline void print_cuda_sum(T* data, size_t len, char* msg, int pIndex = -1) {
+       T* tmp_result = new T[len];
 
-       cudaMemcpy(tmp_result, data, size * sizeof(T), cudaMemcpyDeviceToHost);
+       cudaMemcpy(tmp_result, data, len * sizeof(T), cudaMemcpyDeviceToHost);
        double sum = 0.0;
        T max = std::numeric_limits<T>::min();
-       for(long i = 0; i < size; i++) {
+       for(long i = 0; i < len; i++) {
               sum += tmp_result[i];
               max = std::max(max, tmp_result[i]);
        }
        if(pIndex == -1) {
-              pIndex = size -1;
+              pIndex = len - 1;
        }
-       std::cout << msg << "第"<<pIndex <<"个元素: " << tmp_result[pIndex] <<", 最大值为："<< max << ", 总和: " << sum << std::endl;
+       std::cout << msg << "第" << pIndex << "个元素: " << tmp_result[pIndex] << ", 最大值为："
+                 << max << ", 总和: " << sum << ", 均值: " << sum / len << std::endl;
        // std::printf("%s最后一个元素：结果总和：%lf\n", msg, sum);
        delete []tmp_result;
 }
@@ -315,7 +316,6 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
        float beta  = 0.0f;
        // std::printf("edges: %d\n", edges);
        // std::printf("row: %d, column: %d\n", batch_size, column_num);
-       // TODO: 查看column_num在原实现中的体现
        if(!with_weight){
               // CHECK_CUDA_RESULT(cudaMallocAsync(&weight_forward, edges*sizeof(float), stream));
            // 0x0000803F 即1.0
@@ -335,8 +335,10 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
        // print_cuda_sum(input, column_num*feature_size, "input");
        // print_cuda_sum(output, batch_size * feature_size, "output");
        // std::printf("CUDA v%d.%d\n", CUDART_VERSION/1000, CUDART_VERSION/10%100);
-       CHECK_CUSPARSE(cusparseCreateCsr(&matA, batch_size, column_num, edges, column_offset, row_indices, weight_forward, 
-                            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+//       CHECK_CUSPARSE(cusparseCreateCsr(&matA, batch_size, column_num, edges, column_offset, row_indices, weight_forward,
+//                            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+    CHECK_CUSPARSE(cusparseCreateCsc(&matA, column_num, batch_size, edges, column_offset, row_indices, weight_forward,
+                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
        // float* input_tran;
        //  float *B = NULL;
        //  CHECK_CUDA_RESULT(cudaMalloc((void**)&input_tran, feature_size * column_num * sizeof(float)));
@@ -353,7 +355,7 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
        CHECK_CUSPARSE(cusparseCreateDnMat(&matC, batch_size, feature_size, feature_size, output, CUDA_R_32F, CUSPARSE_ORDER_ROW));
        CHECK_CUSPARSE(cusparseSpMM_bufferSize(
               sparse_handle,
-              CUSPARSE_OPERATION_NON_TRANSPOSE,
+              CUSPARSE_OPERATION_TRANSPOSE,
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               &alpha, matA, matB, &beta, matC, CUDA_R_32F,
               CUSPARSE_SPMM_CSR_ALG2, &bufferSize
@@ -369,7 +371,7 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
 
        CHECK_CUSPARSE(cusparseSpMM(
               sparse_handle,
-              CUSPARSE_OPERATION_NON_TRANSPOSE,
+              CUSPARSE_OPERATION_TRANSPOSE,
               CUSPARSE_OPERATION_NON_TRANSPOSE,
               &alpha, matA, matB, &beta, matC, CUDA_R_32F,
               CUSPARSE_SPMM_CSR_ALG2, dBuffer
@@ -514,7 +516,10 @@ void Cuda_Stream::Push_From_Dst_To_Src_Spmm(float* input,float* output,float* we
 //    std::printf("column num: %d, batch size: %d, feature size: %d, edges: %d\n", column_num, batch_size, feature_size, edges);
 //    print_cuda_sum(column_offset, batch_size + 1, "column_offset");
 //    print_cuda_sum(row_indices,edges, "row_indices");
-    CHECK_CUSPARSE(cusparseCreateCsr(&matA, batch_size, column_num, edges, column_offset, row_indices, weight_forward,
+//    CHECK_CUSPARSE(cusparseCreateCsr(&matA, batch_size, column_num, edges, column_offset, row_indices, weight_forward,
+//                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+
+    CHECK_CUSPARSE(cusparseCreateCsc(&matA, column_num, batch_size, edges, column_offset, row_indices, weight_forward,
                                      CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
     // float* input_tran;
     //  float *B = NULL;
@@ -532,7 +537,7 @@ void Cuda_Stream::Push_From_Dst_To_Src_Spmm(float* input,float* output,float* we
     CHECK_CUSPARSE(cusparseCreateDnMat(&matC, column_num, feature_size, feature_size, output, CUDA_R_32F, CUSPARSE_ORDER_ROW));
     CHECK_CUSPARSE(cusparseSpMM_bufferSize(
             sparse_handle,
-            CUSPARSE_OPERATION_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             &alpha, matA, matB, &beta, matC, CUDA_R_32F,
             CUSPARSE_SPMM_CSR_ALG2, &bufferSize
@@ -549,7 +554,7 @@ void Cuda_Stream::Push_From_Dst_To_Src_Spmm(float* input,float* output,float* we
 
     CHECK_CUSPARSE(cusparseSpMM(
             sparse_handle,
-            CUSPARSE_OPERATION_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             &alpha, matA, matB, &beta, matC, CUDA_R_32F,
             CUSPARSE_SPMM_CSR_ALG2, dBuffer
@@ -768,7 +773,6 @@ void Cuda_Stream::Gather_By_Src_From_Dst_Spmm(float* input,float* output,float* 
        float beta  = 0.0f;
        // std::printf("edges: %d\n", edges);
        // std::printf("row: %d, column: %d\n", batch_size, column_num);
-       // TODO: 查看column_num在原实现中的体现
        if(!with_weight){
               // CHECK_CUDA_RESULT(cudaMallocAsync(&weight_forward, edges*sizeof(float), stream));
            // 0x0000803F 即1.0
@@ -1082,6 +1086,14 @@ void Cuda_Stream::sample_processing_traverse_gpu(VertexId_CUDA *destination,
                                                  VertexId_CUDA layer,
                                                  VertexId_CUDA max_sample_count){
 #if CUDA_ENABLE
+//    std::printf("vtx num: %u\n", vtx_size);
+//    if(layer == 0) {
+//        std::printf("实际第%d层采样节点\n", layer);
+//        print_cuda_array<<<1, 1>>>(destination, vtx_size);
+//        cudaDeviceSynchronize();
+//        std::printf("\n");
+//    }
+
     std::random_device rd;
     auto seed = rd();
     if(max_sample_count < 32) {
@@ -1101,14 +1113,23 @@ void Cuda_Stream::sample_processing_traverse_gpu(VertexId_CUDA *destination,
         sample_processing_traverse_gpu_kernel_stage2<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
                 (destination, c_o,r_i,global_c_o,global_r_i,src_index,vtx_size,layer);
     }
+
     // toao 注释掉同步
 //    this->CUDA_DEVICE_SYNCHRONIZE()
 
 //    sample_processing_traverse_gpu_kernel_stage2<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
 //            (destination, c_o,r_i,global_c_o,global_r_i,src_index,vtx_size,layer);
+//    VertexId_CUDA count = 0;
+//    VertexId_CUDA* gpu_count;
+//    cudaMallocAsync((void**)&gpu_count, sizeof(VertexId_CUDA), stream);
+//    cudaMemcpyAsync(gpu_count, &count, sizeof(VertexId_CUDA), cudaMemcpyHostToDevice, stream);
+//    check_sample<<<vtx_size, 128, 0, stream>>>(c_o, r_i, global_c_o, global_r_i, vtx_size, destination, gpu_count);
+//    cudaMemcpyAsync(&count, gpu_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
+//    cudaDeviceSynchronize();
+//    std::printf("不存在的邻居的个数: %u\n", count);
+
     int block_num = (src_index_size / CUDA_NUM_THREADS) + 1;
     block_num = std::max(block_num, CUDA_NUM_BLOCKS);
-
     sample_processing_traverse_gpu_kernel_stage3<<<block_num,CUDA_NUM_THREADS,0,stream>>>
                             (src_index,src_index_size,src,src_count,layer);
 //    this->CUDA_DEVICE_SYNCHRONIZE();
@@ -1145,7 +1166,6 @@ void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
     block_num = std::min(CUDA_NUM_THREADS, block_num);
     zero_copy_feature_move_gpu_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
                             (dev_feature,pinned_host_feature,src_vertex,feature_size,vertex_size);
-       // TODO: toao注释掉进行测试
 //     this->CUDA_DEVICE_SYNCHRONIZE();
 #else
        printf("CUDA DISABLED Cuda_Stream::zero_copy_feature_move_gpu\n");
@@ -1176,7 +1196,6 @@ void Cuda_Stream::global_copy_label_move_gpu(long *dev_label,
     block_num = std::min(block_num, CUDA_NUM_BLOCKS);
     global_copy_label_move_gpu_kernel<<<block_num,CUDA_NUM_THREADS,0,stream>>>
                             (dev_label,global_dev_label,dst_vertex,vertex_size);
-       // TODO： toao注释掉进行测试
 //     this->CUDA_DEVICE_SYNCHRONIZE();
 #else
        printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
@@ -1241,7 +1260,7 @@ void Cuda_Stream::UpdateDegree(VertexId_CUDA *out_degree,
 #if CUDA_ENABLE
     up_date_degree<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
                                           (out_degree,in_degree,vertices,destination,source,column_offset,row_indices);
-    this->CUDA_DEVICE_SYNCHRONIZE();
+//    this->CUDA_DEVICE_SYNCHRONIZE();
 #else
        printf("CUDA DISABLED Cuda_Stream::up_date_degree\n");
        exit(0);   
@@ -1257,8 +1276,11 @@ void Cuda_Stream::GetWeight(float *edge_weight,
                             VertexId_CUDA *column_offset,
 				VertexId_CUDA *row_indices){
 #if CUDA_ENABLE
-    get_weight<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(edge_weight,out_degree,in_degree,vertices,destination,source,column_offset,row_indices);
-    this->CUDA_DEVICE_SYNCHRONIZE();
+    uint32_t warp_num = CUDA_NUM_THREADS * CUDA_NUM_BLOCKS/WARP_SIZE;
+    uint32_t block_num = std::min(vertices, warp_num);
+    get_weight<<<block_num,WARP_SIZE,0,stream>>>(edge_weight,out_degree,in_degree,vertices,destination,source,column_offset,row_indices);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+//    print_cuda_sum(edge_weight, vertices, "gpu edge weight");
 #else
        printf("CUDA DISABLED Cuda_Stream::get_weight\n");
        exit(0);   
