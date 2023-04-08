@@ -61,7 +61,7 @@ public:
   NtsVar forward(NtsVar &f_input){
     int feature_size = f_input.size(1);
     // printf("forward feature:%d layer:%d\n",feature_size,layer);
-    NtsVar f_output=graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->v_size, 
+    NtsVar f_output=graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->v_size,
                 feature_size}, torch::DeviceType::CUDA);
     ValueType *f_input_buffer =
       graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CUDA);
@@ -70,22 +70,13 @@ public:
     float* weight_forward=subgraphs->sampled_sgs[layer]->dev_e_w_f();
     VertexId* row_indices=subgraphs->sampled_sgs[layer]->dev_r_i();
     VertexId* column_offset=subgraphs->sampled_sgs[layer]->dev_c_o();
-    VertexId* cacheflag = sampler->dev_cacheflag;
     VertexId* destination = subgraphs->sampled_sgs[layer]->dev_destination;
     VertexId edge_size=subgraphs->sampled_sgs[layer]->e_size;
     VertexId batch_size=subgraphs->sampled_sgs[layer]->v_size;
-    if(layer == 0){
-      cuda_stream->Gather_By_Dst_From_Src(
+    cuda_stream->Gather_By_Dst_From_Src(
         f_input_buffer, f_output_buffer, weight_forward, // data
           row_indices, column_offset, 0, 0, 0, 0,
             edge_size, batch_size,feature_size, true, false);
-    }else{
-      cuda_stream->Gather_By_Dst_From_Src_with_cache(
-        f_input_buffer, f_output_buffer, weight_forward, // data
-            cacheflag, destination,
-          row_indices, column_offset, 0, 0, 0, 0,
-            edge_size, batch_size,feature_size, true, false);
-    }
     cuda_stream->CUDA_DEVICE_SYNCHRONIZE();
       return f_output;
   }

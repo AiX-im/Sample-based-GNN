@@ -23,6 +23,8 @@ Copyright (c) 2022-2023 xin ai, Northeastern University
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
+#include <c10/cuda/CUDACachingAllocator.h>
+#include <torch/script.h>
 
 #include "core/graph.hpp"
 #include "core/ntsBaseOp.hpp"
@@ -173,6 +175,23 @@ public:
 
 };
 
+
+void display_c10_cuda_mem_stat() {
+  auto device_stats = c10::cuda::CUDACachingAllocator::getDeviceStats(0);
+  int64_t allocated = 0;
+  for(auto& allocated_byte: device_stats.allocated_bytes){
+      allocated += allocated_byte.allocated + allocated_byte.freed;
+  }
+  std::cout << "allocated: " << allocated << std::endl;
+
+  allocated = 0;
+    for(auto& allocated_byte: device_stats.reserved_bytes){
+        allocated += allocated_byte.allocated + allocated_byte.freed;
+    }
+    std::cout << "reserved_bytes: " << allocated << std::endl;
+    std::cout << "ooms num: " << device_stats.num_ooms << std::endl;
+}
+
 class SingleGPUAllSampleGraphOp : public ntsGraphOp{
 public:
   SampledSubgraph *subgraphs;
@@ -190,7 +209,11 @@ public:
     // printf("forward feature:%d layer:%d\n",feature_size,layer);
     // NtsVar f_output = subgraphs->forward_embedding[layer];
     // graph_->Nts->ZeroVarMem(f_output);
+
+//      display_c10_cuda_mem_stat();
+
     NtsVar f_output = graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->v_size,feature_size},torch::DeviceType::CUDA);
+
     ValueType *f_input_buffer =
       graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CUDA);
     ValueType *f_output_buffer =

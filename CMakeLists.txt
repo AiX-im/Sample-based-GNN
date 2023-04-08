@@ -14,6 +14,8 @@ message(STATUS "NeutronStar buid with CUDA " ${CUDA_ENABLE})
 
 find_package(PythonInterp REQUIRED)
 find_package(MPI REQUIRED)
+# boost库主要用于debug
+find_package(Boost REQUIRED)
 # because torch also depends on cuda, so we find cuda first
 if (CUDA_ENABLE)
         add_definitions(-DCUDA_ENABLE)
@@ -100,7 +102,8 @@ ${MPI_INCLUDE_PATH}
 )
 
 # setting debug flags
-set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++14 -g -fopenmp -march=native")
+#set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++14 -g -fopenmp -march=native")
+set(CMAKE_CXX_FLAGS "-O0 -Wall -std=c++14 -g -fopenmp -march=native")
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fopenmp -march=native -O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++14 -fopenmp -O0 -march=native -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 
@@ -123,9 +126,9 @@ message(STATUS "CUDA_LIBRARIES = ${CUDA_LIBRARIES}.")
 
 add_executable(nts ${NEUTRONSTAR_SRC_FILES})
 if (CUDA_ENABLE)
-        target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${EXTRA_LIBS} ${CUDA_LIBRARIES} cuda_propagate numa)
+        target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${EXTRA_LIBS} ${CUDA_LIBRARIES} ${BOOST_LIBRARIES} cuda_propagate numa)
 else()
-        target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} numa)
+        target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${BOOST_LIBRARIES} numa)
 endif (CUDA_ENABLE)
 
 

@@ -60,6 +60,11 @@ public:
   double graph_time = 0;
   double all_graph_time = 0;
 
+
+    std::mutex sample_mutex;
+    std::mutex transfer_mutex;
+    std::mutex train_mutex;
+
   GCN_SAMPLE_PD_impl(Graph<Empty> *graph_, int iterations_,
                         bool process_local = false,
                         bool process_overlap = false) {
@@ -239,7 +244,9 @@ public:
       correct = 0;
       batch = 0;
       NtsVar target_lab;
-      target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size}, torch::DeviceType::CUDA); 
+      target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size}, torch::DeviceType::CUDA);
+      // TODO: 流水线设计如下，分为三个线程，一个CPU线程进行聚合，进行一个进行传输，一个进行GPU训练
+
       while(sampler->sample_not_finished()){
            sample_time -= get_time();
            sg=sampler->sample_fast(graph->config->batch_size, pipeline_num - 1);
@@ -312,6 +319,121 @@ public:
     // exec_time=2986.859283(s)
   }
 
+  void ForwardPipeline(FastSampler* sampler, int type=0){
+      graph->rtminfo->forward = true;
+      correct = 0;
+      batch = 0;
+//      SampledSubgraph *sg;
+//      NtsVar target_lab;
+//      target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size}, torch::DeviceType::CUDA);
+
+      SampledSubgraph *sg[pipeline_num];
+      NtsVar tmp_X0[pipeline_num];
+      NtsVar tmp_target_lab[pipeline_num];
+      for(int i = 0; i < pipeline_num; i++) {
+          tmp_X0[i] = graph->Nts->NewLeafTensor({1000,F.size(1)},
+                                                torch::DeviceType::CUDA);
+          tmp_target_lab[i] = graph->Nts->NewLabelTensor({graph->config->batch_size},
+                                                         torch::DeviceType::CUDA);
+      }
+
+        std::atomic_flag is_aggregate = ATOMIC_FLAG_INIT;
+
+        std::printf("pipeline num: %d\n", pipeline_num);
+      std::thread threads[pipeline_num];
+      for(int tid = 0; tid < pipeline_num; tid++) {
+          threads[tid] = std::thread([&](int thread_id) {
+            std::unique_lock<std::mutex> sample_lock(sample_mutex, std::defer_lock);
+            sample_lock.lock();
+              while (sampler->sample_not_finished()) {
+                  sample_time -= get_time();
+                  sg[thread_id] = sampler->sample_fast(graph->config->batch_size,  thread_id);
+//                  cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                  sample_time += get_time();
+                  sample_lock.unlock();
+
+                  std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
+                  transfer_lock.lock();
+                  gather_feature_time -= get_time();
+                  // X[0]=nts::op::get_feature(sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->src(),F,graph);
+                  gather_feature_time += get_time();
+                  training_cpu_time -= get_time();
+                  graph->rtminfo->curr_layer = 0;
+                  //    X[0] = X[0].cuda();
+                  //    NtsVar Y_i=ctx->runGraphOp<nts::op::SingleGPUSampleGraphOp>(sg,graph,1,X[0]);
+                  //NtsVar Y_tmp = ctx->runGraphOp<nts::op::PushDownOp>(sg,graph,1,F);
+                  //nts::op::init_embedding(Y_tmp, gnndatum->local_embedding,graph);
+                  if(!is_aggregate.test_and_set()){
+                      ctx->runGraphOp<nts::op::PushDownOp>(sg[thread_id], graph, gnndatum->local_embedding, 1, F);
+                  }
+                  training_cpu_time += get_time();
+                  transfer_feature_time -= get_time();
+                  sampler->load_label_gpu(tmp_target_lab[thread_id], gnndatum->dev_local_label);
+                  //Y_i = Y_i.cuda();
+                  at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
+                  NtsVar Y_i = graph->Nts->NewKeyTensor({sg[thread_id]->sampled_sgs[0]->src_size, F.size(1)}, torch::DeviceType::CUDA);
+                  sampler->load_embedding_gpu_local(&cuda_stream[thread_id], sg[thread_id], Y_i, gnndatum->dev_local_embedding);
+                  transfer_feature_time += get_time();
+//                  cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                  transfer_lock.unlock();
+
+                  std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);
+                  train_lock.lock();
+                  training_time -= get_time();
+                  at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
+                  X[1] = ctx->runVertexForward([&](NtsVar n_i, NtsVar v_i) {
+                                                   return vertexForward(n_i, v_i);
+                                               },
+                                               Y_i,
+                                               tmp_X0[thread_id]);
+                  for (int l = 1; l < (graph->gnnctx->layer_size.size() - 1); l++) {//forward
+                      graph->rtminfo->curr_layer = l;
+                      int hop = (graph->gnnctx->layer_size.size() - 2) - l;
+
+                      NtsVar Y_i = ctx->runGraphOp<nts::op::SingleGPUSampleGraphOp>(sg[thread_id], graph, hop, X[l], &cuda_stream[thread_id]);
+                      X[l + 1] = ctx->runVertexForward([&](NtsVar n_i, NtsVar v_i) {
+                                                           return vertexForward(n_i, v_i);
+                                                       },
+                                                       Y_i,
+                                                       X[l]);
+
+                  }
+
+                  Loss(X[graph->gnnctx->layer_size.size() - 1], tmp_target_lab[thread_id]);
+                  if (ctx->training) {
+                      ctx->self_backward(false);
+                      Update();
+                      for (int i = 0; i < P.size(); i++) {
+                          P[i]->zero_grad();
+                      }
+                  }
+                  training_time += get_time();
+
+                  correct += getCorrect(X[graph->gnnctx->layer_size.size() - 1], tmp_target_lab[thread_id]);
+                  batch++;
+//                  cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                  train_lock.unlock();
+                  sample_lock.lock();
+              }
+              sample_lock.unlock();
+          }, tid);
+      }
+
+      for(int i = 0; i < pipeline_num; i++) {
+          threads[i].join();
+      }
+      sampler->restart();
+      acc = 1.0 * correct / sampler->work_range[1];
+      if (type == 0) {
+          LOG_INFO("Train Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+      } else if (type == 1) {
+          LOG_INFO("Eval Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+      } else if (type == 2) {
+          LOG_INFO("Test Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+      }
+
+  }
+
   void run() {
     if (graph->partition_id == 0)
       printf("GNNmini::Engine[Dist.GPU.GCNimpl] running [%d] Epochs\n",
@@ -369,8 +491,8 @@ public:
         layer--;
     FastSampler* train_sampler = new FastSampler(graph,fully_rep_graph, 
         train_nids,layer,
-            graph->gnnctx->fanout,graph->config->batch_size,true);
-    train_sampler->set_ssg_num(pipeline_num, cuda_stream);
+            graph->gnnctx->fanout,graph->config->batch_size,true, 0, pipeline_num, cuda_stream);
+//    train_sampler->set_ssg_num(pipeline_num, cuda_stream);
 
     FastSampler* eval_sampler = new FastSampler(graph,fully_rep_graph, 
         val_nids,layer,
@@ -394,6 +516,7 @@ public:
       }
       ctx->train();
       Forward(train_sampler, 0);
+//        ForwardPipeline(train_sampler, 0);
     //   ctx->eval();
     //   Forward(eval_sampler, 1);
     //   Forward(test_sampler, 2);
@@ -406,6 +529,7 @@ public:
     exec_time += get_time();
     printf("#run_time=%lf(s)\n", exec_time);
     printf("#sample_time=%lf(s)\n", (sample_time - train_sampler->copy_gpu_time));
+    printf("#total_sample_time= %lf (s)\n", sample_time);
     printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time + train_sampler->copy_gpu_time));
     printf("training_cpu_time:%lf(s)\n",training_cpu_time);
     printf("#training_time=%lf(s)\n", training_time);

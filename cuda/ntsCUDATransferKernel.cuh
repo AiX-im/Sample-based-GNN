@@ -141,31 +141,7 @@ __global__ void global_copy_label_move_gpu_kernel(long *dev_label,
 	}
 }
 
-__global__ void dev_updata_share_embedding_kernel(float *dev_embedding,
-								 	float *share_embedding,
-									VertexId_CUDA *dev_cacheflag,
-									VertexId_CUDA *dev_cacheepoch,
-                            		VertexId_CUDA current_epoch,
-									VertexId_CUDA feature_size,
-									VertexId_CUDA *destination_vertex,
-									VertexId_CUDA vertex_size){
-	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
-	const int WARPSIZE=32;
-	size_t laneId =threadId%WARPSIZE;
-	size_t warp_id=threadId/WARPSIZE;
-	
-	for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
-		VertexId_CUDA vtx_idx=i/WARPSIZE;
-		VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
-		if(dev_cacheflag[vtx_id] == 0){
-			dev_cacheepoch[vtx_id] = current_epoch;
-			for(int j=laneId;j<feature_size;j+=32){
-				share_embedding[vtx_id*feature_size+j] = dev_embedding[vtx_idx*feature_size+j];
-			}
-			dev_cacheflag[vtx_id] = 1;  
-		}
-	}
-}
+
 
 __global__ void re_fresh_degree(VertexId_CUDA *out_degree,
 				                VertexId_CUDA *in_degree,
@@ -226,8 +202,70 @@ __global__ void get_weight(float *edge_weight,
     }
 }
 
-__global__ void dev_updata_load_embedding_kernel(float *dev_embedding,
+__global__ void dev_load_share_embedding_kernel(float *dev_embedding,
 								 	float *share_embedding,
+									VertexId_CUDA *dev_cacheflag,
+									VertexId_CUDA *dev_cachemap,
+									VertexId_CUDA feature_size,
+									VertexId_CUDA *destination_vertex,
+									VertexId_CUDA vertex_size){
+	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+	const int WARPSIZE=32;
+	size_t laneId =threadId%WARPSIZE;
+	size_t warp_id=threadId/WARPSIZE;
+	
+	for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+		VertexId_CUDA vtx_idx=i/WARPSIZE;
+		VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+		if(dev_cacheflag[vtx_id_local] == 2 || dev_cacheflag[vtx_id_local] == 3){
+			for(int j=laneId;j<feature_size;j+=32){
+				dev_embedding[vtx_id*feature_size+j] = share_embedding[vtx_id_local*feature_size+j];
+			}
+		}
+	}
+}
+
+
+__global__ void dev_Grad_accumulate_kernel(float *dev_grad,
+								 	float *share_grad,
+									VertexId_CUDA *dev_cacheflag,
+									VertexId_CUDA *dev_cachemap,
+									VertexId_CUDA feature_size,
+									VertexId_CUDA *destination_vertex,
+									VertexId_CUDA vertex_size){
+	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+	const int WARPSIZE=32;
+	size_t laneId =threadId%WARPSIZE;
+	size_t warp_id=threadId/WARPSIZE;
+	
+	for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+		VertexId_CUDA vtx_idx=i/WARPSIZE;
+		VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+        // TODO: bug在这里
+        // vtx_id应该是全局点，但是这里要求的是采样点的局部id即可
+		if(dev_cacheflag[vtx_id] == 3){
+			for(int j=laneId;j<feature_size;j+=32){
+				//accumulate
+                share_grad[vtx_id_local*feature_size+j] += dev_grad[vtx_idx*feature_size+j];
+                dev_grad[vtx_idx*feature_size+j] = 0.0f;
+			}
+		}else if(dev_cacheflag[vtx_id] == 2){
+            dev_cacheflag[vtx_id] = 3;
+			for(int j=laneId;j<feature_size;j+=32){
+				//accumulate
+                share_grad[vtx_id_local*feature_size+j] = dev_grad[vtx_idx*feature_size+j];
+                dev_grad[vtx_idx*feature_size+j] = 0.0;
+			}
+		}
+	}
+}
+
+
+__global__ void dev_update_share_embedding_kernel(float *dev_embedding,
+								 	float *share_embedding,
+                                    VertexId_CUDA *dev_cachemap,
 									VertexId_CUDA *dev_cacheflag,
 									VertexId_CUDA feature_size,
 									VertexId_CUDA *destination_vertex,
@@ -240,9 +278,12 @@ __global__ void dev_updata_load_embedding_kernel(float *dev_embedding,
 	for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
 		VertexId_CUDA vtx_idx=i/WARPSIZE;
 		VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
 		if(dev_cacheflag[vtx_id] == 1){
+            dev_cacheflag[vtx_id] = 2; //CPU cache embedding to GPU cache embedding
 			for(int j=laneId;j<feature_size;j+=32){
-				dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
+				//dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
+                share_embedding[vtx_id_local*feature_size+j] = dev_embedding[vtx_id_local*feature_size+j];
 			}
 		}
 	}
@@ -265,6 +306,31 @@ __global__ void sample_processing_get_co_gpu_kernel(VertexId_CUDA *dst,
 		//local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];
 	}
 }
+__global__ void sample_processing_get_co_gpu_kernel_omit(
+                                    VertexId_CUDA *CacheFlag,
+                                    VertexId_CUDA *dst,
+								 	VertexId_CUDA *local_column_offset,
+                                   	VertexId_CUDA *global_column_offset,
+                                   	VertexId_CUDA dst_size,
+									VertexId_CUDA src_index_size,
+									VertexId_CUDA* src_count,
+									VertexId_CUDA* src_index,
+									VertexId_CUDA fanout
+									)
+{
+	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+	for(long i = threadId; i < (long)dst_size; i += blockDim.x * gridDim.x){
+	   	VertexId_CUDA dst_vtx = dst[i];
+        if(CacheFlag[dst_vtx] == -1 || CacheFlag[dst_vtx] == 0){
+		local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
+        }
+        else{
+            local_column_offset[i + 1] = 0;
+        }
+		//local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];
+	}
+}
+
 __global__ void sample_processing_traverse_gpu_kernel_stage2(
 									VertexId_CUDA *destination, // 这层要采的节点
 									VertexId_CUDA *c_o,         // 采样后的column_offset

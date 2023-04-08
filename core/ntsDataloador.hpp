@@ -32,12 +32,20 @@ public:
   Graph<Empty> *graph;
   ValueType *local_feature; // features of local partition
   ValueType *dev_local_feature;
-  ValueType *local_embedding; // features of local partition
+
+  ValueType *local_embedding; // embedding of local partition
   ValueType *dev_local_embedding;
+ 
+  VertexId *CacheFlag; //0:未完成聚合  1：CPU已完成聚合 2：CPU的聚合已经传到GPU去
+  VertexId *dev_CacheFlag;
+
+  VertexId *CacheMap; // 存储缓存节点在cache中的下标
+  VertexId *dev_CacheMap;
 
   ValueType *dev_share_embedding; //share computation
   ValueType *dev_share_grad;
 
+  VertexId cache_num;
   long *local_label;        // labels of local partition
   int *local_mask;
   long *dev_local_label;
@@ -49,33 +57,70 @@ public:
 // train:    0
 // val:     1
 // test:     2
-/**
- * @brief Construct a new GNNDatum::GNNDatum object.
- * initialize GNN Data using GNNContext and Graph.
- * Allocating space to save data. e.g. local feature, local label.
- * @param _gnnctx pointer to GNN Context
- * @param graph_ pointer to Graph
- */
-GNNDatum(GNNContext *_gnnctx, Graph<Empty> *graph_) {
-  gnnctx = _gnnctx;
-  //local_feature = new ValueType[gnnctx->l_v_num * gnnctx->layer_size[0]];
-  local_feature=(ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*gnnctx->layer_size[0]*sizeof(ValueType));
-  local_embedding = (ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*gnnctx->layer_size[0]*sizeof(ValueType));
-  // local_label = (long*)cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(long));
-  local_label = new long[gnnctx->l_v_num];
-  local_mask = new int[gnnctx->l_v_num];
-  memset(local_mask, 1, sizeof(int) * gnnctx->l_v_num);
-  graph = graph_;
-}
-void genereate_gpu_data(){
-  dev_local_label=(long*)cudaMallocGPU(gnnctx->l_v_num*sizeof(long));
-  dev_local_feature=(ValueType*)getDevicePointer(local_feature);
-  dev_local_embedding=(ValueType*)getDevicePointer(local_embedding);
-  move_bytes_in(dev_local_label,local_label,gnnctx->l_v_num*sizeof(long));
+    /**
+     * @brief Construct a new GNNDatum::GNNDatum object.
+     * initialize GNN Data using GNNContext and Graph.
+     * Allocating space to save data. e.g. local feature, local label.
+     * @param _gnnctx pointer to GNN Context
+     * @param graph_ pointer to Graph
+     */
+    GNNDatum(GNNContext *_gnnctx, Graph<Empty> *graph_):gnnctx(_gnnctx),graph(graph_) {
+//      gnnctx = _gnnctx;
+//        graph = graph_;
+      //local_feature = new ValueType[gnnctx->l_v_num * gnnctx->layer_size[0]];
+      local_feature=(ValueType*)cudaMallocPinned((long)(gnnctx->l_v_num)*(gnnctx->layer_size[0])*sizeof(ValueType));
+      // local_label = (long*)cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(long));
+      local_label = new long[gnnctx->l_v_num];
+      local_mask = new int[gnnctx->l_v_num];
+      memset(local_mask, 1, sizeof(int) * gnnctx->l_v_num);
 
-  dev_share_embedding = (ValueType*)cudaMallocGPU(gnnctx->l_v_num * gnnctx->layer_size[1] * sizeof(ValueType));
-  dev_share_grad = (ValueType*)cudaMallocGPU(gnnctx->l_v_num * gnnctx->layer_size[1] * sizeof(ValueType));
+    }
+
+    void init_cache_var(float cache_rate){
+        cache_num = gnnctx->l_v_num * cache_rate;
+        local_embedding = (ValueType*)cudaMallocPinned((long)(cache_num)*(gnnctx->layer_size[0])*sizeof(ValueType));
+        CacheFlag = (VertexId*) cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(VertexId));
+        CacheMap = (VertexId*) cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(VertexId));
+
+
+        assert(gnnctx->layer_size.size() > 1);
+        dev_share_embedding = (ValueType*)cudaMallocGPU(cache_num * gnnctx->layer_size[1] * sizeof(ValueType));
+        //初始化和刷新
+//        dev_share_grad = (ValueType*)cudaMallocGPU(cache_num * gnnctx->layer_size[gnnctx->max_layer - 1] * sizeof(ValueType));
+        dev_CacheFlag = (VertexId*) getDevicePointer(CacheFlag);
+        dev_CacheMap = (VertexId*) getDevicePointer(CacheMap);
+        dev_local_embedding=(ValueType*)getDevicePointer(local_embedding);
+    }
+
+    void genereate_gpu_data(){
+        dev_local_label=(long*)cudaMallocGPU(gnnctx->l_v_num*sizeof(long));
+        dev_local_feature=(ValueType*)getDevicePointer(local_feature);
+        move_bytes_in(dev_local_label,local_label,gnnctx->l_v_num*sizeof(long));
+
+    }
+
+void reset_cache_flag(std::vector<VertexId>& cache_ids){
+#pragma omp parallel for
+    for(int i = 0; i < cache_num; i++){
+        CacheFlag[cache_ids[i]] = 0;
+    }
 }
+
+void move_data_to_local_cache(VertexId vertex_num, int feature_len, ValueType* data,
+                              VertexId* ids, uint8_t* masks, VertexId start){
+//      std::printf("batch start: %d, batch num: %d\n", start, vertex_num);
+#pragma omp parallel for
+    for(VertexId i = 0; i < vertex_num; i++){
+        if(CacheFlag[ids[i]] == 0) {
+            auto index = CacheMap[ids[i]];  // 获取该点在cache中的第几行
+            memcpy(&local_embedding[index * feature_len], &data[i * feature_len], sizeof(ValueType)*feature_len);
+            if(__sync_bool_compare_and_swap(&(CacheFlag[ids[i]]), 0u, 1u)){
+                masks[start + i] = 1;
+            }
+        }
+    }
+}
+
 
 /**
  * @brief

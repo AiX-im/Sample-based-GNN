@@ -2,6 +2,8 @@
 #include <random>
 #include"cuda_type.h"
 #include "ntsCUDA.hpp"
+#include <iostream>
+#include <boost/stacktrace.hpp>
 
 #if CUDA_ENABLE
 #include "ntsCUDAFuseKernel.cuh"
@@ -16,8 +18,9 @@
 #define CHECK_CUDA_RESULT(N) {											\
 	cudaError_t result = N;												\
 	if (result != 0) {													\
-		printf("CUDA call on line %d returned error %d\n", __LINE__,	\
-			result);													\
+		printf("CUDA call on file %s line %d returned code %d, error: %s\n", \
+        __FILE__, __LINE__, result, cudaGetErrorString(result));       \
+        std::cout << boost::stacktrace::stacktrace();                                 \
 		exit(1);														\
 	} }
 #endif
@@ -142,11 +145,20 @@ void ResetDevice(){
 }
 void Cuda_Stream::CUDA_DEVICE_SYNCHRONIZE(){
 #if CUDA_ENABLE
-       cudaStreamSynchronize(stream);
+    CHECK_CUDA_RESULT(cudaStreamSynchronize(stream));
 #else
        printf("CUDA DISABLED Cuda_Stream::CUDA_DEVICE_SYNCHRONIZE\n");
        exit(0);   
 #endif   
+}
+
+void Cuda_Stream::CUDA_SYNCHRONIZE_ALL(){
+#if CUDA_ENABLE
+    CHECK_CUDA_RESULT(cudaDeviceSynchronize());
+#else
+    printf("CUDA DISABLED Cuda_Stream::CUDA_DEVICE_SYNCHRONIZE\n");
+       exit(0);
+#endif
 }
 
 void Cuda_Stream::move_result_out(float* output,float* input, VertexId_CUDA src,VertexId_CUDA dst, int feature_size,bool sync){
@@ -1049,6 +1061,99 @@ void Cuda_Stream::sample_processing_get_co_gpu(VertexId_CUDA *dst,
 #endif     
 }
 
+void Cuda_Stream::sample_processing_get_co_gpu_omit(
+                                   VertexId_CUDA *CacheFlag,
+                                   VertexId_CUDA *dst, 
+                                   VertexId_CUDA *local_column_offset,
+                                   VertexId_CUDA *global_column_offset,
+                                   VertexId_CUDA dst_size,
+                                   VertexId_CUDA* tmp_data_buffer,
+                                   VertexId_CUDA src_index_size,
+					VertexId_CUDA* src_count,
+					VertexId_CUDA* src_index,
+                                   VertexId_CUDA fanout,
+                                   VertexId_CUDA & edge_size){
+#if CUDA_ENABLE
+       // 确定每个节点需要采的数量，方便为数组分配空间
+    sample_processing_get_co_gpu_kernel_omit<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+                            (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
+                            src_index_size,src_count,src_index,fanout);
+
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+//    inclusiveTime -= get_time();
+//    int num_items = dst_size + 1;
+//    void *d_temp_storage = NULL;
+//    size_t temp_storage_bytes = 0;
+//    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, tmp_data_buffer, local_column_offset, num_items,stream);
+//    if(temp_storage_bytes < cuda_buffer_size) {
+//       d_temp_storage = cuda_buffer;
+//    } else {
+//       // std::printf("在这里进行了重分配\n\n\n");
+//       if(cuda_buffer_size != 0) {
+//              cudaFreeAsync(cuda_buffer, stream);
+//       }
+//       cuda_buffer_size = temp_storage_bytes * 2;
+//       cudaMallocAsync((void**)&cuda_buffer, cuda_buffer_size, stream);
+//       d_temp_storage = cuda_buffer;
+//
+//    }
+////     cudaMallocAsync(&d_temp_storage, temp_storage_bytes, stream);
+//    //printf("temp_storage_bytes:%d num_items:%d\n",temp_storage_bytes,num_items);
+//    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, tmp_data_buffer, local_column_offset, num_items,stream);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+////     cudaFreeAsync(d_temp_storage, stream);
+//    inclusiveTime += get_time();
+
+//    inclusiveTime -= get_time();
+//    thrust::device_ptr<VertexId_CUDA> g_arr = thrust::device_pointer_cast(tmp_data_buffer);
+//    thrust::inclusive_scan(g_arr, g_arr + dst_size + 1, local_column_offset);
+//    inclusiveTime += get_time();
+
+    cpu_inclusiveTime -= get_time();
+    size_t arr_size = (dst_size + 1) * sizeof(VertexId_CUDA);
+    if(arr_size*2 > cpu_buffer_size) {
+        if(cpu_buffer_size != 0) {
+            delete []cpu_buffer;
+        }
+        cpu_buffer = new unsigned char[arr_size * 4];
+        cpu_buffer_size = arr_size * 4;
+    }
+    VertexId_CUDA* cpu_data_buffer = (VertexId_CUDA*)(cpu_buffer);
+    VertexId_CUDA* cpu_column_offset = (VertexId_CUDA*)(cpu_buffer +arr_size);
+    cudaMemcpyAsync(cpu_data_buffer, tmp_data_buffer, arr_size, cudaMemcpyDeviceToHost, stream);
+    cpu_column_offset[0] = cpu_data_buffer[0];
+    for(int i = 1; i < dst_size + 1; i++) {
+        cpu_column_offset[i] = cpu_data_buffer[i] + cpu_column_offset[i-1];
+    }
+    edge_size = cpu_column_offset[dst_size];
+    cudaMemcpyAsync(local_column_offset, cpu_column_offset, arr_size, cudaMemcpyHostToDevice, stream);
+//    delete []cpu_data_buffer;
+//    delete []cpu_column_offset;
+    cpu_inclusiveTime += get_time();
+
+//    VertexId_CUDA* gpu_column_offset = cpu_data_buffer;
+//    cudaMemcpyAsync(gpu_column_offset, local_column_offset, sizeof(VertexId_CUDA)*(dst_size + 1), cudaMemcpyDeviceToHost, stream);
+//    bool correct = true;
+//    for(int i = 0; i < dst_size + 1; i++) {
+//        if(cpu_column_offset[i] != gpu_column_offset[i]) {
+//            correct = false;
+//            break;
+//        }
+//    }
+//    if(correct) {
+//        std::printf("cpu结果和GPU结果一致\n");
+//    } else {
+//        std::printf("cpu结果和GPU结果不一致\n");
+//        exit(1);
+//    }
+
+
+#else
+       printf("CUDA DISABLED Cuda_Stream::sample_processing_get_co_gpu\n");
+       exit(0);   
+#endif     
+}
+
 __global__ void print_cuda_array(VertexId_CUDA* array, VertexId_CUDA len) {
     auto tid = threadIdx.x + blockIdx.x * blockDim.x;
     if(tid == 0) {
@@ -1149,7 +1254,8 @@ void Cuda_Stream::sample_processing_update_ri_gpu(VertexId_CUDA *r_i,
 #if CUDA_ENABLE
     sample_processing_update_ri_gpu_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
                             (r_i,src_index,edge_size,src_index_size);
-    this->CUDA_DEVICE_SYNCHRONIZE();
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+//    cudaStreamSynchronize()
 #else
     printf("CUDA DISABLED Cuda_Stream::sample_processing_update_ri_gpu\n"); 
     exit(0);   
@@ -1203,17 +1309,32 @@ void Cuda_Stream::global_copy_label_move_gpu(long *dev_label,
 #endif   
 }
 
-void Cuda_Stream::dev_updata_share_embedding(float *dev_embedding,
+void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
 				float *share_embedding,
 				VertexId_CUDA *dev_cacheflag,
-                            VertexId_CUDA *dev_cacheepoch,
-                            VertexId_CUDA current_epoch,
+                            VertexId_CUDA *dev_cachemap,
                             VertexId_CUDA feature_size,
                             VertexId_CUDA *destination_vertex,
 				VertexId_CUDA vertex_size){
 #if CUDA_ENABLE
-    dev_updata_share_embedding_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
-                            (dev_embedding,share_embedding,dev_cacheflag,dev_cacheepoch, current_epoch, feature_size,destination_vertex,vertex_size);
+    dev_load_share_embedding_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+                            (dev_embedding,share_embedding,dev_cacheflag,dev_cachemap,feature_size,destination_vertex,vertex_size);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+#else
+       printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);   
+#endif   
+}
+void Cuda_Stream::dev_Grad_accumulate(float *dev_grad_buffer,
+				float *dev_share_grad,
+				VertexId_CUDA *dev_cacheflag,
+                            VertexId_CUDA *dev_cachemap,
+                            VertexId_CUDA feature_size,
+                            VertexId_CUDA *destination_vertex,
+				VertexId_CUDA vertex_size){
+#if CUDA_ENABLE
+    dev_Grad_accumulate_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+                            (dev_grad_buffer,dev_share_grad,dev_cacheflag,dev_cachemap,feature_size,destination_vertex,vertex_size);
     this->CUDA_DEVICE_SYNCHRONIZE();
 #else
        printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
@@ -1221,15 +1342,16 @@ void Cuda_Stream::dev_updata_share_embedding(float *dev_embedding,
 #endif   
 }
 
-void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
+void Cuda_Stream::dev_update_share_embedding(float *dev_embedding,
 				float *share_embedding,
+                            VertexId_CUDA *dev_cachemap,
 				VertexId_CUDA *dev_cacheflag,
                             VertexId_CUDA feature_size,
                             VertexId_CUDA *destination_vertex,
 				VertexId_CUDA vertex_size){
 #if CUDA_ENABLE
-    dev_updata_load_embedding_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
-                            (dev_embedding,share_embedding,dev_cacheflag,feature_size,destination_vertex,vertex_size);
+    dev_update_share_embedding_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+                            (dev_embedding,share_embedding,dev_cachemap,dev_cacheflag,feature_size,destination_vertex,vertex_size);
     this->CUDA_DEVICE_SYNCHRONIZE();
 #else
        printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
@@ -1520,6 +1642,28 @@ void allocate_gpu_edge_async(VertexId_CUDA** input, int size, cudaStream_t cs){
      exit(0);   
    
 #endif 
+}
+
+template<typename T>
+void sort_graph_vertex(T* vertex_in, T*vertex_out, VertexId_CUDA vertex_num, VertexId_CUDA out_num){
+    out_num = std::min(vertex_num, out_num);
+    T  *d_keys_in;         // e.g., [8, 6, 7, 5, 3, 0, 9]
+    T  *d_keys_out;        // e.g., [        ...        ]
+    cudaMalloc((void**)&d_keys_in, sizeof(T)*vertex_num);
+    cudaMalloc((void**)&d_keys_out, sizeof(T)*vertex_num);
+    cudaMemcpy((void*)d_keys_in, (void*)vertex_in, sizeof(T)*vertex_num, cudaMemcpyHostToDevice);
+// Determine temporary device storage requirements
+    void     *d_temp_storage = NULL;
+    size_t   temp_storage_bytes = 0;
+    cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_in, d_keys_out, vertex_num);
+// Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+// Run sorting operation
+    cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys_in, d_keys_out, vertex_num);
+    cudaMemcpy(&(vertex_out[vertex_num - out_num]), (void*)d_keys_out, sizeof(T)*out_num, cudaMemcpyDeviceToHost);
+    cudaFree(d_keys_in);
+    cudaFree(d_keys_out);
+    cudaFree(d_temp_storage);
 }
 
 //template<class DevType>

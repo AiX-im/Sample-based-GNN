@@ -50,16 +50,16 @@ public:
 
   NtsVar forward(NtsVar &f_input){
     int feature_size = f_input.size(1);
-    std::printf("forward size (%lu, %lu)\n", subgraphs->sampled_sgs[layer]->dst().size(), feature_size);
+//    std::printf("forward size (%lu, %lu)\n", subgraphs->sampled_sgs[layer]->dst().size(), feature_size);
     NtsVar f_output=graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->dst().size(), 
                 feature_size},torch::DeviceType::CPU);     
-    std::printf("debug 1\n");
+//    std::printf("debug 1\n");
     ValueType *f_input_buffer =
       graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CPU);
     ValueType *f_output_buffer = 
       graph_->Nts->getWritableBuffer(f_output, torch::DeviceType::CPU);  
     // memset(f_embedding_output,0,(long)(subgraphs->sampled_sgs[layer]->dst().size())*feature_size*sizeof(ValueType));
-    std::printf("debug 2\n");
+//    std::printf("debug 2\n");
     this->subgraphs->compute_one_layer(
             [&](VertexId local_dst, std::vector<VertexId>& column_offset, 
                 std::vector<VertexId>& row_indices){
@@ -102,6 +102,80 @@ public:
    }
 
 };
+
+    class PushDownBatchOp : public ntsGraphOp{
+        SampledSubgraph* subgraphs;
+        int layer=0;
+        int batch_start;
+        int batch_end;
+
+    public:
+        NtsVar forward(NtsVar& f_input) {
+
+            int feature_size = f_input.size(1);
+//    std::printf("forward size (%lu, %lu)\n", subgraphs->sampled_sgs[layer]->dst().size(), feature_size);
+            NtsVar f_output=graph_->Nts->NewKeyTensor({batch_end - batch_start, feature_size},
+                                                      torch::DeviceType::CPU);
+            // CPU的不需要梯度，故这里设置为不需梯度
+            f_output.requires_grad_(false);
+//    std::printf("debug 1\n");
+            ValueType *f_input_buffer =
+                    graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CPU);
+            ValueType *f_output_buffer =
+                    graph_->Nts->getWritableBuffer(f_output, torch::DeviceType::CPU);
+            this->subgraphs->compute_one_layer_batch(
+                    [&](VertexId local_dst, std::vector<VertexId>& column_offset,
+                        std::vector<VertexId>& row_indices){
+                        VertexId src_start=column_offset[local_dst];
+                        VertexId src_end=column_offset[local_dst+1];
+                        VertexId dst=subgraphs->sampled_sgs[layer]->dst()[local_dst];
+
+                        // Toao修改为相对于batch的偏移量
+                        assert(local_dst >= batch_start && local_dst < batch_end);
+
+                        ValueType *local_output=f_output_buffer+(local_dst - batch_start)*feature_size;
+
+                        for(VertexId src_offset=src_start;
+                            src_offset<src_end;src_offset++){
+                            VertexId local_src=row_indices[src_offset];
+                            VertexId src=subgraphs->sampled_sgs[layer]->src()[local_src];
+                            ValueType *local_input = f_input_buffer + src * feature_size;
+                            nts_comp(local_output, local_input,
+                                     nts_norm_degree(graph_,src, dst), feature_size);
+                            //  nts_comp(local_output, local_input,
+                            //        weight[src_offset], feature_size);
+                        }
+                    },
+                    layer, batch_start, batch_end
+            );
+            return f_output;
+        }
+        NtsVar forward(NtsVar &f_input, std::vector<VertexId> cacheflag){
+
+            int feature_size = f_input.size(1);
+//    std::printf("forward size (%lu, %lu)\n", subgraphs->sampled_sgs[layer]->dst().size(), feature_size);
+            NtsVar f_output=graph_->Nts->NewKeyTensor({batch_end - batch_start, feature_size},
+                                                      torch::DeviceType::CPU);
+            return f_output;
+        }
+        NtsVar backward(NtsVar &f_output_grad){
+            int feature_size=f_output_grad.size(1);
+            //std::printf("output size: (%lu, %lu)\n", f_output_grad.size(0), f_output_grad.size(1));
+            NtsVar f_input_grad=graph_->Nts->NewLeafTensor({subgraphs->sampled_sgs[layer]->src().size(),
+                                                            feature_size},torch::DeviceType::CPU);
+            return f_input_grad;
+        }
+
+        PushDownBatchOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_, int batch_start,
+                        int batch_end)
+                : ntsGraphOp(graph_) {
+            subgraphs = subgraphs_;
+            layer=layer_;
+            this->batch_start = batch_start;
+            this->batch_end = batch_end;
+
+        }
+    };
 
 //class SingleCPUSrcScatterOp : public ntsGraphOp{
 //public:

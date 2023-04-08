@@ -47,11 +47,11 @@ public:
     //cpu-based data;
     Bitmap* samp_bitmap;
     std::vector<VertexId> src_index_array;
-    VertexId* cacheflag;
-    VertexId* cacheepoch;
+    // VertexId* cacheflag;
+    // VertexId* cacheepoch;
 
-    VertexId* dev_cacheflag;
-    VertexId* dev_cacheepoch;
+    // VertexId* dev_cacheflag;
+    // VertexId* dev_cacheepoch;
     int epoch_gap = 2;
     bool to_gpu;
     int cpu_threads;
@@ -87,6 +87,7 @@ public:
             pipeline_num = 1;
         }
         ssgs = new SampledSubgraph*[pipeline_num];
+        // TODO: 这里可以改，现在这个选择不一定好
         if(cudaStreamArray == nullptr) {
             for(int i = 0; i < pipeline_num; i++) {
                 ssgs[i] =new SampledSubgraph(layer,batch_size,graph->gnnctx->layer_size,fanout,graph); //cpu sampler
@@ -124,6 +125,7 @@ public:
         sample_nids.assign(index.begin(), index.end());
         assert(sample_nids.size() == index.size());
         whole_graph=whole_graph_;
+        graph = whole_graph->graph_;
         work_range[0]=0;
         work_range[1]=sample_nids.size();
         work_offset=0;
@@ -174,25 +176,25 @@ public:
         return distribution(generator);
     }
 
-    void init_cache(){
-        cacheflag = (VertexId*)cudaMallocPinned((long)(whole_graph->global_vertices)*sizeof(VertexId));
-        cacheepoch = (VertexId*)cudaMallocPinned((long)(whole_graph->global_vertices)*sizeof(VertexId));
-        dev_cacheflag = (VertexId*)getDevicePointer(cacheflag);
-        dev_cacheepoch = (VertexId*)getDevicePointer(cacheepoch);
-
-        omp_set_num_threads(cpu_threads);
-        #pragma omp parallel for
-            for(VertexId vid = 0; vid < whole_graph->global_vertices; vid++){
-                cacheepoch[vid] = 0;
-                int nbrs = whole_graph->column_offset[vid + 1] - whole_graph->column_offset[vid];
-                if(nbrs < fanout[layer - 1] * 10){
-                    cacheflag[vid] = 0;
-                }
-                else{
-                    cacheflag[vid] = -1;
-                }
-        }
-    }
+//    void init_cache(){
+//        cacheflag = (VertexId*)cudaMallocPinned((long)(whole_graph->global_vertices)*sizeof(VertexId));
+//        cacheepoch = (VertexId*)cudaMallocPinned((long)(whole_graph->global_vertices)*sizeof(VertexId));
+//        dev_cacheflag = (VertexId*)getDevicePointer(cacheflag);
+//        dev_cacheepoch = (VertexId*)getDevicePointer(cacheepoch);
+//
+//        omp_set_num_threads(cpu_threads);
+//        #pragma omp parallel for
+//            for(VertexId vid = 0; vid < whole_graph->global_vertices; vid++){
+//                cacheepoch[vid] = 0;
+//                int nbrs = whole_graph->column_offset[vid + 1] - whole_graph->column_offset[vid];
+//                if(nbrs < fanout[layer - 1] * 10){
+//                    cacheflag[vid] = 0;
+//                }
+//                else{
+//                    cacheflag[vid] = -1;
+//                }
+//        }
+//    }
 
     void load_feature_gpu(NtsVar& local_feature,ValueType* global_feature_buffer){
         if(local_feature.size(0) < ssg->sampled_sgs[layer-1]->src_size){
@@ -255,6 +257,17 @@ public:
                                     ssg->sampled_sgs[0]->src_size);
     }
 
+
+    void load_embedding_gpu_local(Cuda_Stream* cudaStream, SampledSubgraph* subgraph, NtsVar& local_feature,ValueType* global_feature_buffer){
+        //do the load operation.
+        ValueType *local_feature_buffer = whole_graph->graph_->Nts->getWritableBuffer(local_feature, torch::DeviceType::CUDA);
+        cudaStream->zero_copy_embedding_move_gpu(local_feature_buffer,
+                                         global_feature_buffer,
+                                         local_feature.size(1),
+                                         subgraph->sampled_sgs[0]->src_size);
+    }
+
+
     void load_label_gpu(NtsVar& local_label, long *global_label_buffer){
             if(local_label.size(0)!=ssg->sampled_sgs[0]->v_size){
                 local_label.resize_({ssg->sampled_sgs[0]->v_size});
@@ -283,51 +296,65 @@ public:
                                        subgraph->sampled_sgs[0]->v_size);
     }
 
-    void updata_cacheflag(VertexId epoch){
-        omp_set_num_threads(cpu_threads);
-        int cachevtx = 0;
-        #pragma omp parallel for
-        for(VertexId vid = 0; vid < whole_graph->global_vertices; vid++){
-            if(cacheflag[vid] == 1 && cacheepoch[vid] < epoch - epoch_gap){
-                    cacheflag[vid] = 0;
-            }
-            // if(cacheflag[vid] == 1){
-            //     cachevtx++;
-            // }
-        }
-
-        
-
-        // int cacheenable = 0;
-        // for(VertexId vid = 0; vid < ssg->sampled_sgs[1]->v_size; vid++){
-        //     VertexId id = ssg->sampled_sgs[1]->destination[vid];
-        //     if(cacheflag[id] == 1){
-        //         cacheenable++;
-        //     }
-        // }
-        // printf("v_size:%d,epoch:%d cachevtx:%d cacheenable:%d\n",ssg->sampled_sgs[1]->v_size, epoch,cachevtx,cacheenable);
-    }
+//    void updata_cacheflag(VertexId epoch){
+//        omp_set_num_threads(cpu_threads);
+//        int cachevtx = 0;
+//        #pragma omp parallel for
+//        for(VertexId vid = 0; vid < whole_graph->global_vertices; vid++){
+//            if(cacheflag[vid] == 1 && cacheepoch[vid] < epoch - epoch_gap){
+//                    cacheflag[vid] = 0;
+//            }
+//            // if(cacheflag[vid] == 1){
+//            //     cachevtx++;
+//            // }
+//        }
+//
+//
+//
+//        // int cacheenable = 0;
+//        // for(VertexId vid = 0; vid < ssg->sampled_sgs[1]->v_size; vid++){
+//        //     VertexId id = ssg->sampled_sgs[1]->destination[vid];
+//        //     if(cacheflag[id] == 1){
+//        //         cacheenable++;
+//        //     }
+//        // }
+//        // printf("v_size:%d,epoch:%d cachevtx:%d cacheenable:%d\n",ssg->sampled_sgs[1]->v_size, epoch,cachevtx,cacheenable);
+//    }
 
     //cacheflag: 0  2
-    void updata_share_embedding(NtsVar& dev_embedding, ValueType* dev_share_embedding, VertexId current_epoch){
+    void load_share_embedding(Cuda_Stream * cudaStream, 
+                              SampledSubgraph* subgraph,
+                              ValueType* dev_share_embedding,
+                              NtsVar& dev_embedding,
+                              VertexId *CacheMap,
+                              VertexId *CacheFlag){
             ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
-            cs->dev_updata_share_embedding(dev_embedding_buffer,
+            cudaStream->dev_load_share_embedding(dev_embedding_buffer,
                                            dev_share_embedding,
-                                           dev_cacheflag,
-                                           dev_cacheepoch,
-                                           current_epoch,
+                                           CacheFlag,
+                                           CacheMap,
                                            dev_embedding.size(1),
-                                           ssg->sampled_sgs[layer-1]->dev_destination,
-                                           ssg->sampled_sgs[layer-1]->v_size);
+                                           subgraph->sampled_sgs[layer-1]->dev_destination,
+                                           subgraph->sampled_sgs[layer-1]->v_size);
     }
-    void load_share_embedding(NtsVar& dev_embedding, ValueType* dev_share_embedding){
-         ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
-            cs->dev_load_share_embedding(dev_embedding_buffer,
+
+    void update_share_embedding(Cuda_Stream * cudaStream, 
+                              SampledSubgraph* subgraph,
+                              ValueType* dev_embedding,
+                              ValueType* dev_share_embedding,   // 这个为NULL
+                              VertexId *CacheMap,
+                              VertexId *CacheFlag){
+
+         //ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
+//         std::printf("layer: %d, graph: %p\n", layer, graph);
+//         std::printf("embedding size: %d\n", graph->gnnctx->layer_size[layer - 1]);
+            cudaStream->dev_update_share_embedding(dev_embedding,
                                            dev_share_embedding,
-                                           dev_cacheflag,
-                                           dev_embedding.size(1),
-                                           ssg->sampled_sgs[layer-1]->dev_destination,
-                                           ssg->sampled_sgs[layer-1]->v_size);
+                                           CacheMap,
+                                           CacheFlag,
+                                           graph->gnnctx->layer_size[layer - 1], //embedding size
+                                           subgraph->sampled_sgs[layer-1]->dev_destination,
+                                           subgraph->sampled_sgs[layer-1]->v_size);
     }
 
     SampledSubgraph* sample_gpu_fast(int batch_size_){
@@ -397,6 +424,85 @@ public:
         return ssg;
     }
 
+    SampledSubgraph* sample_gpu_fast_omit(int batch_size_, VertexId* CacheFlag){
+        double tmp_all_time = 0.0;
+        double tmp_pre_pro_time = 0.0;
+        double tmp_pro_time = 0.0;
+        tmp_all_time -= MPI_Wtime();
+        assert(work_offset < work_range[1]);
+        // 确定该batch的节点数量
+        int actual_batch_size = std::min((VertexId)batch_size_,work_range[1]-work_offset);
+        for(int i = 0; i < layer; i++){//debug
+            tmp_pre_pro_time = 0.0;
+            tmp_pre_pro_time -= MPI_Wtime();
+            {
+            init_layer_time -= MPI_Wtime();
+            if(i == 0){
+                ssg->gpu_init_first_layer(&(sample_nids[work_offset]),actual_batch_size);
+//                std::printf("理论第0层采样节点:\n");
+//                for(int j = 0; j < actual_batch_size; j++) {
+//                    std::printf("%u ", sample_nids[work_offset + j]);
+//                }
+//                std::printf("\n");
+            }else{
+                ssg->gpu_init_proceeding_layer(i);
+//                auto data_num = ssg->sampled_sgs[i]->v_size;
+//                VertexId * data = new VertexId[data_num];
+//                cudaMemcpy(data, ssg->sampled_sgs[i]->dev_destination, sizeof(VertexId) * data_num, cudaMemcpyDeviceToHost);
+//                std::printf("理论第%d层采样节点:\n", i);
+//                for(int j = 0; j < data_num; j++){
+//                    std::printf("%u ", data[j]);
+//                }
+//                std::printf("\n");
+//                delete[] data;
+
+            }
+            init_layer_time += MPI_Wtime();
+            init_co_time -= MPI_Wtime();
+            
+            if(i < layer - 1){
+                ssg->gpu_sampling_init_co(i,
+                    whole_graph->global_vertices,
+                    column_offset,
+                    tmp_data_buffer,
+                    ssg->cs,
+                    ssg->sampled_sgs[i]->e_size);
+            } 
+            else{ //跳过 CacheFlag = 1 或 2 的bottom layer采样。
+                ssg->gpu_sampling_init_co_omit(i,
+                    CacheFlag,
+                    whole_graph->global_vertices,
+                    column_offset,
+                    tmp_data_buffer,
+                    ssg->cs,
+                    ssg->sampled_sgs[i]->e_size);
+            }           
+            init_co_time += MPI_Wtime();
+            }
+            tmp_pre_pro_time+=MPI_Wtime();
+            pre_pro_time+=tmp_pre_pro_time;
+            
+
+            tmp_pro_time=0.0;
+            tmp_pro_time-=MPI_Wtime();
+            ssg->gpu_sampling(i,
+                    column_offset,
+                    dev_row_indices,
+                    whole_graph->global_vertices,test_time,
+                    ssg->cs);
+            tmp_pro_time+=MPI_Wtime();
+            pro_time+=tmp_pro_time;
+            post_pro_time -= MPI_Wtime();
+            ssg->update_degrees_GPU(i);
+            ssg->Get_Weight(i);
+            post_pro_time += MPI_Wtime();
+        }
+        tmp_all_time+=MPI_Wtime();
+        all_time += tmp_all_time;
+        work_offset += actual_batch_size;
+        return ssg;
+    }
+
     void set_ssg_num(int num, Cuda_Stream* cudaStreamArray){
         if(num <= 0) {
             return;
@@ -406,6 +512,7 @@ public:
         for(int i = 0; i < num; i++) {
             ssgs[i] = new SampledSubgraph(layer,fanout,whole_graph->global_vertices, &cudaStreamArray[i]);
             ssgs[i]->threads = std::max(ssgs[i]->threads - num, 1);
+//            ssgs[i]->threads = ssgs[i]->threads;
         }
 
         ssg = ssgs[0];
@@ -422,6 +529,11 @@ public:
         return ssgs[ssg_id];
     }
 
+    SampledSubgraph* sample_gpu_fast_omit(int batch_size_, int ssg_id, VertexId* CacheFlag) {
+        ssg = ssgs[ssg_id];
+        sample_gpu_fast_omit(batch_size_, CacheFlag);     
+        return ssgs[ssg_id];
+    }
 
 
     SampledSubgraph* sample_fast(int batch_size_){

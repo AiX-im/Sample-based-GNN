@@ -47,7 +47,8 @@ void allocate_gpu_edge(VertexId_CUDA **input, int size);
 
 void allocate_gpu_buffer_async(float **input, int size, cudaStream_t cs);
 void allocate_gpu_edge_async(VertexId_CUDA **input, int size, cudaStream_t cs);
-
+template<typename T>
+void sort_graph_vertex(T* vertex_in, T*vertex_out, VertexId_CUDA vertex_num, VertexId_CUDA out_num);
 void aggregate_comm_result(float *aggregate_buffer, float *input_buffer,
                            int data_size, int feature_size,
                            int partition_offset, bool sync = true);
@@ -120,6 +121,7 @@ public:
   cudaStream_t getStream();
   void setNewStream(cudaStream_t cudaStream);
   void CUDA_DEVICE_SYNCHRONIZE();
+    void CUDA_SYNCHRONIZE_ALL();
   cudaStream_t stream;
   cusparseHandle_t sparse_handle = NULL;
   cublasHandle_t blas_handle;
@@ -252,7 +254,18 @@ public:
 					               VertexId_CUDA* src_count,
 					               VertexId_CUDA* src_index,
                                    VertexId_CUDA fanout,
-                                    VertexId_CUDA& edge_size);
+                                   VertexId_CUDA& edge_size);
+
+  void sample_processing_get_co_gpu_omit(VertexId_CUDA* CacheFlag, VertexId_CUDA *dst, VertexId_CUDA *local_column_offset,
+                                   VertexId_CUDA *global_column_offset,
+                                   VertexId_CUDA dst_size, 
+                                   VertexId_CUDA* tmp_data_buffer,
+                                   VertexId_CUDA src_index_size,
+					               VertexId_CUDA* src_count,
+					               VertexId_CUDA* src_index,
+                                   VertexId_CUDA fanout,
+                                   VertexId_CUDA& edge_size);
+
   void sample_processing_update_ri_gpu(VertexId_CUDA *r_i,
 								 	VertexId_CUDA *src_index,
                                    	VertexId_CUDA edge_size,
@@ -280,16 +293,30 @@ public:
                     long *global_dev_label,
                     VertexId_CUDA *dst_vertex,
                     VertexId_CUDA vertex_size);
-  void dev_updata_share_embedding(float *dev_embedding,
+  void dev_Grad_refresh(float *dev_grad_buffer,
+				float *dev_share_grad,
+				VertexId_CUDA *dev_cacheflag,
+                VertexId_CUDA *dev_cachemap,
+                VertexId_CUDA feature_size,
+                VertexId_CUDA *destination_vertex,
+				VertexId_CUDA vertex_size);
+  void dev_Grad_accumulate(float *dev_grad_buffer,
+				float *dev_share_grad,
+				VertexId_CUDA *dev_cacheflag,
+                VertexId_CUDA *dev_cachemap,
+                VertexId_CUDA feature_size,
+                VertexId_CUDA *destination_vertex,
+				VertexId_CUDA vertex_size);
+  void dev_load_share_embedding(float *dev_embedding,
                     float *share_embedding,
                     VertexId_CUDA *dev_cacheflag,
-                    VertexId_CUDA *dev_cacheepoch,
-                    VertexId_CUDA current_epoch,
+                    VertexId_CUDA *dev_cachemap,
                     VertexId_CUDA feature_size,
                     VertexId_CUDA *destination_vertex,
 				    VertexId_CUDA vertex_size);
-  void dev_load_share_embedding(float *dev_embedding,
+  void dev_update_share_embedding(float *dev_embedding,
                     float *share_embedding,
+                    VertexId_CUDA *dev_cachemap,
                     VertexId_CUDA *dev_cacheflag,
                     VertexId_CUDA feature_size,
                     VertexId_CUDA *destination_vertex,

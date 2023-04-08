@@ -104,6 +104,7 @@ public:
   count = 0;
   training = true;
 }
+
  static void print_cuda_use()
     {
         size_t free_byte;
@@ -143,6 +144,7 @@ public:
     }
     return f_output;
 }
+
   template <typename GOPT>
   NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
         NtsVar &f_input){//graph op
@@ -163,7 +165,18 @@ public:
       count++;
     }
     return f_output;
-}  
+}
+
+    template <typename GOPT>
+    NtsVar runGraphOpNoBackward(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+                      NtsVar &f_input, int batch_start, int batch_end){//graph op
+
+        static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                      "template must be a type of graph op!");
+        nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_, batch_start, batch_end);
+        NtsVar f_output=curr->forward(f_input);
+        return f_output;
+    }
 
     template <typename GOPT>
   NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
@@ -443,7 +456,33 @@ template <typename NOPT>
   }
     reset();  
   }
-    void self_backward_cache(bool retain_graph, std::vector<VertexId> cacheflag,std::vector<VertexId>& dst,Graph<Empty> *graph_){
+
+    void Grad_accumulate(NtsVar &Embedding_Grad,
+                         ValueType *dev_share_grad,
+                         VertexId* cacheflag,
+                         VertexId* cachemap,
+                         VertexId_CUDA *destination_vertex,
+                         VertexId_CUDA vertex_size,
+                         Graph<Empty> *graph_,
+                         Cuda_Stream *cudaStream){
+          ValueType * dev_grad_buffer = graph_->Nts->getWritableBuffer(Embedding_Grad, torch::DeviceType::CUDA);
+         cudaStream->dev_Grad_accumulate(dev_grad_buffer,
+                                dev_share_grad,
+                                cacheflag,
+                                cachemap,
+                                Embedding_Grad.size(1),
+                                destination_vertex,
+                                vertex_size);
+        }
+
+    void self_backward_cache(bool retain_graph, 
+                            VertexId* cacheflag,
+                            VertexId* cachemap,
+                            VertexId_CUDA *destination_vertex,
+                            VertexId_CUDA vertex_size,
+                            Graph<Empty> *graph_,
+                            Cuda_Stream * cudaStream,
+                            ValueType *dev_share_grad){
       assert(this->training);
     output.top().backward(torch::ones_like(output.top()), retain_graph);
     output_grad[top_idx()-1]= input.top().grad();// grad of loss
@@ -487,17 +526,20 @@ template <typename NOPT>
       }//determine o grad
       assert(output_grad[top_idx()].size(1)==output.top().size(1));
       assert(output_grad[top_idx()].size(0)==output.top().size(0)); 
-      if(count == cachecount){
-        ValueType * f_output_buffer = graph_->Nts->getWritableBuffer(X_grad_c, torch::DeviceType::CPU);
-        ValueType * f_input_buffer = graph_->Nts->getWritableBuffer(output_grad[top_idx()], torch::DeviceType::CPU);
-        for(int id = 0; id < dst.size(); id++) {
-            int vertex_c = dst[id];
-            if(cacheflag[vertex_c]){
-                //memcpy(f_output_buffer+vertex_c*256, f_input_buffer+id*256, 256*sizeof(ValueType));
-                nts::op::nts_acc(f_output_buffer+vertex_c*256,f_input_buffer+id*256,256);
-            }
-        }
+      
+      //accumulative grad back to CPU
+      if(output_grad[top_idx()].size(1) == graph_->gnnctx->layer_size[1]) { //判断是否为bottom layer nn
+          Grad_accumulate(output_grad[top_idx()],
+                          dev_share_grad,
+                          cacheflag,
+                          cachemap,
+                          destination_vertex,
+                          vertex_size,
+                          graph_,
+                          cudaStream);
       }
+
+      //todo: 消除 CPU 梯度
       output.top().backward(output_grad[top_idx()], retain_graph);
 
       pop_one_op();
@@ -579,7 +621,6 @@ template <typename NOPT>
   int count;
   bool training; 
   int cachecount;
-  NtsVar X_grad_c;
 //  GraphOperation *gt;
 //  std::vector<CSC_segment_pinned *> subgraphs;
 //  bool bi_direction;

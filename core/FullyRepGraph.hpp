@@ -265,6 +265,27 @@ public:
                                          edge_size);
     }
 
+    void gpu_sampling_init_co_omit(
+                    int layer,
+                    VertexId* CacheFlag,
+                    VertexId src_index_size,
+                    VertexId* global_column_offset,
+                    VertexId* tmp_data_buffer, Cuda_Stream* cs,
+                    VertexId& edge_size){
+        cs->sample_processing_get_co_gpu_omit(
+                                         CacheFlag,
+                                         sampled_sgs[curr_layer]->dev_destination,
+                                         sampled_sgs[curr_layer]->dev_column_offset,
+                                         global_column_offset,
+                                         sampled_sgs[curr_layer]->v_size,
+                                         tmp_data_buffer,
+                                         src_index_size,
+                                         queue_count,
+                                         src_index[layer],
+                                         fanout[layer],
+                                         edge_size);
+    }
+
     void gpu_sampling(int layer,
                 VertexId* global_column_offset,
                 VertexId* global_row_indices,
@@ -426,7 +447,7 @@ public:
                               std::vector<VertexId>& row_indices)>sparse_slot,VertexId layer){
         
         {
-            std::printf("threads: %d\n", threads);
+//            std::printf("threads: %d\n", threads);
             omp_set_num_threads(threads);
 #pragma omp parallel for num_threads(threads)
             for (VertexId begin_v_i = 0;
@@ -450,6 +471,16 @@ public:
                     if(!cacheflag[sampled_sgs[layer]->dst()[begin_v_i]])
                     sparse_slot(begin_v_i,sampled_sgs[layer]->c_o(),sampled_sgs[layer]->r_i());
             }
+        }
+    }
+
+    void compute_one_layer_batch(std::function<void(VertexId local_dst, std::vector<VertexId>& column_offset,
+                                                    std::vector<VertexId>& row_indices)> sparse_slot, VertexId layer,
+                                 VertexId batch_start, VertexId batch_end) {
+//        std::printf("threads: %d\n", threads);
+#pragma omp parallel for num_threads(threads)
+        for(VertexId begin_v_i = batch_start; begin_v_i < batch_end; begin_v_i+=1){
+            sparse_slot(begin_v_i, sampled_sgs[layer]->c_o(), sampled_sgs[layer]->r_i());
         }
     }
 

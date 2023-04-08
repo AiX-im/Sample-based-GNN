@@ -682,9 +682,17 @@ struct Parameter : torch::nn::Module {
   NtsVar V_GPU;
   ValueType *W_from;
   ValueType *w_gradient_buffer;
+  ValueType *dev_w_gradient_buffer; // GPU中缓存的关于CPU的梯度
+  NtsVar W_gradient_gpu_tmp;    // 反向时CPU传过来的梯度存在这里
+  NtsVar W_gradient_cpu_tmp;    // 反向时GPU传过来的梯度存在这里
+  NtsVar W_c;                   // CPU的参数矩阵
+  NtsVar W_c_Adam;              // CPU参数矩阵用于Adam的中间变量
+  
   Network_simple<ValueType> *network_simple;
   int row, col;
   NtsVar W_gradient;
+  NtsVar W_gradient_cpu_buffer;
+  NtsVar dev_W_gradient;
   NtsVar W_g;
   ValueType alpha;
   ValueType beta1;
@@ -710,18 +718,24 @@ struct Parameter : torch::nn::Module {
     //                            scale * torch::ones({w, h}, torch::kFloat));
     //	ValueType scale=sqrt(6.0/(w+h));
     //	W=(2*scale)*W-scale;
-    W = register_parameter("W", torch::ones({w, h}, torch::kFloat));
+    W = register_parameter("W", torch::ones({static_cast<long>(w), static_cast<long>(h)}, torch::kFloat));
     // std::cout << "W before---------\n" << W << std::endl;
     torch::nn::init::xavier_uniform_(W, 1.0);
     // std::cout << "W after---------\n" << W << std::endl;
 
     W_from = new ValueType[w * h];
+
     w_gradient_buffer = new ValueType[w * h];
     memset(w_gradient_buffer, 0, sizeof(ValueType) * w * h);
-    W_gradient = torch::from_blob(w_gradient_buffer, {w, h}, torch::kFloat);
+    W_gradient = torch::from_blob(w_gradient_buffer, {static_cast<long>(w), static_cast<long>(h)}, torch::kFloat);
+
+//    dev_w_gradient_buffer = new ValueType[w * h];
+//    memset(dev_w_gradient_buffer, 0, sizeof(ValueType) * w * h);
+//    W_gradient = torch::from_blob(dev_w_gradient_buffer, {w, h}, torch::kFloat);
+
     network_simple = new Network_simple<ValueType>(row, col);
-    M = torch::zeros({w, h}, torch::kFloat);
-    V = torch::zeros({w, h}, torch::kFloat);
+    M = torch::zeros({static_cast<long>(w), static_cast<long>(h)}, torch::kFloat);
+    V = torch::zeros({static_cast<long>(w), static_cast<long>(h)}, torch::kFloat);
     alpha = alpha_;
     beta1 = beta1_;
     beta2 = beta2_;
@@ -743,7 +757,7 @@ struct Parameter : torch::nn::Module {
     // W = register_parameter("W",
     //                        (2 * scale) * torch::rand({w, h}, torch::kFloat) -
     //                            scale * torch::ones({w, h}, torch::kFloat));
-    W = register_parameter("W", torch::ones({w, h}, torch::kFloat));
+    W = register_parameter("W", torch::ones({static_cast<long>(w), static_cast<long>(h)}, torch::kFloat));
     // std::cout << "W before---------\n" << W << std::endl;
     torch::nn::init::xavier_uniform_(W, 1.0);
     // std::cout << "W after---------\n" << W << std::endl;
@@ -751,7 +765,7 @@ struct Parameter : torch::nn::Module {
     W_from = new ValueType[w * h];
     w_gradient_buffer = new ValueType[w * h];
     memset(w_gradient_buffer, 0, sizeof(ValueType) * w * h);
-    W_gradient = torch::from_blob(w_gradient_buffer, {w, h}, torch::kFloat);
+    W_gradient = torch::from_blob(w_gradient_buffer, {static_cast<long>(w), static_cast<long>(h)}, torch::kFloat);
     network_simple = new Network_simple<ValueType>(row, col);
     weight_decay = weight_decay;
     l_r = l_r_;
@@ -764,6 +778,22 @@ struct Parameter : torch::nn::Module {
   void init_parameter() {
     network_simple->broadcast(W.accessor<ValueType, 2>().data());
   }
+
+  // Toao 初始化pd相关的参数
+  void init_pd_parameter(){
+      W_c = W.clone();
+      W_c.set_requires_grad(false);
+      W_c_Adam = W_c.clone();
+      W_gradient_cpu_tmp = W_c.clone();
+      W_gradient_gpu_tmp = W_c.cuda();
+  }
+
+  void init_shared_grad_buffer(VertexId cache_num, int layer1_size){
+      dev_W_gradient = torch::zeros({cache_num, layer1_size}, at::TensorOptions().device_index(0).dtype(torch::kFloat32));
+//      dev_W_gradient.zero_();
+      dev_w_gradient_buffer = dev_W_gradient.packed_accessor<float, 2>().data();
+  }
+
   void all_reduce_to_gradient(NtsVar from) {
     W_gradient.set_data(from);
     network_simple->all_reduce_sum(W_gradient.accessor<ValueType, 2>().data());
@@ -791,7 +821,6 @@ struct Parameter : torch::nn::Module {
     curr_epoch++;
   }
   NtsVar forward(NtsVar x) {
-
     NtsVar x1 = x.matmul(W);
     return x1;
   }
@@ -832,6 +861,7 @@ struct Parameter : torch::nn::Module {
     W.set_data(a);
   }
 
+  
 #if CUDA_ENABLE
   void Adam_to_GPU() {
     M_GPU = M.cuda();
@@ -866,6 +896,68 @@ struct Parameter : torch::nn::Module {
     W.set_data(W - alpha * M_GPU / (torch::sqrt(V_GPU) + epsilon));
   }
 #endif
+
+    void cal_CPU_gradient(NtsVar &X, NtsVar& mask) {
+      // 这里可能都需要进行mask, 选择需要的行
+//      std::printf("X dim: %d, W dim: %d\n", X.dim(), W.dim());
+//      std::printf("X size: %d\n", X.size(0));
+//      std::printf("X size(%d, %d), W_gradint size(%d, %d)\n", X.size(0), X.size(1), W_gradient.size(0), W_gradient.size(1));
+//      std::printf("mask size: (%d, %d)\n", mask.size(0), mask.size(1));
+//      std::printf("W_gradient sum: %lf\n", W_gradient.sum().item<double>());
+      auto row = X.size(0);
+      auto col = W_gradient_cpu_buffer.size(1);
+        W_gradient_cpu_buffer = torch::masked_select(W_gradient_cpu_buffer, mask);
+//        std::printf("W_gradient dim: %d, size: %d\n", W_gradient.dim(), W_gradient.size(0));
+        if(row * col != W_gradient_cpu_buffer.size(0)){
+            std::printf("row: %d, col: %d, size: %ld", row, col, W_gradient_cpu_buffer.size(0));
+        }
+        assert(row * col == W_gradient_cpu_buffer.size(0));
+        W_gradient_cpu_buffer.resize_({row, col});
+        W_gradient = X.t().matmul(W_gradient_cpu_buffer);
+        W_gradient_gpu_tmp = W_gradient.cuda();
+    }
+    void cal_GPU_gradient() {
+        W_gradient_cpu_tmp = W.grad().cpu();
+    }
+    void learn_gpu_with_decay_Adam() {
+        W_gradient_gpu_tmp += W.grad();
+        W_g.set_data(W);
+        W_g = W_g * weight_decay;
+        W_g = W_g + W_gradient_gpu_tmp; //+weight_decay;
+        M_GPU = beta1 * M_GPU + (1 - beta1) * W_g;
+        V_GPU = beta2 * V_GPU + (1 - beta2) * W_g * W_g;
+        W.set_data(W - alpha * M_GPU / (torch::sqrt(V_GPU) + epsilon));
+    }
+    void learn_cpu_with_decay_Adam(){
+        W_c_Adam.set_data(W_c);
+        W_c_Adam = W_c_Adam * weight_decay;
+        W_c_Adam = W_c_Adam + W_gradient;
+        M = beta1 * M + (1 - beta1) * W_c_Adam;
+        V = beta2 * V + (1 - beta2) * W_c_Adam * W_c_Adam;
+        W_c.set_data(W_c - alpha * M/(torch::sqrt(V) + epsilon));
+    }
+
+    void reduce_GPU_gradient() {
+        W_gradient += W_gradient_cpu_tmp;
+    }
+
+    void send_param_to_cpu() {
+      W_gradient_cpu_buffer = dev_W_gradient.cpu();
+      W_c = W.cpu();
+    }
+
+    void set_gradient_like(NtsVar& tensor){
+      dev_W_gradient = torch::zeros_like(tensor, at::TensorOptions().device_index(0).dtype(torch::kFloat32));
+      dev_w_gradient_buffer = dev_W_gradient.packed_accessor<float, 2>().data();
+    }
+
+    void reset_layer(){
+      this->zero_grad();
+      W_gradient.zero_();
+      W_gradient_gpu_tmp.zero_();
+      W_gradient_cpu_tmp.zero_();
+    }
+
 };
 
 #endif
