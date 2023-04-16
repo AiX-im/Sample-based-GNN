@@ -14,6 +14,8 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
    limitations under the License.
 */
 
+#include <signal.h>
+#include <boost/stacktrace.hpp>
 #include "GAT_CPU.hpp"
 #include "GCN_CPU_SAMPLE.hpp"
 #include "GCN_CPU.hpp"
@@ -37,7 +39,14 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "GCN_SAMPLE_PD_CACHE.hpp"
 #endif
 
+void segment_fault_handler(int signum) {
+    std::fprintf(stderr, "Error: signal %d:\n", signum);
+    std::cerr << boost::stacktrace::stacktrace();
+    exit(signum);
+}
+
 int main(int argc, char **argv) {
+    signal(SIGSEGV, segment_fault_handler);
   MPI_Instance mpi(&argc, &argv);
   if (argc < 2) {
     printf("configuration file missed \n");

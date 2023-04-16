@@ -42,8 +42,21 @@ public:
   VertexId *CacheMap; // 存储缓存节点在cache中的下标
   VertexId *dev_CacheMap;
 
+  ValueType *local_aggregation;
+  ValueType *dev_local_aggregation;
+
+  VertexId *X_version;          // 存储聚合后结果的版本号
+  VertexId *dev_X_version;
+
+  VertexId *Y_version;          // 存储乘W后的结果的版本号
+  VertexId *dev_Y_version;
+
   ValueType *dev_share_embedding; //share computation
-  ValueType *dev_share_grad;
+  ValueType *dev_share_aggregate;
+
+  uint8_t *dev_mask_tensor;
+  NtsVar mask_tensor;
+  NtsVar aggregate_tensor;
 
   VertexId cache_num;
   long *local_label;        // labels of local partition
@@ -78,25 +91,45 @@ public:
 
     void init_cache_var(float cache_rate){
         cache_num = gnnctx->l_v_num * cache_rate;
-        local_embedding = (ValueType*)cudaMallocPinned((long)(cache_num)*(gnnctx->layer_size[0])*sizeof(ValueType));
+        local_embedding = (ValueType*)cudaMallocPinned((long)(cache_num)*(gnnctx->layer_size[1])*sizeof(ValueType));
         CacheFlag = (VertexId*) cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(VertexId));
         CacheMap = (VertexId*) cudaMallocPinned((long)(gnnctx->l_v_num) * sizeof(VertexId));
+
+        local_aggregation = (ValueType*) cudaMallocPinned(cache_num * (gnnctx->layer_size[0]) * sizeof(ValueType));
+        X_version = (VertexId*) cudaMallocPinned(cache_num * sizeof(VertexId));
+        Y_version = (VertexId*) cudaMallocPinned(cache_num * sizeof(VertexId));
+        memset(X_version, 0, sizeof(VertexId) * cache_num);
+        memset(Y_version, 0, sizeof(VertexId) * cache_num);
 
 
         assert(gnnctx->layer_size.size() > 1);
         dev_share_embedding = (ValueType*)cudaMallocGPU(cache_num * gnnctx->layer_size[1] * sizeof(ValueType));
+        aggregate_tensor = torch::zeros({cache_num, gnnctx->layer_size[0]},
+                                        at::TensorOptions().dtype(torch::kFloat32).device_index(0));
+//        dev_share_aggregate = aggregate_tensor.packed_accessor<float, 2>().data();
+//        mask_tensor = torch::zeros({cache_num, 1}, at::TensorOptions().dtype(torch::kBool).device_index(0));
+//        dev_mask_tensor = mask_tensor.packed_accessor<uint8_t, 2>().data();
+        dev_share_aggregate = (ValueType*)cudaMallocGPU(cache_num * gnnctx->layer_size[0] * sizeof(ValueType));
         //初始化和刷新
 //        dev_share_grad = (ValueType*)cudaMallocGPU(cache_num * gnnctx->layer_size[gnnctx->max_layer - 1] * sizeof(ValueType));
         dev_CacheFlag = (VertexId*) getDevicePointer(CacheFlag);
         dev_CacheMap = (VertexId*) getDevicePointer(CacheMap);
         dev_local_embedding=(ValueType*)getDevicePointer(local_embedding);
+
+        dev_local_aggregation = (ValueType*) getDevicePointer(local_aggregation);
+        dev_X_version = (VertexId*) getDevicePointer(X_version);
+        dev_Y_version = (VertexId*) getDevicePointer(Y_version);
     }
 
     void genereate_gpu_data(){
         dev_local_label=(long*)cudaMallocGPU(gnnctx->l_v_num*sizeof(long));
         dev_local_feature=(ValueType*)getDevicePointer(local_feature);
         move_bytes_in(dev_local_label,local_label,gnnctx->l_v_num*sizeof(long));
+    }
 
+    void generate_aggregate_pd_data(){
+        local_aggregation = (ValueType*) cudaMallocPinned(cache_num * (gnnctx->layer_size[0]) * sizeof(ValueType));
+        dev_local_aggregation = (ValueType*) getDevicePointer(local_aggregation);
     }
 
 void reset_cache_flag(std::vector<VertexId>& cache_ids){
@@ -120,6 +153,30 @@ void move_data_to_local_cache(VertexId vertex_num, int feature_len, ValueType* d
         }
     }
 }
+
+void move_data_to_local_cache(VertexId vertex_num, int feature_len, int embedding_len, ValueType* feature,
+                              ValueType* embedding, VertexId* ids, VertexId start, uint32_t version){
+        if(vertex_num <= 0){
+            return;
+        }
+        if(X_version[CacheMap[ids[0]]] >= version){
+            return;
+        }
+//        std::printf("feature len: %d, embedding len: %d, version: %d\n", feature_len, embedding_len, version);
+
+#pragma omp parallel for
+        for(VertexId i = 0; i < vertex_num; i++) {
+            auto index = CacheMap[ids[i]];
+            X_version[index] = version;
+            __asm__ __volatile__ ("" : : : "memory");
+            memcpy(&local_aggregation[index * feature_len], &feature[i * feature_len], sizeof(ValueType)*feature_len);
+            memcpy(&local_embedding[index * embedding_len], &embedding[i * embedding_len], sizeof(ValueType)*embedding_len);
+            Y_version[index] = X_version[index];
+            __asm__ __volatile__ ("" : : : "memory");
+
+        }
+
+    }
 
 
 /**

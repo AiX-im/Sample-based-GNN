@@ -686,6 +686,9 @@ struct Parameter : torch::nn::Module {
   NtsVar W_gradient_gpu_tmp;    // 反向时CPU传过来的梯度存在这里
   NtsVar W_gradient_cpu_tmp;    // 反向时GPU传过来的梯度存在这里
   NtsVar W_c;                   // CPU的参数矩阵
+  uint32_t cpu_version;         // CPU参数的版本
+  uint32_t gpu_version;         // GPU参数的版本
+  std::mutex cpu_set_W_mutex;
   NtsVar W_c_Adam;              // CPU参数矩阵用于Adam的中间变量
   
   Network_simple<ValueType> *network_simple;
@@ -747,6 +750,8 @@ struct Parameter : torch::nn::Module {
     weight_decay = weight_decay_;
     curr_epoch = 0;
     decay_epoch = -1;
+    gpu_version = 1;
+    cpu_version = 1;
   }
   Parameter(size_t w, size_t h, ValueType l_r_ = 0.01,
             ValueType weight_decay_ = 0.05) {
@@ -771,6 +776,8 @@ struct Parameter : torch::nn::Module {
     l_r = l_r_;
     curr_epoch = 0;
     decay_epoch = -1;
+    cpu_version = 1;
+    gpu_version = 1;
   }
 
   // root will broadcast it's parameter to other process
@@ -888,12 +895,14 @@ struct Parameter : torch::nn::Module {
     W.set_data(W - alpha * M_GPU / (torch::sqrt(V_GPU) + epsilon));
   }
   void learn_local_with_decay_Adam() {
+      std::lock_guard<std::mutex> get_lock(cpu_set_W_mutex);
     W_g.set_data(W);
     W_g = W_g * weight_decay;
     W_g = W_g + W.grad(); //+weight_decay;
     M_GPU = beta1 * M_GPU + (1 - beta1) * W_g;
     V_GPU = beta2 * V_GPU + (1 - beta2) * W_g * W_g;
     W.set_data(W - alpha * M_GPU / (torch::sqrt(V_GPU) + epsilon));
+    gpu_version++;
   }
 #endif
 
@@ -944,6 +953,19 @@ struct Parameter : torch::nn::Module {
     void send_param_to_cpu() {
       W_gradient_cpu_buffer = dev_W_gradient.cpu();
       W_c = W.cpu();
+    }
+
+    void send_W_to_cpu(){
+      std::lock_guard<std::mutex> set_lock(cpu_set_W_mutex);
+      W_c = W.cpu();
+      W_c.set_requires_grad(false);
+      cpu_version++;
+    }
+
+    NtsVar get_W_and_version(uint32_t& version){
+        std::lock_guard<std::mutex> get_lock(cpu_set_W_mutex);
+        version = cpu_version;
+        return W_c.clone();
     }
 
     void set_gradient_like(NtsVar& tensor){

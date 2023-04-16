@@ -251,7 +251,8 @@ public:
 
         } else if (layer == 0) {
             //y = P[layer]->forward(torch::relu(drpmodel(a)));
-            y = torch::dropout(torch::relu(P[layer]->forward(a)), drop_rate, ctx->is_train());
+            auto b = P[layer]->forward(a);
+            y = torch::dropout(torch::relu(b), drop_rate, ctx->is_train());
         }
         return y;
     }
@@ -328,6 +329,9 @@ public:
                                                              },
                                                              Y_i,
                                                              tmp_X0[thread_id]);
+                            cudaDeviceSynchronize();
+                            auto Y1_sum = Y_i.abs().sum().item<double>();
+                            std::printf("X1数量: %d, X1 sum: %lf, X1 avg: %lf\n", Y_i.size(0), Y1_sum, Y1_sum/Y_i.size(0));
                         } else {
                             NtsVar Y_i = ctx->runGraphOp<nts::op::SingleGPUAllSampleGraphOp>(sg[thread_id],graph,hop,X[l],&cuda_stream[thread_id]);
                             X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){

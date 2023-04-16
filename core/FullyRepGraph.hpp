@@ -117,7 +117,7 @@ public:
         // std::printf("线程: %d 分配了3：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(all_vertices));
         allocate_gpu_edge_async(&outdegree, all_vertices, cs->stream);
         // std::printf("线程: %d 分配了4：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(all_vertices));
-        allocate_gpu_edge_async(&indegree, all_vertices, cs->stream);         
+        allocate_gpu_edge_async(&indegree, all_vertices, cs->stream);
         threads = std::max(numa_num_configured_cpus() - 1, 1);
 
     }
@@ -163,6 +163,10 @@ public:
                 outs[v_src_m]++;
             }
         }
+    }
+
+    void move_degree_to_gpu(VertexId* cpu_in_degree, VertexId* cpu_out_degree, VertexId vertexs){
+        cs->move_degree_to_gpu(cpu_in_degree, cpu_out_degree, indegree, outdegree, vertexs);
     }
     
     void update_degrees_GPU(int layer) {

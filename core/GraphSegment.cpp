@@ -223,6 +223,10 @@ void InputInfo::readFromCfgFile(std::string config_file) {
   std::string cfg_oneline;
   std::ifstream inFile;
   inFile.open(config_file.c_str(), std::ios::in);
+
+  // toao 初始化一些变量
+  this->pipeline_num = 1;
+  this->cache_rate = 0.1;
   while (getline(inFile, cfg_oneline)) {
     if (cfg_oneline.empty() || cfg_oneline[0] == '#') continue;
     std::string cfg_k;
@@ -326,6 +330,8 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       this->mini_pull = std::atoi(cfg_v.c_str());
     } else if (0 == cfg_k.compare("PIPELINE_NUM")) {
       this->pipeline_num = std::atoi(cfg_v.c_str());
+    } else if(0 == cfg_k.compare("CACHE_RATE")) {
+        this->cache_rate = std::atof(cfg_v.c_str());
     }
 
 

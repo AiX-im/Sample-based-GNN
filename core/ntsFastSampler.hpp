@@ -144,6 +144,7 @@ public:
         ssgs = new SampledSubgraph*[pipeline_num];
         for(int i = 0; i < pipeline_num; i++){
             ssgs[i] = new SampledSubgraph(layer,fanout,whole_graph->global_vertices,&cuda_stream[i]);//gpu sampler
+            ssgs[i]->move_degree_to_gpu(graph->in_degree_for_backward, graph->out_degree_for_backward, graph->vertices);
         }
         ssg = ssgs[0];
         
@@ -338,6 +339,67 @@ public:
                                            subgraph->sampled_sgs[layer-1]->v_size);
     }
 
+
+    //cacheflag: 0  2
+    void load_share_embedding_and_feature(Cuda_Stream * cudaStream,
+                              SampledSubgraph* subgraph,
+                              ValueType* dev_share_feature,
+                              ValueType* dev_share_embedding,
+                              NtsVar& dev_feature,
+                              NtsVar& dev_embedding,
+                              VertexId *CacheMap,
+                              VertexId *CacheFlag){
+        ValueType *dev_feature_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_feature, torch::DeviceType::CUDA);
+        ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
+        cudaStream->dev_load_share_embedding_and_feature(dev_feature_buffer, dev_embedding_buffer,
+                                             dev_share_feature, dev_share_embedding,
+                                             CacheFlag,
+                                             CacheMap,
+                                             dev_feature.size(1), dev_embedding.size(1),
+                                             subgraph->sampled_sgs[layer-1]->dev_destination,
+                                             subgraph->sampled_sgs[layer-1]->v_size);
+    }
+
+    //cacheflag: 0  2
+    void load_share_aggregate(Cuda_Stream * cudaStream,
+                              SampledSubgraph* subgraph,
+                              ValueType* dev_share_feature,
+                              NtsVar& dev_feature,
+                              VertexId *CacheMap,
+                              VertexId *CacheFlag){
+        ValueType *dev_feature_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_feature, torch::DeviceType::CUDA);
+        cudaStream->dev_load_share_aggregate(dev_feature_buffer,
+                                                         dev_share_feature,
+                                                         CacheFlag,
+                                                         CacheMap,
+                                                         dev_feature.size(1),
+                                                         subgraph->sampled_sgs[layer-1]->dev_destination,
+                                                         subgraph->sampled_sgs[layer-1]->v_size);
+    }
+
+    //cacheflag: 0  2
+    void load_share_embedding(Cuda_Stream * cudaStream,
+                              SampledSubgraph* subgraph,
+                              ValueType* dev_share_embedding,
+                              NtsVar& dev_embedding,
+                              VertexId *CacheMap,
+                              VertexId *CacheFlag,
+                              NtsVar& X_mask_tensor,
+                              uint8_t* dev_cache_mask){
+        ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
+        uint8_t* dev_x_mask = X_mask_tensor.packed_accessor<uint8_t, 2>().data();
+        cudaStream->dev_load_share_embedding(dev_embedding_buffer,
+                                             dev_share_embedding,
+                                             CacheFlag,
+                                             CacheMap,
+                                             dev_embedding.size(1),
+                                             subgraph->sampled_sgs[layer-1]->dev_destination,
+                                             dev_x_mask,
+                                             dev_cache_mask,
+                                             subgraph->sampled_sgs[layer-1]->v_size);
+    }
+
+
     void update_share_embedding(Cuda_Stream * cudaStream, 
                               SampledSubgraph* subgraph,
                               ValueType* dev_embedding,
@@ -355,6 +417,31 @@ public:
                                            graph->gnnctx->layer_size[layer - 1], //embedding size
                                            subgraph->sampled_sgs[layer-1]->dev_destination,
                                            subgraph->sampled_sgs[layer-1]->v_size);
+    }
+
+
+    void update_share_embedding_and_feature(Cuda_Stream * cudaStream,
+                                SampledSubgraph* subgraph,
+                                ValueType* dev_feature,
+                                ValueType* dev_embedding,
+                                ValueType* dev_share_aggregate,
+                                ValueType* dev_share_embedding,
+                                VertexId *CacheMap,VertexId *CacheFlag,
+                                VertexId *dev_X_version, VertexId* dev_Y_version, VertexId require_version){
+
+        //ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
+//         std::printf("layer: %d, graph: %p\n", layer, graph);
+//         std::printf("embedding size: %d\n", graph->gnnctx->layer_size[layer - 1]);
+
+        cudaStream->dev_update_share_embedding_and_feature(dev_feature, dev_embedding, dev_share_aggregate,
+                                               dev_share_embedding,
+                                               CacheMap,
+                                               CacheFlag,
+                                               graph->gnnctx->layer_size[0],
+                                               graph->gnnctx->layer_size[1], //embedding size
+                                               subgraph->sampled_sgs[1]->dev_destination,
+                                               dev_X_version, dev_Y_version,
+                                               subgraph->sampled_sgs[1]->v_size, require_version);
     }
 
     SampledSubgraph* sample_gpu_fast(int batch_size_){
@@ -414,7 +501,11 @@ public:
             tmp_pro_time+=MPI_Wtime();
             pro_time+=tmp_pro_time;
             post_pro_time -= MPI_Wtime();
-            ssg->update_degrees_GPU(i);
+            if(graph->config->up_degree){
+                ssg->update_degrees_GPU(i);
+//                ssg->update_degrees(graph,i);
+
+            }
             ssg->Get_Weight(i);
             post_pro_time += MPI_Wtime();
         }
@@ -493,7 +584,12 @@ public:
             tmp_pro_time+=MPI_Wtime();
             pro_time+=tmp_pro_time;
             post_pro_time -= MPI_Wtime();
-            ssg->update_degrees_GPU(i);
+
+            if(graph->config->up_degree){
+                ssg->update_degrees_GPU(i);
+//                ssg->update_degrees(graph,i);
+
+            }
             ssg->Get_Weight(i);
             post_pro_time += MPI_Wtime();
         }

@@ -79,6 +79,7 @@ public:
                       //  nts_comp(local_output, local_input,
                       //        weight[src_offset], feature_size);
                 }
+                // TODO: 这里可能有bug
                  memcpy(f_embedding_output+local_dst*feature_size,
                      local_output,feature_size*sizeof(ValueType));
               },
@@ -176,6 +177,35 @@ public:
 
         }
     };
+
+//    void AVXMul(float* mat1, float* mat2, float* result, int M, int N, int K)
+//    {
+//
+//
+//        __m256 vec_multi_res = _mm256_setzero_ps(); //Initialize vector to zero
+//        __m256 vec_mat1 = _mm256_setzero_ps(); //Initialize vector to zero
+//        __m256 vec_mat2 = _mm256_setzero_ps(); //Initialize vector to zero
+//
+//        int i, j, k;
+//        for (i = 0; i < M; i++)
+//        {
+//            for (j = 0; j < N; ++j)
+//            {
+//                //Stores one element in mat1 and use it in all computations needed before proceeding
+//                //Stores as vector to increase computations per cycle
+//                vec_mat1 = _mm256_set1_epi32(mat1[i*N +j]);
+//
+//                for (k = 0; k < K; k += 8)
+//                {
+//                    vec_mat2 = _mm256_loadu_si256((__m256i*)&mat2[j* K + k]); //Stores row of second matrix (eight in each iteration)
+//                    vec_multi_res = _mm256_loadu_si256((__m256i*)&result[i* K + k]); //Loads the result matrix row as a vector
+//                    vec_multi_res = _mm256_add_epi32(vec_multi_res ,_mm256_mullo_epi32(vec_mat1, vec_mat2));//Multiplies the vectors and adds to th the result vector
+//
+//                    _mm256_storeu_si256((__m256i*)&result[i*K + k], vec_multi_res); //Stores the result vector into the result array
+//                }
+//            }
+//        }
+//    }
 
 //class SingleCPUSrcScatterOp : public ntsGraphOp{
 //public:

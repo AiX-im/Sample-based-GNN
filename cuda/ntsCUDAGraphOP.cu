@@ -220,18 +220,17 @@ void Cuda_Stream::Gather_By_Dst_From_Src(float* input,float* output,float* weigh
         VertexId_CUDA feature_size,bool with_weight,bool tensor_weight){
 #if CUDA_ENABLE
        if(with_weight){
-       if(tensor_weight){
-//		aggregate_kernel_from_src_tensor_weight<float,VertexId_CUDA><<<BLOCK_SIZE,THREAD_SIZE,0,stream>>>(
-//			row_indices, column_offset, input, output, weight_forward, 
-//				src_start, dst_start, batch_size, feature_size);
-              printf("aggregate_kernel_from_src_tensor_weight_optim_nts");
+           if(tensor_weight){
+    //		aggregate_kernel_from_src_tensor_weight<float,VertexId_CUDA><<<BLOCK_SIZE,THREAD_SIZE,0,stream>>>(
+    //			row_indices, column_offset, input, output, weight_forward,
+    //				src_start, dst_start, batch_size, feature_size);
+                  printf("aggregate_kernel_from_src_tensor_weight_optim_nts");
+           }else{
+                  aggregate_kernel_from_src_with_weight<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+                  row_indices, column_offset, input, output, weight_forward,
+                         src_start, dst_start, batch_size, feature_size);
+           }
        }else{
-              aggregate_kernel_from_src_with_weight<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
-              row_indices, column_offset, input, output, weight_forward, 
-                     src_start, dst_start, batch_size, feature_size);
-       }
-       }
-       else{
               aggregate_kernel_from_src_without_weight<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
                      row_indices, column_offset, input, output, weight_forward, 
                             src_start, dst_start, batch_size, feature_size);
@@ -274,6 +273,7 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
         VertexId_CUDA dst_start, VertexId_CUDA dst_end,
 	VertexId_CUDA edges,VertexId_CUDA batch_size,
         VertexId_CUDA feature_size,bool with_weight,bool tensor_weight){
+//    print_cuda_sum(weight_forward, edges, "weight forward");
 #if CUDA_ENABLE
 //    std::printf("real edges: %d, record edges: %d\n", get_cuda_array_num(column_offset, batch_size), edges);
 //         if(with_weight){
@@ -1325,6 +1325,82 @@ void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
        exit(0);   
 #endif   
 }
+
+__global__ void print_cache_num(VertexId_CUDA *destination_vertex, VertexId_CUDA *dev_cachemap, VertexId_CUDA vertex_size) {
+    uint32_t sum = 0;
+    for(VertexId_CUDA i = 0; i < vertex_size; i++) {
+        if(dev_cachemap[i] != -1){
+            sum++;
+        }
+    }
+    std::printf("顶点总数: %u, 缓存数量: %u\n", vertex_size, sum);
+}
+
+void Cuda_Stream::dev_load_share_embedding_and_feature(float* dev_feature, float *dev_embedding,
+                                           float* share_feature, float *share_embedding,
+                                           VertexId_CUDA *dev_cacheflag,
+                                           VertexId_CUDA *dev_cachemap,
+                                           VertexId_CUDA feature_size, VertexId_CUDA embedding_size,
+                                           VertexId_CUDA *destination_vertex,
+                                           VertexId_CUDA vertex_size){
+#if CUDA_ENABLE
+//    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+
+    dev_load_share_embedding_and_feature_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (dev_feature, dev_embedding, share_feature, share_embedding,dev_cacheflag,dev_cachemap,
+             feature_size,embedding_size, destination_vertex,vertex_size);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+//    cudaDeviceSynchronize();
+#else
+    printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);
+#endif
+}
+
+
+void Cuda_Stream::dev_load_share_aggregate(float* dev_feature,
+                                                       float* share_feature,
+                                                       VertexId_CUDA *dev_cacheflag,
+                                                       VertexId_CUDA *dev_cachemap,
+                                                       VertexId_CUDA feature_size,
+                                                       VertexId_CUDA *destination_vertex,
+                                                       VertexId_CUDA vertex_size){
+#if CUDA_ENABLE
+//    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+
+    dev_load_share_aggregate_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (dev_feature, share_feature,dev_cacheflag,dev_cachemap,
+             feature_size,destination_vertex,vertex_size);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+//    cudaDeviceSynchronize();
+#else
+    printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);
+#endif
+}
+
+void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
+                                           float *share_embedding,
+                                           VertexId_CUDA *dev_cacheflag,
+                                           VertexId_CUDA *dev_cachemap,
+                                           VertexId_CUDA feature_size,
+                                           VertexId_CUDA *destination_vertex,
+                                           uint8_t *dev_x_mask,
+                                           uint8_t *dev_cache_mask,
+                                           VertexId_CUDA vertex_size){
+#if CUDA_ENABLE
+    dev_load_share_embedding_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (dev_embedding,share_embedding,dev_cacheflag,dev_cachemap,feature_size,destination_vertex,dev_x_mask, dev_cache_mask, vertex_size);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+#else
+    printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);
+#endif
+}
+
+
 void Cuda_Stream::dev_Grad_accumulate(float *dev_grad_buffer,
 				float *dev_share_grad,
 				VertexId_CUDA *dev_cacheflag,
@@ -1354,9 +1430,34 @@ void Cuda_Stream::dev_update_share_embedding(float *dev_embedding,
                             (dev_embedding,share_embedding,dev_cachemap,dev_cacheflag,feature_size,destination_vertex,vertex_size);
     this->CUDA_DEVICE_SYNCHRONIZE();
 #else
-       printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       printf("CUDA DISABLED Cuda_Stream::dev_update_share_embedding\n");
        exit(0);   
 #endif   
+}
+
+void Cuda_Stream::dev_update_share_embedding_and_feature(float *dev_feature,
+                                                         float *dev_embedding,
+                                                         float * share_aggregate,
+                                             float *share_embedding,
+                                             VertexId_CUDA *dev_cachemap,
+                                             VertexId_CUDA *dev_cacheflag,
+                                             VertexId_CUDA feature_size,
+                                             VertexId_CUDA embedding_size,
+                                             VertexId_CUDA *destination_vertex,
+                                             VertexId_CUDA *dev_X_version,
+                                             VertexId_CUDA *dev_Y_version,
+                                             VertexId_CUDA vertex_size, VertexId_CUDA require_version){
+#if CUDA_ENABLE
+//    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+    dev_update_share_embedding_and_feature_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (dev_feature,dev_embedding,share_aggregate, share_embedding,dev_cachemap,dev_cacheflag,feature_size,
+             embedding_size, destination_vertex, dev_X_version, dev_Y_version, vertex_size, require_version);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+#else
+    printf("CUDA DISABLED Cuda_Stream::dev_update_share_embedding\n");
+       exit(0);
+#endif
 }
 
 void Cuda_Stream::ReFreshDegree(VertexId_CUDA *out_degree,
@@ -1387,6 +1488,17 @@ void Cuda_Stream::UpdateDegree(VertexId_CUDA *out_degree,
        printf("CUDA DISABLED Cuda_Stream::up_date_degree\n");
        exit(0);   
 #endif   
+}
+
+void Cuda_Stream::move_degree_to_gpu(VertexId_CUDA* cpu_in_degree, VertexId_CUDA* cpu_out_degree,
+                                     VertexId_CUDA *gpu_in_degree, VertexId_CUDA *gpu_out_degree,VertexId_CUDA vertexs) {
+#if CUDA_ENABLE
+    cudaMemcpyAsync(gpu_in_degree, cpu_in_degree, sizeof(VertexId_CUDA) * vertexs, cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(gpu_out_degree, cpu_in_degree, sizeof(VertexId_CUDA) * vertexs, cudaMemcpyHostToDevice, stream);
+#else
+    printf("CUDA DISABLED Cuda_Stream::move_degree_to_gpu\n");
+       exit(0);
+#endif
 }
 
 void Cuda_Stream::GetWeight(float *edge_weight,    

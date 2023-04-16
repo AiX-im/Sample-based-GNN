@@ -376,6 +376,33 @@ public:
 //                                int dst_offset, int dst_offset_end,
 //                                int feature_size, int edge_size,
 //                                int out_put_buffer_size, bool sync = true);
+
+
+    void dev_load_share_embedding(float *dev_embedding, float *share_embedding, VertexId_CUDA *dev_cacheflag,
+                                  VertexId_CUDA *dev_cachemap, VertexId_CUDA feature_size,
+                                  VertexId_CUDA *destination_vertex, uint8_t *dev_x_mask, uint8_t *dev_cache_mask,
+                                  VertexId_CUDA vertex_size);
+
+
+    void dev_update_share_embedding_and_feature(float *dev_feature, float *dev_embedding, float *share_aggregate,
+                                                float *share_embedding, VertexId_CUDA *dev_cachemap,
+                                                VertexId_CUDA *dev_cacheflag, VertexId_CUDA feature_size,
+                                                VertexId_CUDA embedding_size, VertexId_CUDA *destination_vertex,
+                                                VertexId_CUDA *dev_X_version, VertexId_CUDA *dev_Y_version,
+                                                VertexId_CUDA vertex_size, VertexId_CUDA require_version);
+
+    void dev_load_share_embedding_and_feature(float *dev_feature, float *dev_embedding, float *share_feature,
+                                              float *share_embedding, VertexId_CUDA *dev_cacheflag,
+                                              VertexId_CUDA *dev_cachemap, VertexId_CUDA feature_size,
+                                              VertexId_CUDA embedding_size, VertexId_CUDA *destination_vertex,
+                                              VertexId_CUDA vertex_size);
+
+    void move_degree_to_gpu(VertexId_CUDA *cpu_in_degree, VertexId_CUDA *cpu_out_degree, VertexId_CUDA *gpu_in_degree,
+                            VertexId_CUDA *gpu_out_degree, VertexId_CUDA vertexs);
+
+    void dev_load_share_aggregate(float *dev_feature, float *share_feature, VertexId_CUDA *dev_cacheflag,
+                                  VertexId_CUDA *dev_cachemap, VertexId_CUDA feature_size,
+                                  VertexId_CUDA *destination_vertex, VertexId_CUDA vertex_size);
 };
 
 // int test();

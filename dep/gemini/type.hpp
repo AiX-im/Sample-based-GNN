@@ -25,6 +25,7 @@ enum DeviceLocation { CPU_T, GPU_T };
 
 struct Empty {};
 
+
 typedef uint32_t VertexId;
 typedef uint64_t EdgeId;
 typedef float ValueType;

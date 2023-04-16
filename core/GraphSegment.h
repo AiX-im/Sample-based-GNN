@@ -173,6 +173,7 @@ public:
   std::string label_file;
   std::string mask_file;
   int pipeline_num;
+  float cache_rate;
   float del_frac = 0;
   bool with_cuda;
   bool up_degree;

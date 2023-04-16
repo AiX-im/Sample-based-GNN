@@ -551,6 +551,9 @@ template <typename NOPT>
   }
     reset();  
   }
+
+
+
     void self_backward_test(bool retain_graph = true){
     pop_one_op();
       while (count > 1 || (count == 1 && NNOP == op.top())) {

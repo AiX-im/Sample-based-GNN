@@ -125,6 +125,7 @@ public:
     gnndatum->registLabel(L_GT_C);
     gnndatum->registMask(MASK);
     gnndatum->genereate_gpu_data();
+    gnndatum->generate_aggregate_pd_data();
     // L_GT_G = L_GT_C.cuda();
     MASK_gpu = MASK.cuda();
 
@@ -245,7 +246,6 @@ public:
       batch = 0;
       NtsVar target_lab;
       target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size}, torch::DeviceType::CUDA);
-      // TODO: 流水线设计如下，分为三个线程，一个CPU线程进行聚合，进行一个进行传输，一个进行GPU训练
 
       while(sampler->sample_not_finished()){
            sample_time -= get_time();
@@ -260,14 +260,14 @@ public:
         //    NtsVar Y_i=ctx->runGraphOp<nts::op::SingleGPUSampleGraphOp>(sg,graph,1,X[0]);
            //NtsVar Y_tmp = ctx->runGraphOp<nts::op::PushDownOp>(sg,graph,1,F);
            //nts::op::init_embedding(Y_tmp, gnndatum->local_embedding,graph);
-           ctx->runGraphOp<nts::op::PushDownOp>(sg,graph,gnndatum->local_embedding,1,F);
+           ctx->runGraphOp<nts::op::PushDownOp>(sg,graph,gnndatum->local_aggregation,1,F);
            training_cpu_time += get_time(); 
            transfer_feature_time -= get_time();
            sampler->load_label_gpu(target_lab,gnndatum->dev_local_label);
            //Y_i = Y_i.cuda();
            at::cuda::setCurrentCUDAStream(torch_stream[pipeline_num - 1]);
            NtsVar Y_i = graph->Nts->NewKeyTensor({sg->sampled_sgs[0]->src_size,F.size(1)},torch::DeviceType::CUDA); 
-           sampler->load_embedding_gpu_local(Y_i, gnndatum->dev_local_embedding);
+           sampler->load_embedding_gpu_local(Y_i, gnndatum->dev_local_aggregation);
            transfer_feature_time += get_time();
            training_time -= get_time();
            X[1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
@@ -339,7 +339,6 @@ public:
 
         std::atomic_flag is_aggregate = ATOMIC_FLAG_INIT;
 
-        std::printf("pipeline num: %d\n", pipeline_num);
       std::thread threads[pipeline_num];
       for(int tid = 0; tid < pipeline_num; tid++) {
           threads[tid] = std::thread([&](int thread_id) {
@@ -364,7 +363,7 @@ public:
                   //NtsVar Y_tmp = ctx->runGraphOp<nts::op::PushDownOp>(sg,graph,1,F);
                   //nts::op::init_embedding(Y_tmp, gnndatum->local_embedding,graph);
                   if(!is_aggregate.test_and_set()){
-                      ctx->runGraphOp<nts::op::PushDownOp>(sg[thread_id], graph, gnndatum->local_embedding, 1, F);
+                      ctx->runGraphOp<nts::op::PushDownOp>(sg[thread_id], graph, gnndatum->local_aggregation, 1, F);
                   }
                   training_cpu_time += get_time();
                   transfer_feature_time -= get_time();
@@ -372,7 +371,7 @@ public:
                   //Y_i = Y_i.cuda();
                   at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
                   NtsVar Y_i = graph->Nts->NewKeyTensor({sg[thread_id]->sampled_sgs[0]->src_size, F.size(1)}, torch::DeviceType::CUDA);
-                  sampler->load_embedding_gpu_local(&cuda_stream[thread_id], sg[thread_id], Y_i, gnndatum->dev_local_embedding);
+                  sampler->load_embedding_gpu_local(&cuda_stream[thread_id], sg[thread_id], Y_i, gnndatum->dev_local_aggregation);
                   transfer_feature_time += get_time();
 //                  cudaStreamSynchronize(cuda_stream[thread_id].stream);
                   transfer_lock.unlock();

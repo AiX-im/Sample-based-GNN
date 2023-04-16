@@ -178,6 +178,33 @@ __global__ void up_date_degree(VertexId_CUDA *out_degree,
 	}
 }
 
+
+__global__ void update_cache_degree(VertexId_CUDA *out_degree,
+                               VertexId_CUDA *CacheFlag,
+                               VertexId_CUDA *in_degree,
+                               VertexId_CUDA vertices,
+                               VertexId_CUDA *destination,
+                               VertexId_CUDA *source,
+                               VertexId_CUDA *column_offset,
+                               VertexId_CUDA *row_indices){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i = threadId;i < (long)vertices; i += blockDim.x*gridDim.x){
+        long begin_edge = column_offset[i];
+        long end_edge = column_offset[i + 1];
+        VertexId_CUDA dst = destination[i];
+        in_degree[dst] = end_edge - begin_edge;
+
+        for (int edge = begin_edge; edge < end_edge; edge++) {
+            VertexId_CUDA src = source[row_indices[edge]];
+            atomicAdd(&out_degree[src], 1);
+        }
+    }
+}
+
 __global__ void get_weight(float *edge_weight,	 
 	 					   VertexId_CUDA *out_degree,
 				   		   VertexId_CUDA *in_degree,
@@ -220,10 +247,111 @@ __global__ void dev_load_share_embedding_kernel(float *dev_embedding,
         VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
 		if(dev_cacheflag[vtx_id_local] == 2 || dev_cacheflag[vtx_id_local] == 3){
 			for(int j=laneId;j<feature_size;j+=32){
-				dev_embedding[vtx_id*feature_size+j] = share_embedding[vtx_id_local*feature_size+j];
+				dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id_local*feature_size+j];
 			}
 		}
 	}
+}
+
+
+__global__ void dev_load_share_embedding_and_feature_kernel(float* dev_feature, float *dev_embedding,
+                                                float* share_feature, float *share_embedding,
+                                                VertexId_CUDA *dev_cacheflag,
+                                                VertexId_CUDA *dev_cachemap,
+                                                VertexId_CUDA feature_size, VertexId_CUDA embedding_size,
+                                                VertexId_CUDA *destination_vertex,
+                                                VertexId_CUDA vertex_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+        if(dev_cacheflag[vtx_id] != -1){
+//            if(laneId == 0) {
+//                std::printf("vertex size: %d, vtx_idx: %d, vtx_id_local: %d, feature size: %d, embedding size: %d\n",
+//                            vertex_size, vtx_idx, vtx_id_local, feature_size, embedding_size);
+//            }
+            for(int j=laneId;j<embedding_size;j+=WARPSIZE){
+                assert(dev_embedding[vtx_idx*embedding_size+j] < 1e-3);
+//                if(dev_embedding[vtx_idx*embedding_size+j] > 1e-1) {
+//                    std::printf("embedding: %f\n", dev_embedding[vtx_idx*embedding_size+j]);
+//                }
+                dev_embedding[vtx_idx*embedding_size+j] = share_embedding[vtx_id_local*embedding_size+j];
+            }
+            for(int j=laneId;j<feature_size;j+=WARPSIZE){
+                assert(dev_feature[vtx_idx*feature_size+j] < 1e-3);
+//                if(dev_feature[vtx_idx*feature_size+j] > 1e-1){
+//                    std::printf("feature: %f, share: %f\n", dev_feature[vtx_idx*feature_size+j], share_feature[vtx_id_local*feature_size+j]);
+//                }
+                dev_feature[vtx_idx*feature_size+j] = share_feature[vtx_id_local*feature_size+j];
+            }
+        }
+    }
+}
+
+
+__global__ void dev_load_share_aggregate_kernel(float* dev_feature,
+                                                            float* share_feature,
+                                                            VertexId_CUDA *dev_cacheflag,
+                                                            VertexId_CUDA *dev_cachemap,
+                                                            VertexId_CUDA feature_size,
+                                                            VertexId_CUDA *destination_vertex,
+                                                            VertexId_CUDA vertex_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+        if(dev_cacheflag[vtx_id] != -1){
+//            if(laneId == 0) {
+//                std::printf("vertex size: %d, vtx_idx: %d, vtx_id_local: %d, feature size: %d, embedding size: %d\n",
+//                            vertex_size, vtx_idx, vtx_id_local, feature_size, embedding_size);
+//            }
+            for(int j=laneId;j<feature_size;j+=WARPSIZE){
+//                assert(dev_feature[vtx_idx*feature_size+j] < 1e-1);
+//                if(dev_feature[vtx_idx*feature_size+j] > 1e-1){
+//                    std::printf("feature: %f, share: %f\n", dev_feature[vtx_idx*feature_size+j], share_feature[vtx_id_local*feature_size+j]);
+//                }
+                dev_feature[vtx_idx*feature_size+j] = share_feature[vtx_id_local*feature_size+j];
+            }
+        }
+    }
+}
+
+__global__ void dev_load_share_embedding_kernel(float *dev_embedding,
+                                                float *share_embedding,
+                                                VertexId_CUDA *dev_cacheflag,
+                                                VertexId_CUDA *dev_cachemap,
+                                                VertexId_CUDA feature_size,
+                                                VertexId_CUDA *destination_vertex,
+                                                uint8_t *dev_x_mask,
+                                                uint8_t *dev_cache_mask,
+                                                VertexId_CUDA vertex_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+        if(dev_cacheflag[vtx_id_local] == 2 || dev_cacheflag[vtx_id_local] == 3){
+            dev_x_mask[vtx_idx] = 1;
+            dev_cache_mask[vtx_id_local] = 1;
+            for(int j=laneId;j<feature_size;j+=32){
+                dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id_local*feature_size+j];
+            }
+        }
+    }
 }
 
 
@@ -243,7 +371,6 @@ __global__ void dev_Grad_accumulate_kernel(float *dev_grad,
 		VertexId_CUDA vtx_idx=i/WARPSIZE;
 		VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
         VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
-        // TODO: bug在这里
         // vtx_id应该是全局点，但是这里要求的是采样点的局部id即可
 		if(dev_cacheflag[vtx_id] == 3){
 			for(int j=laneId;j<feature_size;j+=32){
@@ -288,6 +415,62 @@ __global__ void dev_update_share_embedding_kernel(float *dev_embedding,
 		}
 	}
 }
+
+__global__ void dev_update_share_embedding_and_feature_kernel(float *dev_aggregate,
+                                                  float *dev_embedding,
+                                                  float *share_aggregate,
+                                                  float *share_embedding,
+                                                  VertexId_CUDA *dev_cachemap,
+                                                  VertexId_CUDA *dev_cacheflag,
+                                                  VertexId_CUDA feature_size,
+                                                  VertexId_CUDA embedding_size,
+                                                  VertexId_CUDA *destination_vertex,
+                                                  VertexId_CUDA *dev_X_version,
+                                                  VertexId_CUDA *dev_Y_version,
+                                                  VertexId_CUDA vertex_size, VertexId_CUDA required_version){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+        if(dev_cacheflag[vtx_id] == 0 || dev_cacheflag[vtx_id] < required_version){
+            VertexId_CUDA version_x = dev_X_version[vtx_id_local];
+            VertexId_CUDA version_y = dev_Y_version[vtx_id_local];
+            VertexId_CUDA version_x_new = version_x;
+            VertexId_CUDA version_y_new = version_y;
+            do{
+//                __syncthreads();
+                __syncwarp();
+//                while(version_x != version_y){
+//                    std::printf("warp: %d, old:(%d, %d), new: (%d, %d)\n", warp_id, version_x, version_y, version_x_new, version_y_new);
+                    version_x = dev_X_version[vtx_id_local];
+                    version_y = dev_Y_version[vtx_id_local];
+//                }
+//                __syncthreads();
+                if(version_x == version_y) {
+                    for(int j=laneId;j<feature_size;j+=WARP_SIZE){
+                        //dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
+                        share_aggregate[vtx_id_local*feature_size+j] = dev_aggregate[vtx_id_local*feature_size+j];
+                    }
+                    for(int j = laneId; j < embedding_size; j+=WARP_SIZE) {
+                        share_embedding[vtx_id_local * embedding_size + j] = dev_embedding[vtx_id_local * embedding_size + j];
+                    }
+                }
+                __syncwarp();
+                version_x_new = dev_X_version[vtx_id_local];
+                version_y_new = dev_Y_version[vtx_id_local];
+
+            } while (version_x != version_y || (!(version_x == version_x_new && version_y == version_y_new)));
+            dev_cacheflag[vtx_id] = version_x;
+
+        }
+    }
+}
+
 // 确定每个节点要采的数量，比配置的少则直接为出边数，结果存在第二个参数中
 __global__ void sample_processing_get_co_gpu_kernel(VertexId_CUDA *dst,
 								 	VertexId_CUDA *local_column_offset,
@@ -321,7 +504,8 @@ __global__ void sample_processing_get_co_gpu_kernel_omit(
 	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
 	for(long i = threadId; i < (long)dst_size; i += blockDim.x * gridDim.x){
 	   	VertexId_CUDA dst_vtx = dst[i];
-        if(CacheFlag[dst_vtx] == -1 || CacheFlag[dst_vtx] == 0){
+           // 这里为0的点也不采样
+        if(CacheFlag[dst_vtx] == -1 /*|| CacheFlag[dst_vtx] == 0*/){
 		local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
         }
         else{
