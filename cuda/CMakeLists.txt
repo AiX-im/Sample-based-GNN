@@ -8,7 +8,7 @@ file(GLOB CURRENT_SOURCES *.cu *.cpp)
  
 # set(CUDA_NVCC_FLAGS -gencode arch=compute_75,code=sm_75;-O3;-G;-g)
 
-list(APPEND CUDA_NVCC_FLAGS "-std=c++14")
+list(APPEND CUDA_NVCC_FLAGS "-std=c++17")
  
 source_group("Include" FILES ${CURRENT_HEADERS})
 source_group("Source" FILES ${CURRENT_SOURCES})

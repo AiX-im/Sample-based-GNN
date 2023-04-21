@@ -347,17 +347,47 @@ public:
                               ValueType* dev_share_embedding,
                               NtsVar& dev_feature,
                               NtsVar& dev_embedding,
-                              VertexId *CacheMap,
-                              VertexId *CacheFlag){
+                              VertexId *dev_cacheMap,
+                              VertexId *dev_cacheFlag){
         ValueType *dev_feature_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_feature, torch::DeviceType::CUDA);
         ValueType *dev_embedding_buffer = whole_graph->graph_->Nts->getWritableBuffer(dev_embedding, torch::DeviceType::CUDA);
         cudaStream->dev_load_share_embedding_and_feature(dev_feature_buffer, dev_embedding_buffer,
                                              dev_share_feature, dev_share_embedding,
-                                             CacheFlag,
-                                             CacheMap,
+                                                         dev_cacheFlag,
+                                                         dev_cacheMap,
                                              dev_feature.size(1), dev_embedding.size(1),
                                              subgraph->sampled_sgs[layer-1]->dev_destination,
                                              subgraph->sampled_sgs[layer-1]->v_size);
+    }
+
+    NtsVar get_X_mask(Cuda_Stream* cudaStream, SampledSubgraph* subgraph, VertexId* dev_cacheMap){
+        auto vtx_num = subgraph->sampled_sgs[layer-1]->v_size;
+//        NtsVar X_mask = torch::zeros({vtx_num, 1}, at::TensorOptions().dtype(torch::kBool).device_index(0));
+//        auto X_mask_bool = X_mask.accessor<bool, 2>().data();
+        std::printf("vtx_num: %d\n", vtx_num);
+        uint8_t* X_mask_buffer;
+        cudaMalloc(&X_mask_buffer, sizeof(uint8_t)*vtx_num);
+        cudaStream->dev_get_X_mask(X_mask_buffer, subgraph->sampled_sgs[layer-1]->dev_destination, dev_cacheMap, vtx_num);
+        auto X_mask = torch::from_blob(X_mask_buffer, {vtx_num, 1}, at::TensorOptions().dtype(torch::kBool).device_index(0));
+        return X_mask;
+    }
+
+    void print_avg_weight(Cuda_Stream* cudaStream, SampledSubgraph* subgraph, VertexId* dev_cacheFlag) {
+        float* cuda_sum;
+        float cpu_sum = 0.0f;
+        VertexId cache_num = 0;
+        VertexId* dev_cache_num;
+        cudaMalloc(&cuda_sum, sizeof(float));
+        cudaMalloc(&dev_cache_num, sizeof(VertexId));
+        cudaMemcpy(cuda_sum, &cpu_sum, sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(dev_cache_num, &cache_num, sizeof(VertexId), cudaMemcpyHostToDevice);
+        auto* sg = subgraph->sampled_sgs[layer-1];
+        auto* column_offset = sg->dev_c_o();
+        auto* row_indices = sg->dev_r_i();
+        cudaStream->dev_print_avg_weight(column_offset, row_indices, sg->dev_e_w(), sg->dev_destination, dev_cacheFlag, cuda_sum, dev_cache_num, sg->v_size);
+        cudaMemcpy(&cpu_sum, cuda_sum, sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&cache_num, dev_cache_num, sizeof(VertexId), cudaMemcpyDeviceToHost);
+        std::printf("\tgpu cache weight sum: %f, edge num: %d, avg weight: %f\n", cpu_sum, cache_num, cpu_sum/cache_num);
     }
 
     //cacheflag: 0  2

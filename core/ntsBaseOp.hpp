@@ -170,7 +170,9 @@ inline void nts_copy(ValueType *b_dst, long d_offset, ValueType *b_src, VertexId
  * @return ValueType
  */
 inline ValueType nts_norm_degree(Graph<Empty> *graph_, VertexId src, VertexId dst) {
-  return 1 / ((ValueType)std::sqrt(graph_->out_degree_for_backward[src]) *
+//      edge_weight[i] = 1 / (sqrtf(out_degree[source[src]]) * sqrtf(in_degree[destination[warp_id]]));
+
+      return 1 / ((ValueType)std::sqrt(graph_->out_degree_for_backward[src]) *
               (ValueType)std::sqrt(graph_->in_degree_for_backward[dst]));
 }
 

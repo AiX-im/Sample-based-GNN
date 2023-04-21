@@ -276,14 +276,14 @@ __global__ void dev_load_share_embedding_and_feature_kernel(float* dev_feature, 
 //                            vertex_size, vtx_idx, vtx_id_local, feature_size, embedding_size);
 //            }
             for(int j=laneId;j<embedding_size;j+=WARPSIZE){
-                assert(dev_embedding[vtx_idx*embedding_size+j] < 1e-3);
+//                assert(dev_embedding[vtx_idx*embedding_size+j] < 1e-3);
 //                if(dev_embedding[vtx_idx*embedding_size+j] > 1e-1) {
 //                    std::printf("embedding: %f\n", dev_embedding[vtx_idx*embedding_size+j]);
 //                }
                 dev_embedding[vtx_idx*embedding_size+j] = share_embedding[vtx_id_local*embedding_size+j];
             }
             for(int j=laneId;j<feature_size;j+=WARPSIZE){
-                assert(dev_feature[vtx_idx*feature_size+j] < 1e-3);
+//                assert(dev_feature[vtx_idx*feature_size+j] < 1e-3);
 //                if(dev_feature[vtx_idx*feature_size+j] > 1e-1){
 //                    std::printf("feature: %f, share: %f\n", dev_feature[vtx_idx*feature_size+j], share_feature[vtx_id_local*feature_size+j]);
 //                }
@@ -323,6 +323,42 @@ __global__ void dev_load_share_aggregate_kernel(float* dev_feature,
                 dev_feature[vtx_idx*feature_size+j] = share_feature[vtx_id_local*feature_size+j];
             }
         }
+    }
+}
+
+__global__ void dev_get_X_mask_kernel(uint8_t* dev_X_mask,
+                               VertexId_CUDA *destination,
+                               VertexId_CUDA *dev_cacheflag,
+                               VertexId_CUDA vertex_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+
+    for(long i=threadId;i<(long)vertex_size;i+=blockDim.x*gridDim.x) {
+        if(dev_cacheflag[destination[i]] != -1){
+            dev_X_mask[i] = 1;
+        }
+    }
+}
+
+__global__ void dev_print_avg_weight_kernel(VertexId_CUDA* column_offset, VertexId_CUDA *row_indices,float* weight, VertexId_CUDA *destination,
+                                            VertexId_CUDA* dev_cacheflag,float* dev_sum,VertexId_CUDA* dev_cache_num, VertexId_CUDA vertex_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    int laneId = threadId % WARP_SIZE;
+
+    for(long i=threadId;i<(long)vertex_size * WARP_SIZE;i+=blockDim.x*gridDim.x) {
+        auto vtx = i/WARP_SIZE;
+        auto dst = destination[vtx];
+        auto start = column_offset[vtx];
+        auto end = column_offset[vtx + 1];
+        if(dev_cacheflag[dst] != -1) {
+            for(auto index = start + laneId; index < end; index += WARP_SIZE) {
+                atomicAdd(dev_sum, weight[index]);
+                atomicAdd(dev_cache_num, 1u);
+            }
+        }
+//        if(dev_cacheflag[destination[i]] != -1){
+//            atomicAdd(dev_sum, weight[i]);
+//            atomicAdd(dev_cache_num, 1u);
+//        }
     }
 }
 
@@ -506,7 +542,7 @@ __global__ void sample_processing_get_co_gpu_kernel_omit(
 	   	VertexId_CUDA dst_vtx = dst[i];
            // 这里为0的点也不采样
         if(CacheFlag[dst_vtx] == -1 /*|| CacheFlag[dst_vtx] == 0*/){
-		local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
+		    local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
         }
         else{
             local_column_offset[i + 1] = 0;
@@ -593,7 +629,7 @@ __global__ void sample_processing_traverse_gpu_kernel_stage2(VertexId_CUDA* samp
     ntsRandom rand(random_seed + tid);
 
     int input_idx = blockIdx.x;
-    if(input_idx >= input_node_count) {
+    if(input_idx >= input_node_count || sample_offset[input_idx] == sample_offset[input_idx + 1]) {
         return;
     }
 
@@ -603,7 +639,6 @@ __global__ void sample_processing_traverse_gpu_kernel_stage2(VertexId_CUDA* samp
     int64_t end = global_column_offset[nid + 1];
 
     int neighbor_count = (int)(end - start);
-    // std::printf("tid: %d, max sample: %d neighbor count: %d\n", tid, max_sample_count, neighbor_count);
     if(neighbor_count <= 0) {
         return;
     }

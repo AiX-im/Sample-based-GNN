@@ -46,7 +46,7 @@ public:
         for(int i=0;i<layers;i++){
             sampled_sgs.push_back(new sampCSC(0));
         }
-        threads = std::max(numa_num_configured_cpus() - 1, 1) / 2;
+        threads = std::max(numa_num_configured_cpus() - 1, 1) ;
     }
     
     SampledSubgraph(int layers_,std::vector<int>& fanout_){
@@ -481,7 +481,6 @@ public:
     void compute_one_layer_batch(std::function<void(VertexId local_dst, std::vector<VertexId>& column_offset,
                                                     std::vector<VertexId>& row_indices)> sparse_slot, VertexId layer,
                                  VertexId batch_start, VertexId batch_end) {
-//        std::printf("threads: %d\n", threads);
 #pragma omp parallel for num_threads(threads)
         for(VertexId begin_v_i = batch_start; begin_v_i < batch_end; begin_v_i+=1){
             sparse_slot(begin_v_i, sampled_sgs[layer]->c_o(), sampled_sgs[layer]->r_i());

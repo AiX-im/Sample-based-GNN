@@ -62,6 +62,7 @@ public:
   long *local_label;        // labels of local partition
   int *local_mask;
   long *dev_local_label;
+  int max_threads;
    // mask(indicate whether data is for train, eval or test) of
                    // local partition
 
@@ -86,7 +87,7 @@ public:
       local_label = new long[gnnctx->l_v_num];
       local_mask = new int[gnnctx->l_v_num];
       memset(local_mask, 1, sizeof(int) * gnnctx->l_v_num);
-
+      max_threads = std::thread::hardware_concurrency();
     }
 
     void init_cache_var(float cache_rate){
@@ -163,8 +164,7 @@ void move_data_to_local_cache(VertexId vertex_num, int feature_len, int embeddin
             return;
         }
 //        std::printf("feature len: %d, embedding len: %d, version: %d\n", feature_len, embedding_len, version);
-
-#pragma omp parallel for
+#pragma omp parallel for num_threads(max_threads)
         for(VertexId i = 0; i < vertex_num; i++) {
             auto index = CacheMap[ids[i]];
             X_version[index] = version;

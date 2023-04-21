@@ -23,6 +23,7 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
+#include <atomic>
 
 #include "core/graph.hpp"
 #include "core/ntsBaseOp.hpp"
@@ -124,6 +125,7 @@ public:
                     graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CPU);
             ValueType *f_output_buffer =
                     graph_->Nts->getWritableBuffer(f_output, torch::DeviceType::CPU);
+            auto& forward_weight =subgraphs->sampled_sgs[layer]->e_w_f();
             this->subgraphs->compute_one_layer_batch(
                     [&](VertexId local_dst, std::vector<VertexId>& column_offset,
                         std::vector<VertexId>& row_indices){
@@ -143,6 +145,18 @@ public:
                             ValueType *local_input = f_input_buffer + src * feature_size;
                             nts_comp(local_output, local_input,
                                      nts_norm_degree(graph_,src, dst), feature_size);
+                            nts_comp(local_output, local_input,
+                                     forward_weight[src_offset], feature_size);
+//                            assert(subgraphs->sampled_sgs[layer]->e_w_f()[src_offset] - nts_norm_degree(graph_, src, dst) < 1e-4);
+//                            auto weight = nts_norm_degree(graph_,src, dst);
+//                            ++weight_num;
+//                            auto old_sum = weight_sum.load();
+//                            while(!weight_sum.compare_exchange_weak(old_sum, old_sum+weight)){
+//                                old_sum = weight_sum.load();
+//                            }
+//                            for(int i = 0; i < feature_size; i++){
+//                                local_output[i] += local_input[i]*weight;
+//                            }
                             //  nts_comp(local_output, local_input,
                             //        weight[src_offset], feature_size);
                         }

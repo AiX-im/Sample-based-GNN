@@ -686,9 +686,11 @@ struct Parameter : torch::nn::Module {
   NtsVar W_gradient_gpu_tmp;    // 反向时CPU传过来的梯度存在这里
   NtsVar W_gradient_cpu_tmp;    // 反向时GPU传过来的梯度存在这里
   NtsVar W_c;                   // CPU的参数矩阵
+  NtsVar W_c_GPU;
+  uint32_t middle_version;
   uint32_t cpu_version;         // CPU参数的版本
   uint32_t gpu_version;         // GPU参数的版本
-  std::mutex cpu_set_W_mutex;
+  std::shared_mutex cpu_set_W_mutex;
   NtsVar W_c_Adam;              // CPU参数矩阵用于Adam的中间变量
   
   Network_simple<ValueType> *network_simple;
@@ -752,6 +754,7 @@ struct Parameter : torch::nn::Module {
     decay_epoch = -1;
     gpu_version = 1;
     cpu_version = 1;
+    middle_version = 1;
   }
   Parameter(size_t w, size_t h, ValueType l_r_ = 0.01,
             ValueType weight_decay_ = 0.05) {
@@ -778,6 +781,7 @@ struct Parameter : torch::nn::Module {
     decay_epoch = -1;
     cpu_version = 1;
     gpu_version = 1;
+    middle_version = 1;
   }
 
   // root will broadcast it's parameter to other process
@@ -789,6 +793,7 @@ struct Parameter : torch::nn::Module {
   // Toao 初始化pd相关的参数
   void init_pd_parameter(){
       W_c = W.clone();
+      W_c_GPU = W_c.cuda();
       W_c.set_requires_grad(false);
       W_c_Adam = W_c.clone();
       W_gradient_cpu_tmp = W_c.clone();
@@ -895,7 +900,6 @@ struct Parameter : torch::nn::Module {
     W.set_data(W - alpha * M_GPU / (torch::sqrt(V_GPU) + epsilon));
   }
   void learn_local_with_decay_Adam() {
-      std::lock_guard<std::mutex> get_lock(cpu_set_W_mutex);
     W_g.set_data(W);
     W_g = W_g * weight_decay;
     W_g = W_g + W.grad(); //+weight_decay;
@@ -955,15 +959,22 @@ struct Parameter : torch::nn::Module {
       W_c = W.cpu();
     }
 
+    void set_middle_weight(){
+        std::lock_guard<std::shared_mutex> set_lock(cpu_set_W_mutex);
+      W_c_GPU = W.clone();
+      W_c_GPU.set_requires_grad(false);
+      middle_version = gpu_version;
+  }
+
     void send_W_to_cpu(){
-      std::lock_guard<std::mutex> set_lock(cpu_set_W_mutex);
-      W_c = W.cpu();
-      W_c.set_requires_grad(false);
-      cpu_version++;
+      std::lock_guard<std::shared_mutex> set_lock(cpu_set_W_mutex);
+      W_c = W_c_GPU.cpu();
+//      W_c.set_requires_grad(false);
+      cpu_version = middle_version;
     }
 
     NtsVar get_W_and_version(uint32_t& version){
-        std::lock_guard<std::mutex> get_lock(cpu_set_W_mutex);
+        std::shared_lock<std::shared_mutex> get_lock(cpu_set_W_mutex);
         version = cpu_version;
         return W_c.clone();
     }

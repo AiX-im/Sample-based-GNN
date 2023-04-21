@@ -52,6 +52,17 @@ T get_cuda_array_num(T* arr, int index) {
     return value;
 }
 
+
+__global__ void print_cache_num(VertexId_CUDA *destination_vertex, VertexId_CUDA *dev_cachemap, VertexId_CUDA vertex_size) {
+    uint32_t sum = 0;
+    for(VertexId_CUDA i = 0; i < vertex_size; i++) {
+        if(dev_cachemap[destination_vertex[i]] != -1){
+            sum++;
+        }
+    }
+    std::printf("顶点总数: %u, 缓存数量: %u\n", vertex_size, sum);
+}
+
 void* getDevicePointer(void* host_data_to_device){
 #if CUDA_ENABLE
     void* dev_host_data_to_device;
@@ -273,7 +284,6 @@ void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* 
         VertexId_CUDA dst_start, VertexId_CUDA dst_end,
 	VertexId_CUDA edges,VertexId_CUDA batch_size,
         VertexId_CUDA feature_size,bool with_weight,bool tensor_weight){
-//    print_cuda_sum(weight_forward, edges, "weight forward");
 #if CUDA_ENABLE
 //    std::printf("real edges: %d, record edges: %d\n", get_cuda_array_num(column_offset, batch_size), edges);
 //         if(with_weight){
@@ -1075,6 +1085,7 @@ void Cuda_Stream::sample_processing_get_co_gpu_omit(
                                    VertexId_CUDA & edge_size){
 #if CUDA_ENABLE
        // 确定每个节点需要采的数量，方便为数组分配空间
+//    print_cache_num<<<1,1>>>(dst, CacheFlag, dst_size);
     sample_processing_get_co_gpu_kernel_omit<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
                             (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
                             src_index_size,src_count,src_index,fanout);
@@ -1127,6 +1138,7 @@ void Cuda_Stream::sample_processing_get_co_gpu_omit(
     }
     edge_size = cpu_column_offset[dst_size];
     cudaMemcpyAsync(local_column_offset, cpu_column_offset, arr_size, cudaMemcpyHostToDevice, stream);
+
 //    delete []cpu_data_buffer;
 //    delete []cpu_column_offset;
     cpu_inclusiveTime += get_time();
@@ -1268,6 +1280,7 @@ void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
                                    	VertexId_CUDA feature_size,
 						VertexId_CUDA vertex_size){
 #if CUDA_ENABLE
+//    std::printf("传输feature大小数量: %u\n", vertex_size);
     int block_num = ((vertex_size * WARP_SIZE)/CUDA_NUM_THREADS) + 1;
     block_num = std::min(CUDA_NUM_THREADS, block_num);
     zero_copy_feature_move_gpu_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
@@ -1326,15 +1339,6 @@ void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
 #endif   
 }
 
-__global__ void print_cache_num(VertexId_CUDA *destination_vertex, VertexId_CUDA *dev_cachemap, VertexId_CUDA vertex_size) {
-    uint32_t sum = 0;
-    for(VertexId_CUDA i = 0; i < vertex_size; i++) {
-        if(dev_cachemap[i] != -1){
-            sum++;
-        }
-    }
-    std::printf("顶点总数: %u, 缓存数量: %u\n", vertex_size, sum);
-}
 
 void Cuda_Stream::dev_load_share_embedding_and_feature(float* dev_feature, float *dev_embedding,
                                            float* share_feature, float *share_embedding,
@@ -1380,6 +1384,29 @@ void Cuda_Stream::dev_load_share_aggregate(float* dev_feature,
        exit(0);
 #endif
 }
+
+void Cuda_Stream::dev_get_X_mask(uint8_t* dev_X_mask,
+                                           VertexId_CUDA *destination,
+                                           VertexId_CUDA *dev_cacheflag,
+                                           VertexId_CUDA vertex_size){
+#if CUDA_ENABLE
+//    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+    dev_get_X_mask_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(dev_X_mask, destination, dev_cacheflag, vertex_size);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+//    cudaDeviceSynchronize();
+#else
+    printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);
+#endif
+}
+
+void Cuda_Stream::dev_print_avg_weight(VertexId_CUDA* column_offset, VertexId_CUDA *row_indices,float* weight, VertexId_CUDA *destination,
+                                       VertexId_CUDA* dev_cacheflag,float* dev_sum, VertexId_CUDA* dev_cache_num, VertexId_CUDA vertex_size){
+    dev_print_avg_weight_kernel<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>
+        (column_offset, row_indices,weight, destination, dev_cacheflag, dev_sum, dev_cache_num, vertex_size);
+}
+
 
 void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
                                            float *share_embedding,
@@ -1449,7 +1476,7 @@ void Cuda_Stream::dev_update_share_embedding_and_feature(float *dev_feature,
                                              VertexId_CUDA vertex_size, VertexId_CUDA require_version){
 #if CUDA_ENABLE
 //    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
-    this->CUDA_DEVICE_SYNCHRONIZE();
+//    this->CUDA_DEVICE_SYNCHRONIZE();
     dev_update_share_embedding_and_feature_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
             (dev_feature,dev_embedding,share_aggregate, share_embedding,dev_cachemap,dev_cacheflag,feature_size,
              embedding_size, destination_vertex, dev_X_version, dev_Y_version, vertex_size, require_version);

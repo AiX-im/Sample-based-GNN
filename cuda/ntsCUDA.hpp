@@ -403,6 +403,13 @@ public:
     void dev_load_share_aggregate(float *dev_feature, float *share_feature, VertexId_CUDA *dev_cacheflag,
                                   VertexId_CUDA *dev_cachemap, VertexId_CUDA feature_size,
                                   VertexId_CUDA *destination_vertex, VertexId_CUDA vertex_size);
+
+    void dev_get_X_mask(uint8_t *dev_X_mask, VertexId_CUDA *destination, VertexId_CUDA *dev_cacheflag,
+                        VertexId_CUDA vertex_size);
+
+    void dev_print_avg_weight(VertexId_CUDA *column_offset, VertexId_CUDA *row_indices, float *weight,
+                              VertexId_CUDA *destination, VertexId_CUDA *dev_cacheflag, float *dev_sum,
+                              VertexId_CUDA *dev_cache_num, VertexId_CUDA vertex_size);
 };
 
 // int test();
