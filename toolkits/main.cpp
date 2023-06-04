@@ -37,6 +37,8 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "GCN_GPU_SHARE.hpp"
 #include "GCN_SAMPLE_ALLGPU.hpp"
 #include "GCN_SAMPLE_PD_CACHE.hpp"
+#include "GS_SAMPLE_PD_CACHE.hpp"
+#include "GS_SAMPLE_ALLGPU.hpp"
 #endif
 
 void segment_fault_handler(int signum) {
@@ -44,6 +46,8 @@ void segment_fault_handler(int signum) {
     std::cerr << boost::stacktrace::stacktrace();
     exit(signum);
 }
+
+
 
 int main(int argc, char **argv) {
     signal(SIGSEGV, segment_fault_handler);
@@ -215,6 +219,14 @@ int main(int argc, char **argv) {
     ntsGCN->init_graph();
     ntsGCN->init_nn();
     ntsGCN->run();
+  } else if (graph->config->algorithm == std::string("GSSAMPLEALLGPU")) {
+    graph->load_directed(graph->config->edge_file, graph->config->vertices);
+    graph->generate_backward_structure();
+    GS_SAMPLE_ALLGPU_impl *ntsGCN =
+        new GS_SAMPLE_ALLGPU_impl(graph, iterations);
+    ntsGCN->init_graph();
+    ntsGCN->init_nn();
+    ntsGCN->run();
   } else if (graph->config->algorithm == std::string("GCNSAMPLEPD")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
     graph->generate_backward_structure();
@@ -231,7 +243,15 @@ int main(int argc, char **argv) {
       ntsGCN->init_graph();
       ntsGCN->init_nn();
       ntsGCN->run();
-  }  else if (graph->config->algorithm == std::string("COMMNETGPU")) {
+  } else if (graph->config->algorithm == std::string("GSSAMPLEPDCACHE")) {
+      graph->load_directed(graph->config->edge_file, graph->config->vertices);
+      graph->generate_backward_structure();
+      GS_SAMPLE_PD_CACHE_impl *ntsGCN =
+              new GS_SAMPLE_PD_CACHE_impl(graph, iterations);
+      ntsGCN->init_graph();
+      ntsGCN->init_nn();
+      ntsGCN->run();
+  }   else if (graph->config->algorithm == std::string("COMMNETGPU")) {
     graph->load_directed(graph->config->edge_file, graph->config->vertices);
     graph->generate_backward_structure();
     COMMNET_impl *ntsCOMM = new COMMNET_impl(graph, iterations);

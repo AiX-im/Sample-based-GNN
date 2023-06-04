@@ -451,6 +451,8 @@ public:
         // FastSampler* test_sampler = new FastSampler(graph,fully_rep_graph,
         //     test_nids,layer,
         //         graph->gnnctx->fanout,graph->config->batch_size,true);
+        auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
         exec_time -= get_time();
         for (int i_i = 0; i_i < iterations; i_i++) {
             double per_epoch_time = 0.0;
@@ -471,7 +473,8 @@ public:
             std::cout << "GNNmini::Running.Epoch[" << i_i << "]:Times["
                       << per_epoch_time << "(s)]:loss\t" << loss << std::endl;
         }
-
+        auto end_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
         exec_time += get_time();
         auto wait_time = 0.0;
         for(int i = 0; i < pipeline_num; i++) {
@@ -481,15 +484,19 @@ public:
         printf("all:%lf(s) prepro:%lf(s) pro:%lf(s) post:%lf(s) copy:%lf(s)\n",train_sampler->all_time,train_sampler->pre_pro_time, train_sampler->pro_time,train_sampler->post_pro_time,train_sampler->copy_gpu_time );
         printf("test_time:%lf(s)\n",train_sampler->test_time);
         printf("#wait time: %lf(s)\n", wait_time);
-        printf("#sample_time=%lf(s)\n", (sample_time));
-        printf("#transfer_feature_time=%lf(s)\n", (transfer_feature_time));
-        printf("#training_time=%lf(s)\n", training_time);
         printf("#gather_feature_time=%lf(s)\n", gather_feature_time);
         std::printf("cpu inclusiveTime: %lf\n", train_sampler->cs->cpu_inclusiveTime);
         std::printf("inclusiveTime: %lf\n", train_sampler->cs->inclusiveTime);
         std::printf("init layer time: %lf\n", train_sampler->init_layer_time);
         std::printf("init co time: %lf\n", train_sampler->init_co_time);
+        printf("#sample_time= %.4lf (s)\n", (sample_time));
+        printf("#transfer_feature_time= %.4lf (s)\n", (transfer_feature_time));
+        printf("#training_time= %.4lf (s)\n", training_time);
         delete active;
+        printf("#average epoch time: %lf\n", exec_time/iterations);
+        printf("总传输节点数: %llu\n", Cuda_Stream::total_transfer_node);
+//        printf("平均epoch传输节点数:%llu\n", Cuda_Stream::total_transfer_node/iterations);
+        printf("%lu\n%lu\n", start_time, end_time);
     }
 
     // void cachenode_select(){

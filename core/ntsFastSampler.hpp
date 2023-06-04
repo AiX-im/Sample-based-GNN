@@ -22,6 +22,9 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "FullyRepGraph.hpp"
 #include "cuda/ntsCUDA.hpp"
 #include "NtsScheduler.hpp"
+
+
+enum class WeightType{Sum, Mean};
 class FastSampler{
 public:
         double pre_pro_time;
@@ -161,6 +164,8 @@ public:
         //memcpy(edge_weight, whole_graph->edge_weight,(whole_graph->global_edges)*sizeof(ValueType));
         
         dev_row_indices=(VertexId *)getDevicePointer(row_indices);
+        // dev_row_indices = (VertexId *)cudaMallocGPU(sizeof(VertexId) * ((long)whole_graph->global_edges));
+        // move_bytes_in(dev_row_indices, row_indices, sizeof(VertexId) * ((long)whole_graph->global_edges), false);
         //dev_edge_weight=(ValueType *)getDevicePointer(edge_weight);
             pre_pro_time=0.0;
             pro_time=0.0;
@@ -474,7 +479,7 @@ public:
                                                subgraph->sampled_sgs[1]->v_size, require_version);
     }
 
-    SampledSubgraph* sample_gpu_fast(int batch_size_){
+    SampledSubgraph* sample_gpu_fast(int batch_size_, WeightType weightType=WeightType::Sum){
         double tmp_all_time = 0.0;
         double tmp_pre_pro_time = 0.0;
         double tmp_pro_time = 0.0;
@@ -536,7 +541,11 @@ public:
 //                ssg->update_degrees(graph,i);
 
             }
-            ssg->Get_Weight(i);
+            if(weightType == WeightType::Mean){
+                ssg->Get_Mean_Weight(i);
+            } else {
+                ssg->Get_Weight(i);
+            }
             post_pro_time += MPI_Wtime();
         }
         tmp_all_time+=MPI_Wtime();
@@ -545,7 +554,7 @@ public:
         return ssg;
     }
 
-    SampledSubgraph* sample_gpu_fast_omit(int batch_size_, VertexId* CacheFlag){
+    SampledSubgraph* sample_gpu_fast_omit(int batch_size_, VertexId* CacheFlag, WeightType weightType=WeightType::Sum){
         double tmp_all_time = 0.0;
         double tmp_pre_pro_time = 0.0;
         double tmp_pro_time = 0.0;
@@ -616,11 +625,16 @@ public:
             post_pro_time -= MPI_Wtime();
 
             if(graph->config->up_degree){
-                ssg->update_degrees_GPU(i);
+//                ssg->update_degrees_GPU(i);
+                ssg->update_cache_degrees_GPU(i);
 //                ssg->update_degrees(graph,i);
 
             }
-            ssg->Get_Weight(i);
+            if(weightType == WeightType::Mean){
+                ssg->Get_Mean_Weight(i);
+            } else {
+                ssg->Get_Weight(i);
+            }
             post_pro_time += MPI_Wtime();
         }
         tmp_all_time+=MPI_Wtime();
@@ -649,20 +663,26 @@ public:
         return ssgs[ssg_id];
     }
 
-    SampledSubgraph* sample_gpu_fast(int batch_size_, int ssg_id) {
+    // SampledSubgraph* sample_gpu_fast(int batch_size_, int ssg_id) {
+    //     ssg = ssgs[ssg_id];
+    //     sample_gpu_fast(batch_size_);     
+    //     return ssgs[ssg_id];
+    // }
+
+    SampledSubgraph* sample_gpu_fast(int batch_size_, int ssg_id,  WeightType weightType=WeightType::Sum) {
         ssg = ssgs[ssg_id];
         sample_gpu_fast(batch_size_);     
         return ssgs[ssg_id];
     }
 
-    SampledSubgraph* sample_gpu_fast_omit(int batch_size_, int ssg_id, VertexId* CacheFlag) {
+    SampledSubgraph* sample_gpu_fast_omit(int batch_size_, int ssg_id, VertexId* CacheFlag, WeightType weightType=WeightType::Sum) {
         ssg = ssgs[ssg_id];
-        sample_gpu_fast_omit(batch_size_, CacheFlag);     
+        sample_gpu_fast_omit(batch_size_, CacheFlag, weightType);
         return ssgs[ssg_id];
     }
 
 
-    SampledSubgraph* sample_fast(int batch_size_){
+    SampledSubgraph* sample_fast(int batch_size_, WeightType weightType = WeightType::Sum){
         double tmp_all_time=0.0;
         double tmp_pre_pro_time=0.0;
         double tmp_pro_time=0.0;
@@ -721,7 +741,7 @@ public:
                         int num = column_offset[id + 1] - column_offset[id];
                         std::unordered_map<VertexId, int> sampled_idxs;
                         int pos = 0;
-                        if(num > fanout_i){
+                        if(nbr_size > fanout_i){
                             while (sampled_idxs.size() < num) {        
                                 VertexId rand = random_uniform_int(0,nbr_size - 1);
                                 sampled_idxs.insert(std::pair<size_t, int>(rand, 1));
@@ -793,8 +813,13 @@ public:
                 ssg->update_degrees(graph,i);
 
             }
-            ssg->sampled_sgs[i]->WeightCompute([&](VertexId src, VertexId dst) {
-                      return nts::op::nts_norm_degree(graph,src,dst);});
+            if(weightType == WeightType::Mean){
+                ssg->sampled_sgs[i]->WeightCompute([&](VertexId src, VertexId dst) {
+                    return nts::op::nts_norm_degree(graph,src,dst) / graph->in_degree_for_backward[dst];});
+            } else {
+                ssg->sampled_sgs[i]->WeightCompute([&](VertexId src, VertexId dst) {
+                    return nts::op::nts_norm_degree(graph,src,dst);});
+            }
             tmp_post_pro_time += MPI_Wtime();
             post_pro_time += tmp_post_pro_time; 
 

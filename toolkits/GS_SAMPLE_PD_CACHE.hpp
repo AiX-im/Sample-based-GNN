@@ -2,14 +2,13 @@
 // Created by toao on 23-3-30.
 //
 
-#ifndef GNNMINI_GCN_SAMPLE_PD_CACHE_HPP
-#define GNNMINI_GCN_SAMPLE_PD_CACHE_HPP
+#ifndef GNNMINI_GS_SAMPLE_PD_CACHE_HPP
+#define GNNMINI_GS_SAMPLE_PD_CACHE_HPP
 #include "core/neutronstar.hpp"
 #include "core/ntsPeerRPC.hpp"
 #include <chrono>
 #include <execution>
-
-class GCN_SAMPLE_PD_CACHE_impl {
+class GS_SAMPLE_PD_CACHE_impl {
 public:
     int iterations;
     ValueType learn_rate;
@@ -114,7 +113,7 @@ public:
     double cpu_cal_grad_time = 0.0;
     double cpu_reset_flag_time = 0.0;
 
-    GCN_SAMPLE_PD_CACHE_impl(Graph<Empty> *graph_, int iterations_,
+    GS_SAMPLE_PD_CACHE_impl(Graph<Empty> *graph_, int iterations_,
                              bool process_local = false,
                              bool process_overlap = false) {
         graph = graph_;
@@ -309,11 +308,12 @@ public:
     NtsVar vertexForward(NtsVar &a, NtsVar &x) {
         NtsVar y;
         int layer = graph->rtminfo->curr_layer;
-        if (layer == 1) {
+        int layer_num = gnndatum->gnnctx->layer_size.size();
+        if (layer == layer_num - 1) {
             y = P[layer]->forward(a);
             y = y.log_softmax(1); //CUDA
 
-        } else if (layer == 0) {
+        } else {
             //y = P[layer]->forward(torch::relu(drpmodel(a)));
             y = torch::dropout(torch::relu(P[layer]->forward(a)), drop_rate, ctx->is_train());
         }
@@ -332,9 +332,9 @@ public:
         batch = 0;
         // NtsVar target_lab;
         // X[0]=graph->Nts->NewLeafTensor({1000,F.size(1)},
-        //   torch::DeviceType::CUDA);
+        //   torch::DeviceType::CUDA); 
         // target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size},
-        //       torch::DeviceType::CUDA);
+        //       torch::DeviceType::CUDA); 
         SampledSubgraph *sg[pipeline_num];
         NtsVar tmp_X0[pipeline_num];
         NtsVar tmp_target_lab[pipeline_num];
@@ -354,19 +354,19 @@ public:
                 bool start_send_flag = false;
                 while(sampler->sample_not_finished()){
                     sample_time -= get_time();
-                    //sample -1 0
-                    sg[thread_id]=sampler->sample_gpu_fast_omit(graph->config->batch_size, thread_id, gnndatum->dev_CacheFlag);
-//                    sg[thread_id]=sampler->sample_gpu_fast(graph->config->batch_size, thread_id);
-//                    sg=sampler->sample_fast(graph->config->batch_size);
                     gpu_round++;
+                    //sample -1 0
+                    sg[thread_id]=sampler->sample_gpu_fast_omit(graph->config->batch_size, thread_id, gnndatum->dev_CacheFlag, WeightType::Mean);
+//                    sg[thread_id]=sampler->sample_gpu_fast(graph->config->batch_size, thread_id);
+                    //sg=sampler->sample_fast(graph->config->batch_size);
                     cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
                     sample_time += get_time();
                     sample_lock.unlock();
 
-                    wait_times[thread_id] -= get_time();
-                    std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
-                    transfer_lock.lock();
-                    wait_times[thread_id] += get_time();
+              wait_times[thread_id] -= get_time();
+              std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
+              transfer_lock.lock();
+              wait_times[thread_id] += get_time();
                     transfer_feature_time -= get_time();
                     // sampler->load_label_gpu(target_lab,gnndatum->dev_local_label);
                     // sampler->load_feature_gpu(X[0],gnndatum->dev_local_feature);
@@ -380,11 +380,11 @@ public:
                     auto gpu_version = P[0]->gpu_version;
                     uint32_t require_version = gpu_version < pipeline_num ? 0 : gpu_version - pipeline_num;
 //                    std::printf("min version: %d, gpu version: %d, require version: %d\n", min_version, gpu_version, require_version);
-//                    if(gpu_version > pipeline_num + min_version) {
-////                        std::printf("CPU的版本: %d, 需要的版本: %d，进入等待\n", min_version, gpu_version);
-//                        std::unique_lock<std::mutex> version_lock(version_mutex);
-//                        version_cv.wait(version_lock, [&]{return gpu_version  <= pipeline_num + min_version;});
-//                    }
+//                     if(gpu_version > pipeline_num + min_version) {
+// //                        std::printf("CPU的版本: %d, 需要的版本: %d，进入等待\n", min_version, gpu_version);
+//                         std::unique_lock<std::mutex> version_lock(version_mutex);
+//                         version_cv.wait(version_lock, [&]{return gpu_version  <= pipeline_num + min_version;});
+//                     }
                     // Note: 这里是用于测试看一下使用最新版本的会怎样
 //                    if(gpu_version != min_version) {
 ////                        std::printf("CPU的版本太旧，进入等待\n");
@@ -402,7 +402,7 @@ public:
                     gnndatum->unset_gpu_transfer_flag();
                     transfer_share_time += get_time();
                     transfer_feature_time += get_time();
-                    transfer_lock.unlock();
+              transfer_lock.unlock();
 
                     wait_times[thread_id] -= get_time();
                     std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);
@@ -521,7 +521,7 @@ public:
         FastSampler* cpu_sampler = new FastSampler(graph, fully_rep_graph,
                                                    cache_ids, 1, fanout,
                                                    cache_num);
-        CPU_sg = cpu_sampler->sample_fast(cache_num);
+        CPU_sg = cpu_sampler->sample_fast(cache_num, WeightType::Mean);
         VertexId batch_start = 0;
         VertexId batch_end = std::min(cache_num, batch_start + cpu_batch_size);
         // CPU会按行进行聚合，所以行需要有序
@@ -534,7 +534,7 @@ public:
             uint32_t epoch_min_version = 0;
             auto cpu_sample_time = 0.0;
             auto cpu_cal_time = 0.0;
-            int cpu_round = 0;
+            auto cpu_cal_round = 0;
             while(!is_pipeline_end.load()){
 //                // 进行nn计算
 //                auto W = P[0]->get_W_and_version(W_version);
@@ -579,7 +579,7 @@ public:
 //                auto W = P[0]->get_W_and_version(W_version);
 //                current_min_version = W_version;
                 cpu_cal_time -= get_time();
-                std::for_each(std::execution::par, range_arr.begin(), range_arr.end(), [&](VertexId& arr_offset){
+                std::for_each(std::execution::seq, range_arr.begin(), range_arr.end(), [&](VertexId& arr_offset){
                     VertexId batch_start = arr_offset *  cpu_batch_size;
                     VertexId batch_end = std::min(cache_num, batch_start + cpu_batch_size);
                     if(batch_start == batch_end) {
@@ -602,9 +602,9 @@ public:
                     write_min(&current_min_version, batch_min_version);
 
                 });
+                cpu_cal_round++;
                 cpu_cal_time += get_time();
                 cpu_sample_time -= get_time();
-                cpu_round++;
 //                std::cout << "current_min_version: " << current_min_version << ", gpu version: " << P[0]->gpu_version << ", middle version: " << P[0]->middle_version << std::endl;
                 gnndatum->try_swap_buffer();
                 if(current_min_version > min_version) {
@@ -614,12 +614,12 @@ public:
                 version_cv.notify_all();
                 current_min_version = std::numeric_limits<uint32_t>::max();
                 cpu_sampler->restart();
-                CPU_sg = cpu_sampler->sample_fast(cache_num);
+                CPU_sg = cpu_sampler->sample_fast(cache_num, WeightType::Mean);
                 cpu_sample_time += get_time();
             }
             std::printf("#cpu sample time: %lf\n", cpu_sample_time);
             std::printf("#cpu cal time: %lf\n", cpu_cal_time);
-            std::printf("# cpu round: %d\n", cpu_round);
+            std::printf("#cpu cal round: %d\n", cpu_cal_round);
         });
 
 
@@ -663,11 +663,10 @@ public:
             std::cout << "GNNmini::Running.Epoch[" << i_i << "]:Times["
                       << per_epoch_time << "(s)]:loss\t" << loss << std::endl;
         }
+//        std::printf("最终的GPU version: %d\n", P[0]->gpu_version);
+        exec_time += get_time();
         auto end_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch()).count();
-//        std::printf("最终的GPU version: %d\n", P[0]->gpu_version);
-
-        exec_time += get_time();
         auto wait_time = 0.0;
         for(int i = 0; i < pipeline_num; i++) {
             wait_time += wait_times[i];
@@ -696,11 +695,7 @@ public:
         W_GPU_cv.notify_all();
         Grad_back_cv.notify_all();
         cpu_thread.join();
-        printf("#average epoch time: %lf\n", exec_time/iterations);
-//        printf("总采样数:%llu, 总命中数:%llu\n", Cuda_Stream::total_sample_num, Cuda_Stream::total_cache_hit);
-//        printf("平均epoch采样数:%llu, 平均epoch命中数:%llu\n", Cuda_Stream::total_sample_num/iterations, Cuda_Stream::total_cache_hit/iterations);
-        printf("总传输节点数: %llu\n", Cuda_Stream::total_transfer_node);
-//        printf("平均epoch传输节点数:%llu\n", Cuda_Stream::total_transfer_node/iterations);
+        printf("#average epoch time: %.4lf \n", exec_time/iterations);
         printf("%lu\n%lu\n", start_time, end_time);
 
     }
@@ -747,7 +742,7 @@ public:
 
                 X[l + 1] = ctx->runVertexForward(
                         [&](NtsVar n_i,NtsVar v_i){
-                            auto Y_W = MultiplyWeight(n_i);
+                                        auto Y_W = MultiplyWeight(n_i);
 //                                        auto X_mask = sampler->get_X_mask(cudaStream, sg, gnndatum->dev_CacheFlag);
 //                                        auto mask_sum = X_mask.sum().item<int>();
 //                                        std::printf("X mask sum: %d\n", X_mask.sum().item<int>());
@@ -758,19 +753,19 @@ public:
 //
 //                                        auto Y_sum = Y_i.abs().sum().item<double>();
 //                                        std::printf("before Y row: %d, sum: %lf, avg: %lf\n", Y_i.size(0), Y_sum, Y_sum/Y_i.size(0));
-                            cudaStream->CUDA_DEVICE_SYNCHRONIZE();
-                            update_cache_time -= get_time();
-                            sampler->load_share_embedding_and_feature(cudaStream, sg,gnndatum->dev_share_aggregate, gnndatum->dev_share_embedding,
-                                                                      Y_i, Y_W, gnndatum->dev_CacheMap,gnndatum->dev_CacheFlag);
-                            cudaStream->CUDA_DEVICE_SYNCHRONIZE();
-                            update_cache_time += get_time();
+                                        cudaStream->CUDA_DEVICE_SYNCHRONIZE();
+                                        update_cache_time -= get_time();
+                                         sampler->load_share_embedding_and_feature(cudaStream, sg,gnndatum->dev_share_aggregate, gnndatum->dev_share_embedding,
+                                                                                   Y_i, Y_W, gnndatum->dev_CacheMap,gnndatum->dev_CacheFlag);
+                                         cudaStream->CUDA_DEVICE_SYNCHRONIZE();
+                                         update_cache_time += get_time();
 //                                         Y_sum = Y_i.abs().sum().item<double>();
 //                                        std::printf("after Y row: %d, sum: %lf, avg: %lf\n", Y_i.size(0), Y_sum, Y_sum/Y_i.size(0));
-                            return RunReluAndDropout(Y_W);
-                        },
-                        Y_i,
-                        tmp_X0
-                );
+                                         return RunReluAndDropout(Y_W);
+                                     },
+                                     Y_i,
+                                     tmp_X0
+                                     );
                 //load embedding of cacheflag = 2 or 3 to X[l + 1], GPU cache embedding
 //                X_mask = torch::zeros({X[l+1].size(0), 1}, at::TensorOptions().dtype(torch::kBool).device_index(0));
 //                sampler->load_share_embedding(cudaStream, sg, gnndatum->dev_share_embedding, X[l + 1],gnndatum->CacheMap,
@@ -862,4 +857,4 @@ public:
 
 };
 
-#endif //GNNMINI_GCN_SAMPLE_PD_CACHE_HPP
+#endif //GNNMINI_GS_SAMPLE_PD_CACHE_HPP

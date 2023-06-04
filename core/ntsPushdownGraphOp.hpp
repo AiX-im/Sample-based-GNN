@@ -144,9 +144,9 @@ public:
                             VertexId src=subgraphs->sampled_sgs[layer]->src()[local_src];
                             ValueType *local_input = f_input_buffer + src * feature_size;
                             nts_comp(local_output, local_input,
-                                     nts_norm_degree(graph_,src, dst), feature_size);
-                            nts_comp(local_output, local_input,
                                      forward_weight[src_offset], feature_size);
+//                            nts_comp(local_output, local_input,
+//                                     nts_norm_degree(graph_,src, dst), feature_size);
 //                            assert(subgraphs->sampled_sgs[layer]->e_w_f()[src_offset] - nts_norm_degree(graph_, src, dst) < 1e-4);
 //                            auto weight = nts_norm_degree(graph_,src, dst);
 //                            ++weight_num;

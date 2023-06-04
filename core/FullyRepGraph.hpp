@@ -176,10 +176,23 @@ public:
                          sampled_sgs[layer]->dev_src(),
                          sampled_sgs[layer]->dev_c_o(),sampled_sgs[layer]->dev_r_i());
     }
+    void update_cache_degrees_GPU(int layer) {
+        VertexId v_size = sampled_sgs[layer]->v_size;
+        cs->ReFreshDegree(outdegree,indegree,all_vertices);
+        cs->UpdateDegreeCache(outdegree,indegree,v_size,sampled_sgs[layer]->dev_dst(),
+                         sampled_sgs[layer]->dev_src(),
+                         sampled_sgs[layer]->dev_c_o(),sampled_sgs[layer]->dev_r_i(), fanout[layer]);
+    }
 
     void Get_Weight(int layer){
         VertexId v_size = sampled_sgs[layer]->v_size;
         cs->GetWeight(sampled_sgs[curr_layer]->edge_weight,outdegree,indegree,v_size,
+                      sampled_sgs[layer]->dev_dst(),sampled_sgs[layer]->dev_src(),
+                      sampled_sgs[layer]->dev_c_o(),sampled_sgs[layer]->dev_r_i());
+    }
+    void Get_Mean_Weight(int layer){
+        VertexId v_size = sampled_sgs[layer]->v_size;
+        cs->GetMeanWeight(sampled_sgs[curr_layer]->edge_weight,outdegree,indegree,v_size,
                       sampled_sgs[layer]->dev_dst(),sampled_sgs[layer]->dev_src(),
                       sampled_sgs[layer]->dev_c_o(),sampled_sgs[layer]->dev_r_i());
     }

@@ -112,9 +112,12 @@ void release(){
 
 class Cuda_Stream {
 public:
-    // toao debug
+    // NOTE: Toao debug变量
     double cpu_inclusiveTime = 0.0;
   double inclusiveTime = 0;
+    static uint64_t total_sample_num;
+    static uint64_t total_cache_hit;
+    static uint64_t total_transfer_node;
 
   Cuda_Stream();
   void destory_Stream();
@@ -410,6 +413,14 @@ public:
     void dev_print_avg_weight(VertexId_CUDA *column_offset, VertexId_CUDA *row_indices, float *weight,
                               VertexId_CUDA *destination, VertexId_CUDA *dev_cacheflag, float *dev_sum,
                               VertexId_CUDA *dev_cache_num, VertexId_CUDA vertex_size);
+
+    void UpdateDegreeCache(VertexId_CUDA *out_degree, VertexId_CUDA *in_degree, VertexId_CUDA vertices,
+                           VertexId_CUDA *destination, VertexId_CUDA *source, VertexId_CUDA *column_offset,
+                           VertexId_CUDA *row_indices, int fanout);
+
+    void GetMeanWeight(float *edge_weight, VertexId_CUDA *out_degree, VertexId_CUDA *in_degree, VertexId_CUDA vertices,
+                       VertexId_CUDA *destination, VertexId_CUDA *source, VertexId_CUDA *column_offset,
+                       VertexId_CUDA *row_indices);
 };
 
 // int test();

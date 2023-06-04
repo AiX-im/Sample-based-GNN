@@ -231,10 +231,10 @@ public:
           row_indices, column_offset, 0, 0, 0, 0,
             edge_size, batch_size,feature_size, true, false);
     }else{
-//        cuda_stream->Gather_By_Dst_From_Src(
-//                f_input_buffer, f_output_buffer, weight_forward, // data
-//                row_indices, column_offset,0, 0, 0, 0,
-//                edge_size, batch_size,feature_size, true, false);
+        cuda_stream->Gather_By_Dst_From_Src(
+                f_input_buffer, f_output_buffer, weight_forward, // data
+                row_indices, column_offset,0, 0, 0, 0,
+                edge_size, batch_size,feature_size, true, false);
       cuda_stream->Gather_By_Dst_From_Src_Spmm(
         f_input_buffer, f_output_buffer, weight_forward, // data
           row_indices, column_offset, column_num,0, 0, 0, 0,

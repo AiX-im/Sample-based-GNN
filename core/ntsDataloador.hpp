@@ -24,6 +24,8 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include <unistd.h>
 #include <vector>
 #include <sstream>
+#include <execution>
+#include <random>
 #include "core/graph.hpp"
 
 class GNNDatum {
@@ -45,10 +47,20 @@ public:
   ValueType *local_aggregation;
   ValueType *dev_local_aggregation;
 
-  VertexId *X_version;          // 存储聚合后结果的版本号
+    ValueType *local_aggregation_cpu;
+    ValueType *dev_local_aggregation_cpu;
+    ValueType *local_embedding_cpu; // embedding of local partition
+    ValueType *dev_local_embedding_cpu;
+    std::atomic<bool> gpu_flag;
+    std::atomic<bool> cpu_flag;
+    std::mutex share_mutex;
+    std::condition_variable share_cv;
+    // TODO: CPU端可能要上锁，GPU端使用自旋的方式，GPU端调用前要上锁，分别由两个函数控制（一个上锁，一个释放锁并唤醒CPU线程），CPU上锁就在交换函数里面控制就行
+
+  VertexId *X_version;          // 存储CPU上的版本信息
   VertexId *dev_X_version;
 
-  VertexId *Y_version;          // 存储乘W后的结果的版本号
+  VertexId *Y_version;          // 存储GPU上的版本信息
   VertexId *dev_Y_version;
 
   ValueType *dev_share_embedding; //share computation
@@ -105,8 +117,8 @@ public:
 
         assert(gnnctx->layer_size.size() > 1);
         dev_share_embedding = (ValueType*)cudaMallocGPU(cache_num * gnnctx->layer_size[1] * sizeof(ValueType));
-        aggregate_tensor = torch::zeros({cache_num, gnnctx->layer_size[0]},
-                                        at::TensorOptions().dtype(torch::kFloat32).device_index(0));
+//        aggregate_tensor = torch::zeros({cache_num, gnnctx->layer_size[0]},
+//                                        at::TensorOptions().dtype(torch::kFloat32).device_index(0));
 //        dev_share_aggregate = aggregate_tensor.packed_accessor<float, 2>().data();
 //        mask_tensor = torch::zeros({cache_num, 1}, at::TensorOptions().dtype(torch::kBool).device_index(0));
 //        dev_mask_tensor = mask_tensor.packed_accessor<uint8_t, 2>().data();
@@ -120,7 +132,18 @@ public:
         dev_local_aggregation = (ValueType*) getDevicePointer(local_aggregation);
         dev_X_version = (VertexId*) getDevicePointer(X_version);
         dev_Y_version = (VertexId*) getDevicePointer(Y_version);
+
+        // 下面是使用多个缓冲区的做法
+        local_aggregation_cpu = (ValueType*) cudaMallocPinned(cache_num * (gnnctx->layer_size[0]) * sizeof(ValueType));
+        dev_local_aggregation_cpu = (ValueType*)getDevicePointer(local_aggregation_cpu);
+        local_embedding_cpu = (ValueType*) cudaMallocPinned((long)(cache_num)*(gnnctx->layer_size[1])*sizeof(ValueType));
+        dev_local_embedding_cpu = (ValueType*)getDevicePointer(local_embedding_cpu);
+        cpu_flag.store(false);
+        gpu_flag.store(false);
+
     }
+
+
 
     void genereate_gpu_data(){
         dev_local_label=(long*)cudaMallocGPU(gnnctx->l_v_num*sizeof(long));
@@ -155,6 +178,28 @@ void move_data_to_local_cache(VertexId vertex_num, int feature_len, ValueType* d
     }
 }
 
+    void try_swap_buffer(){
+        if(!gpu_flag.load()){
+            cpu_flag.store(true);
+            std::swap(local_embedding, local_embedding_cpu);
+            std::swap(local_aggregation, local_aggregation_cpu);
+            std::swap(X_version, Y_version);
+            std::swap(dev_X_version, dev_Y_version);
+            cpu_flag.store(false);
+        }
+    }
+
+    void set_gpu_transfer_flag(){
+        // 自旋等待
+        gpu_flag.store(true);
+        while(cpu_flag.load()) std::this_thread::yield();
+    }
+
+    void unset_gpu_transfer_flag(){
+        gpu_flag.store(false);
+    }
+
+
 void move_data_to_local_cache(VertexId vertex_num, int feature_len, int embedding_len, ValueType* feature,
                               ValueType* embedding, VertexId* ids, VertexId start, uint32_t version){
         if(vertex_num <= 0){
@@ -164,17 +209,33 @@ void move_data_to_local_cache(VertexId vertex_num, int feature_len, int embeddin
             return;
         }
 //        std::printf("feature len: %d, embedding len: %d, version: %d\n", feature_len, embedding_len, version);
-#pragma omp parallel for num_threads(max_threads)
-        for(VertexId i = 0; i < vertex_num; i++) {
-            auto index = CacheMap[ids[i]];
-            X_version[index] = version;
-            __asm__ __volatile__ ("" : : : "memory");
-            memcpy(&local_aggregation[index * feature_len], &feature[i * feature_len], sizeof(ValueType)*feature_len);
-            memcpy(&local_embedding[index * embedding_len], &embedding[i * embedding_len], sizeof(ValueType)*embedding_len);
-            Y_version[index] = X_version[index];
-            __asm__ __volatile__ ("" : : : "memory");
+//#pragma omp parallel for num_threads(max_threads)
+//        for(VertexId i = 0; i < vertex_num; i++) {
+//            auto index = CacheMap[ids[i]];
+//            X_version[index] = version;
+////            __asm__ __volatile__ ("" : : : "memory");
+//            memcpy(&local_aggregation_cpu[index * feature_len], &feature[i * feature_len], sizeof(ValueType)*feature_len);
+//            memcpy(&local_embedding_cpu[index * embedding_len], &embedding[i * embedding_len], sizeof(ValueType)*embedding_len);
+////            Y_version[index] = X_version[index];
+////            __asm__ __volatile__ ("" : : : "memory");
+//
+//        }
 
-        }
+
+        std::vector<VertexId> ids_vertor(ids, ids+vertex_num);
+        assert(ids_vertor.size() == vertex_num);
+        std::for_each(std::execution::par, ids_vertor.begin(), ids_vertor.end(), [&](VertexId const& glabol_id){
+            VertexId i = &glabol_id - &ids_vertor[0];
+            assert(i >= 0 && i < ids_vertor.size());
+            auto index = CacheMap[glabol_id];
+            X_version[index] = version;
+//            __asm__ __volatile__ ("" : : : "memory");
+//            std::copy(std::execution::par, &feature[i * feature_len],&feature[(i+1) * feature_len], &local_aggregation_cpu[index * feature_len]);
+//            std::copy(std::execution::par, &embedding[i * embedding_len],&embedding[(i+1) * embedding_len], &local_embedding_cpu[index * embedding_len]);
+            memcpy(&local_aggregation_cpu[index * feature_len], &feature[i * feature_len], sizeof(ValueType)*feature_len);
+            memcpy(&local_embedding_cpu[index * embedding_len], &embedding[i * embedding_len], sizeof(ValueType)*embedding_len);
+
+        });
 
     }
 
@@ -183,13 +244,31 @@ void move_data_to_local_cache(VertexId vertex_num, int feature_len, int embeddin
  * @brief
  * generate random data for feature, label and mask
  */
-void random_generate() {
-  for (int i = 0; i < gnnctx->l_v_num; i++) {
+void random_generate(float train_rate=0.65, float val_rate=0.10, float test_rate=0.25) {
+    VertexId max_train_id = gnnctx->l_v_num * train_rate;
+    VertexId max_val_id = gnnctx->l_v_num * val_rate + max_train_id;
+//     int threads = omp_get_num_threads();
+//     std::random_device rd;
+//     std::mt19937 mts[threads];
+//     for(int i = 0; i < threads; i++) {
+//         mts[i] = std::mt19937(rd());
+//     }
+
+// #pragma omp parallel for
+  for (uint32_t i = 0; i < gnnctx->l_v_num; i++) {
     for (int j = 0; j < gnnctx->layer_size[0]; j++) {
-      local_feature[i * gnnctx->layer_size[0] + j] = 1.0;
+      uint64_t index = i * gnnctx->layer_size[0] + j;
+      local_feature[index] = 1.0;
     }
-    local_label[i] = rand() % gnnctx->label_num;
-    local_mask[i] = i % 3;
+    local_label[i] = (rand()) % gnnctx->label_num;
+//    local_mask[i] = i % 3;
+    if(i < max_train_id) {
+        local_mask[i] = 0;
+    } else if(i < max_val_id) {
+        local_mask[i] = 1;
+    } else {
+        local_mask[i] = 2;
+    }
   }
 }
 
@@ -199,7 +278,7 @@ void random_generate() {
  * @param target target tensor where we should place local label
  */
 void registLabel(NtsVar &target) {
-  target = graph->Nts->NewLeafKLongTensor(local_label, {gnnctx->l_v_num});
+  target = graph->Nts->NewLeafKLongTensor(local_label, {static_cast<long>(gnnctx->l_v_num)});
   // torch::from_blob(local_label, gnnctx->l_v_num, torch::kLong);
 }
 
@@ -209,7 +288,7 @@ void registLabel(NtsVar &target) {
  * @param mask target tensor where we should place local mask
  */
 void registMask(NtsVar &mask) {
-  mask = graph->Nts->NewLeafKIntTensor(local_mask, {gnnctx->l_v_num, 1});
+  mask = graph->Nts->NewLeafKIntTensor(local_mask, {static_cast<long>(gnnctx->l_v_num), 1});
   // torch::from_blob(local_mask, {gnnctx->l_v_num,1}, torch::kInt32);
 }
 

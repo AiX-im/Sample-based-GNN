@@ -45,6 +45,12 @@
     }                                                                          \
 }
 
+// TODO: Toao debug
+
+uint64_t  Cuda_Stream::total_cache_hit = 0;
+uint64_t Cuda_Stream::total_sample_num = 0;
+uint64_t Cuda_Stream::total_transfer_node = 0;
+
 template<typename T>
 T get_cuda_array_num(T* arr, int index) {
     T value;
@@ -1086,9 +1092,25 @@ void Cuda_Stream::sample_processing_get_co_gpu_omit(
 #if CUDA_ENABLE
        // 确定每个节点需要采的数量，方便为数组分配空间
 //    print_cache_num<<<1,1>>>(dst, CacheFlag, dst_size);
-    sample_processing_get_co_gpu_kernel_omit<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
-                            (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
-                            src_index_size,src_count,src_index,fanout);
+     sample_processing_get_co_gpu_kernel_omit<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+                             (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
+                             src_index_size,src_count,src_index,fanout);
+
+    // NOTE: Toao用于检测cache点数量
+    // TODO: Toao用于检测cache点的数量
+//    VertexId_CUDA* cache_count;
+//    cudaMallocAsync(&cache_count, sizeof(VertexId_CUDA), stream);
+//    cudaMemsetAsync(cache_count, 0, sizeof(VertexId_CUDA), stream);
+//    sample_processing_get_co_gpu_kernel_omit_lab<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+//                            (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
+//                            src_index_size,src_count,src_index,fanout, cache_count);
+//    VertexId_CUDA* cache_count_cpu = new VertexId_CUDA[1]();
+//    cudaMemcpyAsync(cache_count_cpu, cache_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
+////    std::printf("采样总结点数: %u, cache点数量: %u\n", dst_size, cache_count_cpu[0]);
+//    total_sample_num += dst_size;
+//    total_cache_hit += cache_count_cpu[0];
+//    delete []cache_count_cpu;
+//    cudaFreeAsync(cache_count, stream);
 
 //    this->CUDA_DEVICE_SYNCHRONIZE();
 //    inclusiveTime -= get_time();
@@ -1239,7 +1261,7 @@ void Cuda_Stream::sample_processing_traverse_gpu(VertexId_CUDA *destination,
 //    VertexId_CUDA count = 0;
 //    VertexId_CUDA* gpu_count;
 //    cudaMallocAsync((void**)&gpu_count, sizeof(VertexId_CUDA), stream);
-//    cudaMemcpyAsync(gpu_count, &count, sizeof(VertexId_CUDA), cudaMemcpyHostToDevice, stream);
+////    cudaMemcpyAsync(gpu_count, &count, sizeof(VertexId_CUDA), cudaMemcpyHostToDevice, stream);
 //    check_sample<<<vtx_size, 128, 0, stream>>>(c_o, r_i, global_c_o, global_r_i, vtx_size, destination, gpu_count);
 //    cudaMemcpyAsync(&count, gpu_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
 //    cudaDeviceSynchronize();
@@ -1281,6 +1303,7 @@ void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
 						VertexId_CUDA vertex_size){
 #if CUDA_ENABLE
 //    std::printf("传输feature大小数量: %u\n", vertex_size);
+    total_transfer_node += vertex_size;
     int block_num = ((vertex_size * WARP_SIZE)/CUDA_NUM_THREADS) + 1;
     block_num = std::min(CUDA_NUM_THREADS, block_num);
     zero_copy_feature_move_gpu_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
@@ -1517,6 +1540,25 @@ void Cuda_Stream::UpdateDegree(VertexId_CUDA *out_degree,
 #endif   
 }
 
+
+void Cuda_Stream::UpdateDegreeCache(VertexId_CUDA *out_degree,
+                               VertexId_CUDA *in_degree,
+                               VertexId_CUDA vertices,
+                               VertexId_CUDA *destination,
+                               VertexId_CUDA *source,
+                               VertexId_CUDA *column_offset,
+                               VertexId_CUDA *row_indices,
+                               int fanout){
+#if CUDA_ENABLE
+    update_cache_degree<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (out_degree,in_degree,vertices,destination,source,column_offset,row_indices, fanout);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+#else
+    printf("CUDA DISABLED Cuda_Stream::up_date_degree\n");
+       exit(0);
+#endif
+}
+
 void Cuda_Stream::move_degree_to_gpu(VertexId_CUDA* cpu_in_degree, VertexId_CUDA* cpu_out_degree,
                                      VertexId_CUDA *gpu_in_degree, VertexId_CUDA *gpu_out_degree,VertexId_CUDA vertexs) {
 #if CUDA_ENABLE
@@ -1546,6 +1588,26 @@ void Cuda_Stream::GetWeight(float *edge_weight,
        printf("CUDA DISABLED Cuda_Stream::get_weight\n");
        exit(0);   
 #endif   
+}
+
+void Cuda_Stream::GetMeanWeight(float *edge_weight,
+                            VertexId_CUDA *out_degree,
+                            VertexId_CUDA *in_degree,
+                            VertexId_CUDA vertices,
+                            VertexId_CUDA *destination,
+                            VertexId_CUDA *source,
+                            VertexId_CUDA *column_offset,
+                            VertexId_CUDA *row_indices){
+#if CUDA_ENABLE
+    uint32_t warp_num = CUDA_NUM_THREADS * CUDA_NUM_BLOCKS/WARP_SIZE;
+    uint32_t block_num = std::min(vertices, warp_num);
+    get_mean_weight<<<block_num,WARP_SIZE,0,stream>>>(edge_weight,out_degree,in_degree,vertices,destination,source,column_offset,row_indices);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+//    print_cuda_sum(edge_weight, vertices, "gpu edge weight");
+#else
+    printf("CUDA DISABLED Cuda_Stream::get_weight\n");
+       exit(0);
+#endif
 }
 
 void Cuda_Stream::Edge_Softmax_Forward_Block(float* msg_output,float* msg_input,//data 

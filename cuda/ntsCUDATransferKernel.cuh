@@ -141,6 +141,18 @@ __global__ void global_copy_label_move_gpu_kernel(long *dev_label,
 	}
 }
 
+__global__ void global_copy_label_move_gpu_kernel_test(long *dev_label,
+                                                  long *global_dev_label,
+                                                  VertexId_CUDA *dst_vertex,
+                                                  VertexId_CUDA vertex_size,
+                                                  int* test_count){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    for(long i=threadId;i<(long)vertex_size;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA dst_vtx = dst_vertex[i];
+        dev_label[i] = global_dev_label[dst_vtx];
+        test_count[dst_vtx]++;
+    }
+}
 
 
 __global__ void re_fresh_degree(VertexId_CUDA *out_degree,
@@ -180,13 +192,13 @@ __global__ void up_date_degree(VertexId_CUDA *out_degree,
 
 
 __global__ void update_cache_degree(VertexId_CUDA *out_degree,
-                               VertexId_CUDA *CacheFlag,
                                VertexId_CUDA *in_degree,
                                VertexId_CUDA vertices,
                                VertexId_CUDA *destination,
                                VertexId_CUDA *source,
                                VertexId_CUDA *column_offset,
-                               VertexId_CUDA *row_indices){
+                               VertexId_CUDA *row_indices,
+                               int fanout){
     size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
     const int WARPSIZE=32;
     size_t laneId =threadId%WARPSIZE;
@@ -197,6 +209,10 @@ __global__ void update_cache_degree(VertexId_CUDA *out_degree,
         long end_edge = column_offset[i + 1];
         VertexId_CUDA dst = destination[i];
         in_degree[dst] = end_edge - begin_edge;
+        assert(fanout > 0);
+        if(in_degree[dst] == 0){
+            in_degree[dst] = fanout;
+        }
 
         for (int edge = begin_edge; edge < end_edge; edge++) {
             VertexId_CUDA src = source[row_indices[edge]];
@@ -205,7 +221,32 @@ __global__ void update_cache_degree(VertexId_CUDA *out_degree,
     }
 }
 
-__global__ void get_weight(float *edge_weight,	 
+__global__ void get_weight(float *edge_weight,
+                           VertexId_CUDA *out_degree,
+                           VertexId_CUDA *in_degree,
+                           VertexId_CUDA vertices,
+                           VertexId_CUDA *destination,
+                           VertexId_CUDA *source,
+                           VertexId_CUDA *column_offset,
+                           VertexId_CUDA *row_indices){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    size_t laneId = threadId%WARP_SIZE;
+    size_t warpId = threadId/WARP_SIZE;
+    size_t warp_num = gridDim.x * blockDim.x / WARP_SIZE;
+
+    for(size_t warp_id = warpId; warp_id < vertices; warp_id += warp_num){
+        const uint64_t start = column_offset[warp_id];
+        const uint64_t end = column_offset[warp_id+1];
+
+        for(uint64_t i = start + laneId; i < end; i += WARP_SIZE) {
+            long src = row_indices[i];
+            edge_weight[i] = 1 / (sqrtf(out_degree[source[src]]) * sqrtf(in_degree[destination[warp_id]]));
+        }
+    }
+}
+
+// TODO: 改一下这个权重进行更改weight完成GCN-->GraphSage-mean的转化
+__global__ void get_mean_weight(float *edge_weight,
 	 					   VertexId_CUDA *out_degree,
 				   		   VertexId_CUDA *in_degree,
 				   		   VertexId_CUDA vertices,
@@ -221,10 +262,11 @@ __global__ void get_weight(float *edge_weight,
     for(size_t warp_id = warpId; warp_id < vertices; warp_id += warp_num){
         const uint64_t start = column_offset[warp_id];
         const uint64_t end = column_offset[warp_id+1];
+        const uint64_t edges_num = end - start;
 
         for(uint64_t i = start + laneId; i < end; i += WARP_SIZE) {
                 long src = row_indices[i];
-				edge_weight[i] = 1 / (sqrtf(out_degree[source[src]]) * sqrtf(in_degree[destination[warp_id]]));
+				edge_weight[i] = (1 / (sqrtf(out_degree[source[src]]) * sqrtf(in_degree[destination[warp_id]])))/edges_num;
         }
     }
 }
@@ -476,33 +518,40 @@ __global__ void dev_update_share_embedding_and_feature_kernel(float *dev_aggrega
         if(dev_cacheflag[vtx_id] == 0 || dev_cacheflag[vtx_id] < required_version){
             VertexId_CUDA version_x = dev_X_version[vtx_id_local];
             VertexId_CUDA version_y = dev_Y_version[vtx_id_local];
-            VertexId_CUDA version_x_new = version_x;
-            VertexId_CUDA version_y_new = version_y;
-            do{
-//                __syncthreads();
-                __syncwarp();
-//                while(version_x != version_y){
-//                    std::printf("warp: %d, old:(%d, %d), new: (%d, %d)\n", warp_id, version_x, version_y, version_x_new, version_y_new);
-                    version_x = dev_X_version[vtx_id_local];
-                    version_y = dev_Y_version[vtx_id_local];
+//            VertexId_CUDA version_x_new = version_x;
+//            VertexId_CUDA version_y_new = version_y;
+//            do{
+////                __syncthreads();
+//                __syncwarp();
+////                while(version_x != version_y){
+////                    std::printf("warp: %d, old:(%d, %d), new: (%d, %d)\n", warp_id, version_x, version_y, version_x_new, version_y_new);
+//                    version_x = dev_X_version[vtx_id_local];
+//                    version_y = dev_Y_version[vtx_id_local];
+////                }
+////                __syncthreads();
+//                if(version_x == version_y) {
+//                    for(int j=laneId;j<feature_size;j+=WARP_SIZE){
+//                        //dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
+//                        share_aggregate[vtx_id_local*feature_size+j] = dev_aggregate[vtx_id_local*feature_size+j];
+//                    }
+//                    for(int j = laneId; j < embedding_size; j+=WARP_SIZE) {
+//                        share_embedding[vtx_id_local * embedding_size + j] = dev_embedding[vtx_id_local * embedding_size + j];
+//                    }
 //                }
-//                __syncthreads();
-                if(version_x == version_y) {
-                    for(int j=laneId;j<feature_size;j+=WARP_SIZE){
-                        //dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
-                        share_aggregate[vtx_id_local*feature_size+j] = dev_aggregate[vtx_id_local*feature_size+j];
-                    }
-                    for(int j = laneId; j < embedding_size; j+=WARP_SIZE) {
-                        share_embedding[vtx_id_local * embedding_size + j] = dev_embedding[vtx_id_local * embedding_size + j];
-                    }
-                }
-                __syncwarp();
-                version_x_new = dev_X_version[vtx_id_local];
-                version_y_new = dev_Y_version[vtx_id_local];
+//                __syncwarp();
+//                version_x_new = dev_X_version[vtx_id_local];
+//                version_y_new = dev_Y_version[vtx_id_local];
+//
+//            } while (version_x != version_y || (!(version_x == version_x_new && version_y == version_y_new)));
 
-            } while (version_x != version_y || (!(version_x == version_x_new && version_y == version_y_new)));
-            dev_cacheflag[vtx_id] = version_x;
-
+            for(int j=laneId;j<feature_size;j+=WARP_SIZE){
+                //dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
+                share_aggregate[vtx_id_local*feature_size+j] = dev_aggregate[vtx_id_local*feature_size+j];
+            }
+            for(int j = laneId; j < embedding_size; j+=WARP_SIZE) {
+                share_embedding[vtx_id_local * embedding_size + j] = dev_embedding[vtx_id_local * embedding_size + j];
+            }
+            dev_cacheflag[vtx_id] = version_y;
         }
     }
 }
@@ -546,6 +595,34 @@ __global__ void sample_processing_get_co_gpu_kernel_omit(
         }
         else{
             local_column_offset[i + 1] = 0;
+        }
+		//local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];
+	}
+}
+
+__global__ void sample_processing_get_co_gpu_kernel_omit_lab(
+                                    VertexId_CUDA *CacheFlag,
+                                    VertexId_CUDA *dst,
+								 	VertexId_CUDA *local_column_offset,
+                                   	VertexId_CUDA *global_column_offset,
+                                   	VertexId_CUDA dst_size,
+									VertexId_CUDA src_index_size,
+									VertexId_CUDA* src_count,
+									VertexId_CUDA* src_index,
+									VertexId_CUDA fanout,
+                                    VertexId_CUDA* cache_count
+									)
+{
+	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+	for(long i = threadId; i < (long)dst_size; i += blockDim.x * gridDim.x){
+	   	VertexId_CUDA dst_vtx = dst[i];
+           // 这里为0的点也不采样
+        if(CacheFlag[dst_vtx] == -1 /*|| CacheFlag[dst_vtx] == 0*/){
+		    local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
+        }
+        else{
+            local_column_offset[i + 1] = 0;
+            atomicAdd(cache_count, 1u);
         }
 		//local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];
 	}
@@ -787,7 +864,7 @@ __global__ void check_sample(VertexId_CUDA* local_column_offset, VertexId_CUDA* 
         auto global_id = destination[i];
         auto global_start = global_column_offset[global_id];
         auto global_end = global_column_offset[global_id + 1];
-        std::printf("global start: %u, global end: %u\n", global_start, global_end);
+//        std::printf("global start: %u, global end: %u\n", global_start, global_end);
         for(auto j = start; j < end; j++) {
             auto neighbor = local_row_indices[j];
             auto find = false;
@@ -799,7 +876,7 @@ __global__ void check_sample(VertexId_CUDA* local_column_offset, VertexId_CUDA* 
             }
             if(!find){
                 atomicAdd(count, 1);
-//                std::printf("有邻居没有找到，采样有问题\n");
+                std::printf("有邻居没有找到，采样有问题\n");
 //                return;
             }
         }
