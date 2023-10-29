@@ -56,6 +56,8 @@ public:
           nts_copy(f_output_buffer, eid * 2, f_input_buffer, src, feature_size,1);
           nts_copy(f_output_buffer, eid * 2 + 1, f_input_buffer, vtx, feature_size,1);
         }
+
+
       },
       subgraphs, feature_size, active_);            
     return f_output;
@@ -90,6 +92,7 @@ public:
         }
       },
       subgraphs, feature_size, active_);
+
       return f_input_grad;
   }
 
@@ -208,6 +211,7 @@ public:
         }
       },
       subgraphs, feature_size, active_);
+
       return f_input_grad;
   }    
 
@@ -420,6 +424,8 @@ public:
                   0, feature_size,(eid_end-eid_start));
         },
         subgraphs, f_output_grad.size(1), this->active_);
+
+
       return f_input_grad;
   }    
 

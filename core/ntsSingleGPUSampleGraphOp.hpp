@@ -197,11 +197,14 @@ public:
   SampledSubgraph *subgraphs;
   int layer;
   Cuda_Stream* cuda_stream;
-  SingleGPUAllSampleGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,Cuda_Stream* cuda_stream_)
+  int device_id = 0;
+  SingleGPUAllSampleGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,
+                            int layer_,Cuda_Stream* cuda_stream_, int device_id_=0)
       : ntsGraphOp(graph_) {
     subgraphs = subgraphs_;
     layer = layer_;
     cuda_stream = cuda_stream_;
+    device_id = device_id_;
   }
 
   NtsVar forward(NtsVar &f_input){
@@ -211,8 +214,8 @@ public:
     // graph_->Nts->ZeroVarMem(f_output);
 
 //      display_c10_cuda_mem_stat();
-
-    NtsVar f_output = graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->v_size,feature_size},torch::DeviceType::CUDA);
+    NtsVar f_output = graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->v_size,feature_size},
+                                                torch::DeviceType::CUDA, device_id);
 
     ValueType *f_input_buffer =
       graph_->Nts->getWritableBuffer(f_input, torch::DeviceType::CUDA);
@@ -231,10 +234,10 @@ public:
           row_indices, column_offset, 0, 0, 0, 0,
             edge_size, batch_size,feature_size, true, false);
     }else{
-        cuda_stream->Gather_By_Dst_From_Src(
-                f_input_buffer, f_output_buffer, weight_forward, // data
-                row_indices, column_offset,0, 0, 0, 0,
-                edge_size, batch_size,feature_size, true, false);
+//        cuda_stream->Gather_By_Dst_From_Src(
+//                f_input_buffer, f_output_buffer, weight_forward, // data
+//                row_indices, column_offset,0, 0, 0, 0,
+//                edge_size, batch_size,feature_size, true, false);
       cuda_stream->Gather_By_Dst_From_Src_Spmm(
         f_input_buffer, f_output_buffer, weight_forward, // data
           row_indices, column_offset, column_num,0, 0, 0, 0,
@@ -254,7 +257,8 @@ public:
     // printf("backward feature:%d layer:%d\n",feature_size,layer);
     // NtsVar f_input_grad = graph_->Nts->NewKeyTensor({subgraphs->layer_size[0],feature_size},torch::DeviceType::CUDA);
     //graph_->Nts->ZeroVarMem(f_input_grad);
-    NtsVar f_input_grad = graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->src_size,feature_size},torch::DeviceType::CUDA);
+    NtsVar f_input_grad = graph_->Nts->NewKeyTensor({subgraphs->sampled_sgs[layer]->src_size,
+                                                     feature_size},torch::DeviceType::CUDA, device_id);
     ValueType *f_input_grad_buffer =
           graph_->Nts->getWritableBuffer(f_input_grad, torch::DeviceType::CUDA);
     ValueType *f_output_grad_buffer =

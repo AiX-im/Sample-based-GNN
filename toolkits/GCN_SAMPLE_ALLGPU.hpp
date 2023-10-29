@@ -118,7 +118,9 @@ public:
         gnndatum = new GNNDatum(graph->gnnctx, graph);
         if (0 == graph->config->feature_file.compare("random")) {
             gnndatum->random_generate();
-        } else {
+        } else if(0 == graph->config->feature_file.compare("mask")){
+            gnndatum->read_mask_random_other(graph->config->mask_file);
+        }  else {
             gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                              graph->config->label_file,
                                              graph->config->mask_file);
@@ -206,24 +208,6 @@ public:
                           << g_correct << " " << std::endl;
         }
     }
-    static void print_cuda_use()
-    {
-        size_t free_byte;
-        size_t total_byte;
-
-        cudaError_t cuda_status = cudaMemGetInfo(&free_byte, &total_byte);
-
-        if (cudaSuccess != cuda_status) {
-            printf("Error: cudaMemGetInfo fails, %s \n", cudaGetErrorString(cuda_status));
-            exit(1);
-        }
-
-        double free_db = (double)free_byte;
-        double total_db = (double)total_byte;
-        double used_db_1 = (total_db - free_db) / 1024.0 / 1024.0;
-        std::cout << "Now used GPU memory " << used_db_1 << "  MB\n";
-    }
-
     void Loss(NtsVar &left,NtsVar &right) {
         //  return torch::nll_loss(a,L_GT_C);
         torch::Tensor a = left.log_softmax(1);
@@ -242,17 +226,32 @@ public:
         }
     }
 
+    // NtsVar vertexForward(NtsVar &a, NtsVar &x) {
+    //     NtsVar y;
+    //     int layer = graph->rtminfo->curr_layer;
+    //     if (layer == 1) {
+    //         y = P[layer]->forward(a);
+    //         y = y.log_softmax(1); //CUDA
+
+    //     } else if (layer == 0) {
+    //         //y = P[layer]->forward(torch::relu(drpmodel(a)));
+    //         auto b = P[layer]->forward(a);
+    //         y = torch::dropout(torch::relu(b), drop_rate, ctx->is_train());
+    //     }
+    //     return y;
+    // }
+
     NtsVar vertexForward(NtsVar &a, NtsVar &x) {
         NtsVar y;
         int layer = graph->rtminfo->curr_layer;
-        if (layer == 1) {
+        int layer_num = gnndatum->gnnctx->layer_size.size() - 1;
+        if (layer == layer_num - 1) {
             y = P[layer]->forward(a);
             y = y.log_softmax(1); //CUDA
 
-        } else if (layer == 0) {
+        } else {
             //y = P[layer]->forward(torch::relu(drpmodel(a)));
-            auto b = P[layer]->forward(a);
-            y = torch::dropout(torch::relu(b), drop_rate, ctx->is_train());
+            y = torch::dropout(torch::relu(P[layer]->forward(a)), drop_rate, ctx->is_train());
         }
         return y;
     }
@@ -408,6 +407,11 @@ public:
         shuffle_vec(train_nids);
         shuffle_vec(val_nids);
         shuffle_vec(test_nids);
+        
+
+        //  nts::op::nts_local_shuffle(train_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
+        // nts::op::nts_local_shuffle(val_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
+        // nts::op::nts_local_shuffle(test_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
 
         cuda_stream = new Cuda_Stream[pipeline_num];
         auto default_stream = at::cuda::getDefaultCUDAStream();
@@ -437,8 +441,8 @@ public:
         if(graph->config->pushdown)
             layer--;
         FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
+//        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
+//        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
 
         // FastSampler* train_sampler = new FastSampler(graph,fully_rep_graph,
         //     train_nids,layer,

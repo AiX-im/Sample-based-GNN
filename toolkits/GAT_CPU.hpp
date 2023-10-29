@@ -101,7 +101,9 @@ public:
     // gnndatum->random_generate();
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
-    } else {
+    } else if(0 == graph->config->feature_file.compare("mask")){
+        gnndatum->read_mask_random_other(graph->config->mask_file);
+    }  else {
       gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                        graph->config->label_file,
                                        graph->config->mask_file);
@@ -176,7 +178,7 @@ public:
 
   void Update() {
     for (int i = 0; i < P.size(); i++) {
-      P[i]->all_reduce_to_gradient(P[i]->W.grad().cpu());
+        P[i]->all_reduce_to_gradient(P[i]->W.grad().cpu());
       P[i]->learnC2C_with_decay_Adam();
       P[i]->next();
     }
@@ -197,27 +199,28 @@ public:
       graph->rtminfo->curr_layer = i;
       NtsVar X_trans=ctx->runVertexForward([&](NtsVar x_i){
             return preForward(x_i);},
-        X[i]);//pre apply    
+        X[i]);//pre apply
       NtsVar E_msg=ctx->runGraphOp<nts::op::SingleCPUSrcDstScatterOp>(
               partitioned_graph,active,X_trans);// scatterto edge
-      
+
+
       NtsVar m=ctx->runEdgeForward([&](NtsVar e_msg){
             int layer = graph->rtminfo->curr_layer;
             return torch::leaky_relu(P[2 * layer + 1]->forward(e_msg),0.2);
         },
       E_msg);//edge NN
-        
+
       NtsVar a=ctx->runGraphOp<nts::op::SingleEdgeSoftMax>(partitioned_graph,
-              active,m);// edge NN   
-      
+              active,m);// edge NN
+
       NtsVar E_msg_out=ctx->runEdgeForward([&](NtsVar a){
             return E_msg.slice(1, 0, E_msg.size(1) / 2, 1)*a;
         },
-      a);//Edge NN 
-        
+      a);//Edge NN
+
       NtsVar nbr=ctx->runGraphOp<nts::op::SingleCPUDstAggregateOp>(
-              partitioned_graph,active,E_msg_out);//agg  
-      
+              partitioned_graph,active,E_msg_out);//agg
+
       X[i+1]=ctx->runVertexForward([&](NtsVar nbr){
             return torch::relu(nbr);
         },nbr);

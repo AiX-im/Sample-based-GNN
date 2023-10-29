@@ -103,7 +103,9 @@ public:
     GNNDatum *gnndatum = new GNNDatum(graph->gnnctx, graph);
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
-    } else {
+    } else if(0 == graph->config->feature_file.compare("mask")){
+        gnndatum->read_mask_random_other(graph->config->mask_file);
+    }  else {
       gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                        graph->config->label_file,
                                        graph->config->mask_file);
@@ -182,11 +184,16 @@ public:
 
   NtsVar vertexForward(NtsVar &a, NtsVar &x) {
     NtsVar y;
-    int layer = graph->rtminfo->curr_layer;
-    if (layer == 0) {
-      y = torch::relu(P[layer]->forward(a)).set_requires_grad(true);
+     int layer = graph->rtminfo->curr_layer;
+     if (layer == 0) {
+//    int layer = graph->rtminfo->curr_layer;
+//    std::cout << "layer size: " << gnndatum->gnnctx->layer_size << std::endl;
+//    int layer_num = gnndatum->gnnctx->layer_size.size();
+//    if (layer == layer_num - 1) {
+//        std::printf("ctx->is_train: %d\n", ctx->is_train());
+      y = torch::dropout(torch::relu(P[layer]->forward(a)).set_requires_grad(true), drop_rate, ctx->is_train());
 
-    } else if (layer == 1) {
+    } else {
       y = P[layer]->forward(a);
       y = y.log_softmax(1); // CUDA
     }
@@ -218,9 +225,9 @@ public:
     graph->rtminfo->forward = true;
     for (int i = 0; i < graph->gnnctx->layer_size.size() - 1; i++) {
       graph->rtminfo->curr_layer = i;
-      if (i != 0) {
-        X[i] = drpmodel(X[i]);
-      }
+//      if (i != 0) {
+//        X[i] = drpmodel(X[i]);
+//      }
 //      gt->GraphPropagateForward(X[i], Y[i], subgraphs);
 //      cp->op_push(X[i], Y[i], nts::autodiff::DIST_GPU);
 //      X[i + 1] = vertexForward(Y[i], X[i]);
@@ -302,6 +309,8 @@ public:
 
     exec_time += get_time();
 
+      printf("#communicate_processing_received.wait=%lf(s)\n",
+             graph->all_recv_wait_time);
     delete active;
   }
 

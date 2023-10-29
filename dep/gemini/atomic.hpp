@@ -58,6 +58,16 @@ template <class T> inline void write_add(T *ptr, T val) {
     new_val = old_val + val;
   } while (!cas(ptr, old_val, new_val));
 }
+
+template <class T> inline T write_add_return_old(T *ptr, T val) {
+  volatile T new_val, old_val;
+  do {
+    old_val = *ptr;
+    new_val = old_val + val;
+  } while (!cas(ptr, old_val, new_val));
+  return old_val;
+}
+
 template <class T> inline int get_and_reset(T *ptr) {
   volatile T new_val, old_val;
   do {

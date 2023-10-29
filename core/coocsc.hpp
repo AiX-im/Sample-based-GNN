@@ -404,9 +404,16 @@ public:
     //         printf("%d\t",source[i]);
     //     }printf("\n\n");
     // }
+    void set_merge_src_dst(){
+        is_merge_src_dst = true;
+        dev_src_local_id_size = 0;
+        dev_dst_local_id_size = 0;
+        dev_local_to_global_size = 0;
+    }
     
 std::vector<VertexId> row_indices_debug;//local id
 
+// 数组大小为边的数量
 std::vector<VertexId> sample_ans;//local id
 std::vector<VertexId> column_offset;//local offset    
 std::vector<VertexId> row_indices;//local id
@@ -437,6 +444,21 @@ std::map<VertexId,VertexId> src_index;//set
 VertexId v_size; //dst_size
 VertexId e_size; // edge size
 VertexId src_size;//distinct src size
+
+bool is_merge_src_dst = false;
+VertexId* dev_src_local_id;
+// 标记的是分配给dev_src_local的大小，以进行复用
+VertexId dev_src_local_id_size;
+std::vector<VertexId> dst_local_id;
+VertexId* dev_dst_local_id;
+// 标记的是分配给dev_dst_local的大小，以进行复用
+VertexId dev_dst_local_id_size;
+VertexId* dev_local_to_global;
+// 标记的是分配给dev_local_to_global的大小，以进行复用
+VertexId dev_local_to_global_size;
+// local_to_global的实际大小，传输feature的时候使用这个
+VertexId local_size;
+
 };
 
 template<typename T>

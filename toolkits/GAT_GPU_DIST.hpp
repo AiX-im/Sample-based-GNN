@@ -90,7 +90,9 @@ public:
     // gnndatum->random_generate();
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
-    } else {
+    } else if(0 == graph->config->feature_file.compare("mask")){
+        gnndatum->read_mask_random_other(graph->config->mask_file);
+    }  else {
       gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                        graph->config->label_file,
                                        graph->config->mask_file);
@@ -167,7 +169,19 @@ public:
   void Loss() {
     //  return torch::nll_loss(a,L_GT_C);
     torch::Tensor a = X[graph->gnnctx->layer_size.size() - 1].log_softmax(1);
+
+//    auto& left = X[graph->gnnctx->layer_size.size() - 1];
+//      std::printf("Loss left size: (%d, %d), a size: (%d, %d)\n",
+//                  left.size(0), left.size(1), a.size(0), a.size(1));
+
     torch::Tensor mask_train = MASK_gpu.eq(0);
+
+//    auto right = L_GT_G.masked_select(mask_train.view({mask_train.size(0)}));
+//    auto loss_left = a.masked_select(mask_train.expand({mask_train.size(0), a.size(1)}))
+//            .view({-1, a.size(1)});
+//    std::printf("loss left dim: %d, size: (%d, %d) label dim: %d, size: (%d, )\n",
+//                loss_left.dim(), loss_left.size(0), loss_left.size(1), right.dim(), right.size(0));
+
     loss = torch::nll_loss(
         a.masked_select(mask_train.expand({mask_train.size(0), a.size(1)}))
             .view({-1, a.size(1)}),
@@ -180,6 +194,7 @@ public:
       // accumulate the gradient using all_reduce
       P[i]->all_reduce_to_gradient(P[i]->W.grad().cpu());
       // update parameters with Adam optimizer
+//      P[i]->learn_local_with_decay_Adam();
       P[i]->learnC2G_with_decay_Adam();
       P[i]->next();
     }

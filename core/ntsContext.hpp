@@ -126,11 +126,14 @@ public:
   template <typename GOPT>
   NtsVar runGraphOp(PartitionedGraph* partitioned_graph, VertexSubset *active,
         NtsVar &f_input){//graph op
+        std::printf("test 1 \n");
     static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
                 "template must be a type of graph op!");
-
+std::printf("test 2 \n");
     nts::op::ntsGraphOp * curr=new GOPT(partitioned_graph,active);
+    std::printf("test 3 \n");
     NtsVar f_output=curr->forward(f_input);
+    std::printf("test 4 \n");
     if (this->training == true) {
       NtsVar ig;
       op.push(GRAPHOP);
@@ -144,6 +147,7 @@ public:
     }
     return f_output;
 }
+
 
   template <typename GOPT>
   NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
@@ -179,6 +183,28 @@ public:
     }
 
     template <typename GOPT>
+    NtsVar runGraphOpNoBackward(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+                                NtsVar &f_input){//graph op
+
+        static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                      "template must be a type of graph op!");
+        nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_);
+        NtsVar f_output=curr->forward(f_input).set_requires_grad(false);
+        return f_output;
+    }
+
+    template <typename GOPT>
+    NtsVar runGraphOpNoBackward(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+                                NtsVar &f_input, int batch_start, int batch_end, Cuda_Stream* cudaStream){//graph op
+
+        static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                      "template must be a type of graph op!");
+        nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_, batch_start, batch_end, cudaStream);
+        NtsVar f_output=curr->forward(f_input);
+        return f_output;
+    }
+
+    template <typename GOPT>
   NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
         NtsVar &f_input,Cuda_Stream* cuda_stream){//graph op
       
@@ -198,9 +224,31 @@ public:
       count++;
     }
     return f_output;
-}  
+}
 
-  template <typename GOPT>
+    template <typename GOPT>
+    NtsVar runGraphOp(SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
+                      NtsVar &f_input,Cuda_Stream* cuda_stream, int device_id){//graph op
+
+        static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
+                      "template must be a type of graph op!");
+        nts::op::ntsGraphOp * curr=new GOPT(subgraphs_,graph_, layer_,cuda_stream, device_id);
+        NtsVar f_output=curr->forward(f_input);
+        if (this->training == true) {
+            NtsVar ig;
+            op.push(GRAPHOP);
+            output.push(f_output);
+            input.push(f_input);
+            ntsOp.push(ntsOperator(curr,GRAPHOP));
+            iot_id.push_back(IOTensorId((long)(f_output.data_ptr()),(long)(f_input.data_ptr())));
+            // pre-alloc space to save graident
+            output_grad.push_back(ig);
+            count++;
+        }
+        return f_output;
+    }
+
+    template <typename GOPT>
   NtsVar runGraphOp(FastSampler *sampler,SampledSubgraph *subgraphs_,Graph<Empty> *graph_,int layer_,
         NtsVar &f_input){//graph op
       
@@ -394,6 +442,7 @@ template <typename NOPT>
     output.top().backward(torch::ones_like(output.top()), retain_graph);
     output_grad[top_idx()-1]= input.top().grad();// grad of loss
     pop_one_op();
+//    std::printf("\tcount: %d thread id: 0x%lx\n", count, std::this_thread::get_id());
     //LOG_INFO("FINISH LOSS");
       while (count > 1 || (count == 1 && NNOP == op.top())) {
     // NNOP means we are using torch lib to do the forward computation
@@ -440,11 +489,16 @@ template <typename NOPT>
       if(output_grad[top_idx()].dim()>1){
         //printf("2\n");
         // std::printf("top_idx(): %d\n",top_idx());
-        // std::printf("output_grad[top_idx()].size(1):%d, output.top().size(1):%d\n", output_grad[top_idx()].size(1), output.top().size(1));
+//         std::printf("output_grad[top_idx()].size(1):%d, output.top().size(1):%d\n", output_grad[top_idx()].size(1), output.top().size(1));
         assert(output_grad[top_idx()].size(1)==output.top().size(1));
-        //  printf("output_grad[top_idx()].size(0):%d output.top().size(0):%d\n",output_grad[top_idx()].size(0),output.top().size(0));
-        assert(output_grad[top_idx()].size(0)==output.top().size(0)); 
+//          printf("output_grad[%d].size(0):%d output.top().size(0):%d\n",top_idx(), output_grad[top_idx()].size(0),output.top().size(0));
+        assert(output_grad[top_idx()].size(0)==output.top().size(0));
+        // TODO: 好像是总有线程停在这里
+//        std::printf("\tbefore thread id 0x%lx top backward, count: %d, top_idx: %d, output grad size: %d\n",
+//                    std::this_thread::get_id(), count, top_idx(),output_grad.size());
         output.top().backward(output_grad[top_idx()], retain_graph);
+//          std::printf("\tafter thread id 0x%lx top backward, count: %d, top_idx: %d, output grad size: %d\n",
+//                      std::this_thread::get_id(), count, top_idx(),output_grad.size());
       }
 
       pop_one_op();

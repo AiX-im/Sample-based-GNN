@@ -33,6 +33,7 @@ Copyright (c) 2015-2016 Xiaowei Zhu, Tsinghua University
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <shared_mutex>
 
 #include "dep/gemini/atomic.hpp"
 #include "dep/gemini/bitmap.hpp"
@@ -48,6 +49,8 @@ Copyright (c) 2015-2016 Xiaowei Zhu, Tsinghua University
 #include "torch/csrc/autograd/generated/variable_factories.h"
 #include "torch/nn/module.h"
 #include "torch/torch.h"
+
+// TODO: 将这个声明进行下推
 //#define CUDA_ENABLE 1
 typedef torch::Tensor NtsVar;
 typedef torch::nn::Module NtsMudule;
@@ -694,6 +697,8 @@ struct Parameter : torch::nn::Module {
   NtsVar W_c_Adam;              // CPU参数矩阵用于Adam的中间变量
   
   Network_simple<ValueType> *network_simple;
+  // 多GPU通讯器，仅用于float类型的数据
+  NCCL_Communicator* ncclCommunicator;
   int row, col;
   NtsVar W_gradient;
   NtsVar W_gradient_cpu_buffer;
@@ -790,6 +795,17 @@ struct Parameter : torch::nn::Module {
     network_simple->broadcast(W.accessor<ValueType, 2>().data());
   }
 
+    // root will broadcast it's parameter to other process
+    // to synchronize the model
+    void init_multi_gpu_parameter(int device_id) {
+        ncclCommunicator->Bcast(device_id, W.accessor<ValueType, 2>().data(),
+                                W.size(0)*W.size(1), nullptr);
+    }
+
+    void set_multi_gpu_comm(NCCL_Communicator* ncclCommunicator_) {
+      this->ncclCommunicator = ncclCommunicator_;
+  }
+
   // Toao 初始化pd相关的参数
   void init_pd_parameter(){
       W_c = W.clone();
@@ -810,6 +826,14 @@ struct Parameter : torch::nn::Module {
     W_gradient.set_data(from);
     network_simple->all_reduce_sum(W_gradient.accessor<ValueType, 2>().data());
   }
+
+    void reduce_multi_gpu_gradient(NtsVar from, int device_id, cudaStream_t cudaStream) {
+        W_gradient.set_data(from);
+        ncclCommunicator->AllReduce(device_id,W_gradient.accessor<ValueType, 2>().data(),
+                                    W_gradient.accessor<ValueType, 2>().data(),
+                                    W_gradient.size(0) * W_gradient.size(1),
+                                    cudaStream);
+    }
 
   void set_gradient(NtsVar from) {
     W_gradient.set_data(from);
@@ -876,10 +900,17 @@ struct Parameter : torch::nn::Module {
   
 #if CUDA_ENABLE
   void Adam_to_GPU() {
+
     M_GPU = M.cuda();
     V_GPU = V.cuda();
     W_g = W_gradient.cuda();
   }
+    void Adam_to_GPU(int device_id) {
+        torch::Device GPU(torch::kCUDA, device_id);
+        M_GPU = M.to(GPU);
+        V_GPU = V.to(GPU);
+        W_g = W_gradient.to(GPU);
+    }
   void learnC2G(ValueType learning_rate) {
     NtsVar tmp = W_gradient.cuda();
     NtsVar a = (W - (tmp * learning_rate));

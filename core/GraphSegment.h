@@ -172,6 +172,7 @@ public:
   std::string edge_file;
   std::string label_file;
   std::string mask_file;
+  std::string pre_sample_file;
   int pipeline_num;
   float cache_rate;
   float del_frac = 0;
@@ -184,6 +185,7 @@ public:
   int time_skip = 3;
   int runs = 1;
   int mini_pull = 0;
+  int gpu_num = 0;
 
   // algorithm related:
   VertexId batch_size;

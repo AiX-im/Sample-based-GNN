@@ -8,6 +8,9 @@
 #include "core/ntsPeerRPC.hpp"
 #include <chrono>
 #include <execution>
+#include <tbb/concurrent_queue.h>
+#include <queue>
+
 
 class GCN_SAMPLE_PD_CACHE_impl {
 public:
@@ -41,6 +44,8 @@ public:
     NtsVar X_mask;
     Cuda_Stream* cuda_stream;
     int pipeline_num;
+    VertexId super_batchsize;
+    VertexId top_cache_num;
     int gpu_round = 0;
     std::vector<at::cuda::CUDAStream> torch_stream;
 
@@ -65,6 +70,13 @@ public:
     std::mutex version_mutex;
     std::condition_variable version_cv;
 
+    // super-batch类型的PD-cache
+//    tbb::concurrent_queue<ValueType*> shared_aggr_queue;
+//    tbb::concurrent_queue<ValueType*> shared_embedding_queue;
+//    tbb::concurrent_queue<ValueType*>  reuse_aggr_queue;
+//    tbb::concurrent_queue<ValueType*> reuse_embedding_queue;
+    tbb::concurrent_queue<NtsVar> shared_W_queue;
+
 
     std::atomic_flag send_back_flag = ATOMIC_FLAG_INIT;
 
@@ -78,7 +90,12 @@ public:
     float cache_rate = 0.05;
     std::vector<VertexId> cache_ids;
     std::atomic_bool is_pipeline_end ;  // 流水线是否结束
+    std::vector<VertexId> batch_cache_num;
+    VertexId epoch_super_batch_num;
+    VertexId last_super_batch_num;
+    std::vector<VertexId> train_nids, val_nids, test_nids;
 
+    NtsVar Y_PD;
     NtsVar F;
     NtsVar loss;
     NtsVar tt;
@@ -106,6 +123,7 @@ public:
     double* wait_times;
 
     // 性能时间检测
+    double gpu_wait_time = 0.0;
     double transfer_share_time = 0.0;
     double update_cache_time = 0.0;
     double cal_grad_time = 0.0;
@@ -163,10 +181,12 @@ public:
         epsilon = 1e-9;
 
         gnndatum = new GNNDatum(graph->gnnctx, graph);
-        gnndatum->init_cache_var(cache_rate);
+//        gnndatum->init_cache_var(cache_rate);
         if (0 == graph->config->feature_file.compare("random")) {
             gnndatum->random_generate();
-        } else {
+        } else if(0 == graph->config->feature_file.compare("mask")){
+            gnndatum->read_mask_random_other(graph->config->mask_file);
+        }  else {
             gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                              graph->config->label_file,
                                              graph->config->mask_file);
@@ -309,11 +329,12 @@ public:
     NtsVar vertexForward(NtsVar &a, NtsVar &x) {
         NtsVar y;
         int layer = graph->rtminfo->curr_layer;
-        if (layer == 1) {
+        int layer_num = gnndatum->gnnctx->layer_size.size() - 1;
+        if (layer == layer_num - 1) {
             y = P[layer]->forward(a);
             y = y.log_softmax(1); //CUDA
 
-        } else if (layer == 0) {
+        } else {
             //y = P[layer]->forward(torch::relu(drpmodel(a)));
             y = torch::dropout(torch::relu(P[layer]->forward(a)), drop_rate, ctx->is_train());
         }
@@ -345,6 +366,10 @@ public:
                                                            torch::DeviceType::CUDA);
         }
         std::thread threads[pipeline_num];
+        std::vector<unsigned int> super_batch_countdown(epoch_super_batch_num); // 用于统计super batch内有多少batch已经完成
+        // TODO: 最后一个super batch内batch数可能不等于pipeline数量，所以上面可以改为倒计数看看
+        std::vector<bool>super_batch_ready(epoch_super_batch_num);
+
         for(int tid = 0; tid < pipeline_num; tid++) {
             threads[tid] = std::thread([&](int thread_id){
                 wait_times[thread_id] -= get_time();
@@ -352,16 +377,40 @@ public:
                 sample_lock.lock();
                 wait_times[thread_id] += get_time();
                 bool start_send_flag = false;
+                int local_batch;
+                int super_batch_id;
+                CacheVars* cacheVars;
+                NNVars* nnVars;
                 while(sampler->sample_not_finished()){
+                    // TODO: 在这里要确定自己的super_batch 编号，然后根据super batch编号进行确定cache
+                    // 还要确定它是这个super batch里面的第几个batch，如果是第一个batch，则负责初始化工作，如果是最后一个batch，则负责收尾工作
+                    local_batch = batch;
+                    super_batch_id = local_batch / pipeline_num;
+                    batch++;
+                    // 如果是super batch的第一个batch
+                    if(local_batch % pipeline_num == 0) {
+                        // 初始化cache
+                        cacheVars = gnndatum->new_cache_var(super_batch_id);
+//                        gnndatum->set_cache_index(cacheVars->cache_map, cacheVars->cache_location, super_batch_id, batch_cache_num, cache_ids);
+                        gnndatum->set_cache_index(cacheVars->cache_map, cacheVars->cache_location, super_batch_id, batch_cache_num, cache_ids);
+                        super_batch_countdown[super_batch_id] = 0;
+                        super_batch_ready[super_batch_id] = false;
+                    } else {
+                        cacheVars = gnndatum->get_cache_var(super_batch_id);
+                    }
+                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
                     sample_time -= get_time();
                     //sample -1 0
-                    sg[thread_id]=sampler->sample_gpu_fast_omit(graph->config->batch_size, thread_id, gnndatum->dev_CacheFlag);
+                    // TODO: 下面这个要改成使用新的Cache_Map,新的Cahce_Map的判断条件也变了，变成判断super_batch是否匹配，因此函数要多添加一个super batch 参数
+                    sg[thread_id]=sampler->sample_gpu_fast_omit(graph->config->batch_size, thread_id, cacheVars->dev_cache_map, super_batch_id);
 //                    sg[thread_id]=sampler->sample_gpu_fast(graph->config->batch_size, thread_id);
 //                    sg=sampler->sample_fast(graph->config->batch_size);
                     gpu_round++;
                     cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
                     sample_time += get_time();
+//                    std::printf("sample time: %.4lf\n", sample_time);
                     sample_lock.unlock();
+
 
                     wait_times[thread_id] -= get_time();
                     std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
@@ -374,35 +423,32 @@ public:
                     // load feature of cacheflag -1 0, 不需要cacheflag，在sample step已经包含cacheflag信息。
                     sampler->load_feature_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_X0[thread_id],gnndatum->dev_local_feature);
 
+
                     // load embedding of cacheflag = 1, cacheflag 1 to 2 CPU cache embedding to GPU cache embedding
 //                    sampler->update_share_embedding(&cuda_stream[thread_id], sg[thread_id], gnndatum->dev_local_embedding,
 //                                                    gnndatum->dev_share_embedding,gnndatum->dev_CacheMap,gnndatum->dev_CacheFlag);
-                    auto gpu_version = P[0]->gpu_version;
-                    uint32_t require_version = gpu_version < pipeline_num ? 0 : gpu_version - pipeline_num;
-//                    std::printf("min version: %d, gpu version: %d, require version: %d\n", min_version, gpu_version, require_version);
-//                    if(gpu_version > pipeline_num + min_version) {
-////                        std::printf("CPU的版本: %d, 需要的版本: %d，进入等待\n", min_version, gpu_version);
-//                        std::unique_lock<std::mutex> version_lock(version_mutex);
-//                        version_cv.wait(version_lock, [&]{return gpu_version  <= pipeline_num + min_version;});
-//                    }
-                    // Note: 这里是用于测试看一下使用最新版本的会怎样
-//                    if(gpu_version != min_version) {
-////                        std::printf("CPU的版本太旧，进入等待\n");
-//                        std::unique_lock<std::mutex> version_lock(version_mutex);
-//                        version_cv.wait(version_lock, [&]{return P[0]->gpu_version == min_version;});
-//                    }
                     cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
-                    transfer_share_time -= get_time();
-                    gnndatum->set_gpu_transfer_flag();
-                    sampler->update_share_embedding_and_feature(&cuda_stream[thread_id], sg[thread_id], gnndatum->dev_local_aggregation,
-                                                                gnndatum->dev_local_embedding, gnndatum->dev_share_aggregate,
-                                                                gnndatum->dev_share_embedding, gnndatum->dev_CacheMap, gnndatum->dev_CacheFlag,
-                                                                gnndatum->dev_X_version, gnndatum->dev_Y_version, require_version);
-                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
-                    gnndatum->unset_gpu_transfer_flag();
-                    transfer_share_time += get_time();
+//                    transfer_share_time -= get_time();
+//                    sampler->update_share_embedding_and_feature(&cuda_stream[thread_id], sg[thread_id], gnndatum->dev_local_aggregation,
+//                                                                gnndatum->dev_local_embedding, gnndatum->dev_share_aggregate,
+//                                                                gnndatum->dev_share_embedding, gnndatum->dev_CacheMap, gnndatum->dev_CacheFlag,
+//                                                                gnndatum->dev_X_version, gnndatum->dev_Y_version, require_version);
+//                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+//                    transfer_share_time += get_time();
                     transfer_feature_time += get_time();
+                    super_batch_countdown[super_batch_id]++;
+                    if(super_batch_id != epoch_super_batch_num - 1) {
+                        if(super_batch_countdown[super_batch_id] == pipeline_num) {
+                            super_batch_ready[super_batch_id] = true;
+                        }
+                    } else if(super_batch_countdown[super_batch_id] == last_super_batch_num) {
+                        super_batch_ready[super_batch_id] = true;
+                    }
                     transfer_lock.unlock();
+
+                    while(!super_batch_ready[super_batch_id]) {
+                        std::this_thread::yield();
+                    }
 
                     wait_times[thread_id] -= get_time();
                     std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);
@@ -410,17 +456,42 @@ public:
                     wait_times[thread_id] += get_time();
                     training_time -= get_time();
 
+                    // TODO：在下面进行提取
+                    // 如果是进行训练的第一个batch，就进行提取相关数据
+                    gpu_wait_time -= get_time();
+                    if(super_batch_countdown[super_batch_id] == pipeline_num  || (super_batch_id == epoch_super_batch_num - 1&&
+                                                                                  super_batch_countdown[super_batch_id] == last_super_batch_num )) {
+                        nnVars = gnndatum->new_nn_var(super_batch_id);
+//                        gnndatum->move_nn_data_to_gpu(nnVars, cuda_stream[thread_id].stream);
+                    } else {
+                        nnVars = gnndatum->get_nn_var(super_batch_id);
+                    }
+                    gpu_wait_time += get_time();
+
+
+
                     at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
-                    Forward(sampler, tmp_X0[thread_id], sg[thread_id], &cuda_stream[thread_id]);
+                    Forward(sampler, tmp_X0[thread_id], sg[thread_id], &cuda_stream[thread_id], super_batch_id, cacheVars, nnVars);
                     Loss(X[graph->gnnctx->layer_size.size()-1],tmp_target_lab[thread_id]);
                     BackwardAndUpdate(sg[thread_id], &cuda_stream[thread_id], start_send_flag);
-                    P[0]->set_middle_weight();
-                    training_time += get_time();
+//                    P[0]->set_middle_weight();
                     correct += getCorrect(X[graph->gnnctx->layer_size.size()-1], tmp_target_lab[thread_id]);
-                    batch++;
+//                    batch++;
                     cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+                    training_time += get_time();
+                    if((super_batch_id != epoch_super_batch_num - 1 && super_batch_countdown[super_batch_id] == pipeline_num)
+                       || (super_batch_id == epoch_super_batch_num - 1 && super_batch_countdown[super_batch_id] == last_super_batch_num)) {
+                        shared_W_queue.push(P[0]->W.cpu());
+                    }
+//                    shared_W_queue.push(P[0]->W.cpu());
+                    super_batch_countdown[super_batch_id]--;
+                    if(super_batch_countdown[super_batch_id] == 0) {
+                        // 最后一个batch了，回收相应的空间
+                        gnndatum->recycle_memory(cacheVars, nnVars);
+                    }
+
                     train_lock.unlock();
-                    P[0]->send_W_to_cpu();
+//                    P[0]->send_W_to_cpu();
 
                     wait_times[thread_id] -= get_time();
                     sample_lock.lock();
@@ -482,7 +553,6 @@ public:
                    iterations);
 
         //      graph->print_info();
-        std::vector<VertexId> train_nids, val_nids, test_nids;
         for (VertexId i = 0; i < graph->gnnctx->l_v_num; ++i) {
             int type = gnndatum->local_mask[i];
             if (type == 0) {
@@ -493,133 +563,166 @@ public:
                 test_nids.push_back(i);
             }
         }
-        shuffle_vec(train_nids);
-        shuffle_vec(val_nids);
-        shuffle_vec(test_nids);
 
+        std::printf("train:%d\n",train_nids.size());
+        std::printf("val_nids:%d\n",val_nids.size());
+        std::printf("test_nids:%d\n",test_nids.size());
+        //    std::printf("aggresult start \n");
+        //     PartitionedGraph *partitioned_graph;
+        //     partitioned_graph = new PartitionedGraph(graph, active);
+        //     std::printf("aggresult 1\n");
+        //     partitioned_graph->GenerateAll([&](VertexId src, VertexId dst) {
+        //     return nts::op::nts_norm_degree(graph, src, dst);
+        //     },CPU_T);
+        //     std::printf("aggresult 2 \n");
+        //     ctx->eval();
+        //     std::printf("aggresult 3 \n");
+        //     Y_PD = ctx->runGraphOp<nts::op::ForwardCPUfuseOp>(partitioned_graph,active,X[0]);
+        //     std::printf("aggresult 4 \n");
+        //     delete partitioned_graph;
+        //     std::printf("aggresult 5 \n");  
 
-        CacheFlag_init(cache_rate);
-        // 下面是开始进行CPU的任务
-        // get cache vertexs
-        VertexId cache_num = graph->vertices * cache_rate;
-        gnndatum->cache_num = cache_num;
-        P[0]->init_shared_grad_buffer(cache_num, gnndatum->gnnctx->layer_size[1]);
-        // Note: 这里可以修改cpu采样的batch
-        VertexId cpu_batch_size = 64;
-        std::vector<ValueType> X0_ptr(cache_num * gnndatum->gnnctx->layer_size[1]);
-//        NtsVar X0;
-        std::printf("cache num: %d\n", cache_num);
+            
+        // shuffle_vec(train_nids);
+        // shuffle_vec(val_nids);
+        // shuffle_vec(test_nids);
+        initCacheVariable();
+        //layer 0 graphop push down code by aix from 566 to 573
 
-        VertexId range_num = (cache_num/cpu_batch_size) + 1;
-        std::vector<VertexId> range_arr(range_num);
-        std::iota(range_arr.begin(), range_arr.end(), 0u);
+        long batch_sum = 0;
+        for(int i = 0; i < batch_cache_num.size(); i++) {
+            batch_sum += batch_cache_num[i];
+        }
+        std::printf("before shuffle sum: %ld, total cache: %ld\n", batch_sum, cache_ids.size());
 
-        auto* cache_ids_ptr = cache_ids.data();
+//         nts::op::nts_local_shuffle(train_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
+//        nts::op::nts_local_shuffle(val_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
+//        nts::op::nts_local_shuffle(test_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
+        nts::op::nts_local_shuffle(train_nids,  graph->config->batch_size * pipeline_num, cache_ids, batch_cache_num);
+
+        batch_sum = 0;
+        for(int i = 0; i < batch_cache_num.size(); i++) {
+            batch_sum += batch_cache_num[i];
+        }
+        std::printf("before shuffle sum: %ld, total cache: %ld\n", batch_sum, cache_ids.size());
+
+        
+
 //        sort_graph_vertex(graph->out_degree, cache_ids.data(), graph->vertices, cache_num);
+//        // 进行预采样
+//        VertexId sample_neighs = 1;
+//        for(int i = 0; i < graph->gnnctx->fanout.size() - 1; i++) {
+//            sample_neighs *= graph->gnnctx->fanout[i];
+//        }
+//        std::printf("sample last layer neighs: %u\n", sample_neighs);
+//        batch_cache_num = graph->config->batch_size * pipeline_num * cache_rate * sample_neighs;
+//        std::printf("batch cache num: %u\n", batch_cache_num);
+//        auto super_batchsize = graph->config->batch_size * pipeline_num;
+//        auto cpu_batch_size = batch_cache_num;
+//        auto pre_sample_time = -get_time();
+//        cache_ids = preSample(train_nids, graph->config->batch_size, batch_cache_num, gnndatum->gnnctx->layer_size.size() - 1);
+//        pre_sample_time += get_time();
+//        std::printf("预采样完成，预采样时间: %lf (s)\n", pre_sample_time);
         std::vector<int> fanout(1);
         fanout[0] = graph->gnnctx->fanout[graph->gnnctx->fanout.size() - 1];
         FastSampler* cpu_sampler = new FastSampler(graph, fully_rep_graph,
                                                    cache_ids, 1, fanout,
-                                                   cache_num);
-        CPU_sg = cpu_sampler->sample_fast(cache_num);
+                                                   super_batchsize);
+//        // 计算CPU循环次数
+//        // CPU计算的次数可由epoch的数量和一个epoch内super batch的数量确定
+//        epoch_super_batch_num = train_nids.size() / super_batchsize;
+//        last_super_batch_num = train_nids.size() - super_batchsize * epoch_super_batch_num;
+//        last_super_batch_num = std::ceil((double)last_super_batch_num/(double)graph->config->batch_size);
+//        if(last_super_batch_num != 0) {
+//            epoch_super_batch_num++;
+//        } else {
+//            last_super_batch_num = pipeline_num;
+//        }
+        auto total_super_batch_num = epoch_super_batch_num * iterations;
+        // 初始化cache map这些变量
+        gnndatum->init_super_batch_var(epoch_super_batch_num);
+        // 首先将一个W放进相应队列里面
+        shared_W_queue.push(P[0]->W.cpu());
+        // 使用一个多线程queue来进行存储CPU的计算结果，然后GPU会从这里面提取计算结果
+
+        // 使用一个特定的流来进行传输
+        cudaStream_t cpu_cuda_stream;
+        cudaStreamCreateWithFlags(&cpu_cuda_stream, cudaStreamNonBlocking);
+
+
+        CPU_sg = cpu_sampler->sample_fast(batch_cache_num[0]);
+        // CPU_sg = cpu_sampler->sample_fast_allPD(batch_cache_num[0]);
         VertexId batch_start = 0;
-        VertexId batch_end = std::min(cache_num, batch_start + cpu_batch_size);
-        // CPU会按行进行聚合，所以行需要有序
+        VertexId batch_end = std::min((VertexId)cache_ids.size(), batch_start + batch_cache_num[0]);
+        // CPU会按行进行聚合，所以行需要有序   %Y_PD 全部顶点的一阶全邻居聚合结果
         auto tmpX0 = ctx->runGraphOpNoBackward<nts::op::PushDownBatchOp>(CPU_sg, graph, 0,  F, batch_start, batch_end);
-//        NtsVar mask = torch::zeros({static_cast<long>(cache_ids.size()), 1}, torch::kBool);
+        // std::printf("load_aggresult start \n");
+        // auto tmpX0 = cpu_sampler->load_aggresult(Y_PD);
+        // std::printf("load_aggresult end \n");
+        
+        NtsVar W;
+        shared_W_queue.try_pop(W);
+        auto y = tmpX0.matmul(W);
+//        gnndatum->move_data_to_pin_memory(tmpX0.size(0), tmpX0.size(1), y.size(1), tmpX0.accessor<ValueType, 2>().data(),
+//                                          y.accessor<ValueType, 2>().data(), cpu_cuda_stream);
+        gnndatum->move_embedding_to_gpu(top_cache_num, y.size(0), y.size(1), y.accessor<ValueType, 2>().data(),
+                                        cpu_cuda_stream);
+        //        NtsVar mask = torch::zeros({static_cast<long>(cache_ids.size()), 1}, torch::kBool);
 //        auto* mask_ptr = mask.accessor<char , 2>().data();
+
+        double cpu_sample_time = 0.0;
+        double cpu_graph_time = 0.0;
+        double cpu_wait_time = 0.0;
+        double cpu_nn_time = 0.0;
+        double cpu_copy_time = 0.0;
+        double cpu_total_time = -get_time();
         cpu_thread = std::thread([&](){
-            uint32_t W_version;
-            uint32_t current_min_version = std::numeric_limits<uint32_t>::max();
-            uint32_t epoch_min_version = 0;
-            auto cpu_sample_time = 0.0;
-            auto cpu_cal_time = 0.0;
-            int cpu_round = 0;
-            while(!is_pipeline_end.load()){
-//                // 进行nn计算
-//                auto W = P[0]->get_W_and_version(W_version);
-////                std::printf("X size:(%d, %d), W size: (%d, %d), version: %d\n", tmpX0.size(0), tmpX0.size(1), W.size(0), W.size(1), W_version);
-//                auto y = tmpX0.matmul(W);
-//                current_min_version = gnndatum->X_version[batch_start];
-//                if(current_min_version > min_version){
-//                    min_version = current_min_version;
-//                    version_cv.notify_all();
-//                }
-////               std::printf("tmp X0 sum: %lf\n", tmpX0.sum().item<double>());
-//
-//                // 将结果传到gpu
-////                gnndatum->move_data_to_local_cache(y.size(0), y.size(1), y.accessor<ValueType , 2>().data(),
-////                                                   &(cache_ids_ptr[batch_start]), mask_ptr, batch_start);
-////                auto y_sum = y.sum().abs().item<float>();
-////                std::printf("CPU y row: %d, y sum: %f, y average: %f\n", y.size(0), y_sum, y_sum/(y.size(0)));
-////                auto F_sum = F.sum().abs().item<float>();
-////                std::printf("F row: %d, F sum: %f, F avg: %f\n", F.size(0), F_sum, F_sum/(F.size(0) * F.size(1)));
-////                auto X_sum = tmpX0.abs().sum().item<float>();
-//                gnndatum->move_data_to_local_cache(y.size(0), gnndatum->gnnctx->layer_size[0],
-//                                                   y.size(1), tmpX0.accessor<ValueType, 2>().data(),
-//                                                   y.accessor<ValueType, 2>().data(), &(cache_ids_ptr[batch_start]),
-//                                                   batch_start, W_version);
-//
-//
-//                // 检查是否到最后，计算完了的话重启采样器，并进行采样, 然后进行反向
-//                if(batch_end == cache_num) {
-//                    cpu_sampler->restart();
-//                    CPU_sg = cpu_sampler->sample_fast(cache_num);
-////                   std::printf("before mask X0 dim: %d\n", X0.dim());
-////                   std::printf("before mask X0 size: (%d, %d)\n", X0.size(0), X0.size(1));
-////                   std::printf("mask size: (%d, %d)\n", mask.size(0), mask.size(1));
-//
-//                }
-//                batch_start = batch_end % cache_num;
-//                batch_end = std::min(cache_num, batch_start + cpu_batch_size);
-//
-//                // 进行CPU的聚合
-//                tmpX0 = ctx->runGraphOpNoBackward<nts::op::PushDownBatchOp>(CPU_sg, graph, 0,  F, batch_start, batch_end);
+            auto max_threads = std::thread::hardware_concurrency();
+            for(VertexId i = 1; i < total_super_batch_num; i++){
+                // TODO: 如果报错，就是这里转移的问题
+                batch_start = batch_end % cache_ids.size();
+                batch_end = std::min(batch_start + batch_cache_num[i%epoch_super_batch_num], (VertexId)cache_ids.size());
 
-//                auto W = P[0]->get_W_and_version(W_version);
-//                current_min_version = W_version;
-                cpu_cal_time -= get_time();
-                std::for_each(std::execution::par, range_arr.begin(), range_arr.end(), [&](VertexId& arr_offset){
-                    VertexId batch_start = arr_offset *  cpu_batch_size;
-                    VertexId batch_end = std::min(cache_num, batch_start + cpu_batch_size);
-                    if(batch_start == batch_end) {
-                        return;
-                    }
-                    auto tmpX0 = ctx->runGraphOpNoBackward<nts::op::PushDownBatchOp>(CPU_sg, graph, 0,  F, batch_start, batch_end);
-                    // 进行nn计算
-                    auto W = P[0]->get_W_and_version(W_version);
-                    auto y = tmpX0.matmul(W);
-//                    if(current_min_version > min_version){
-//                        min_version = current_min_version;
-//                        version_cv.notify_all();
-//                    }
-                    gnndatum->move_data_to_local_cache(y.size(0), gnndatum->gnnctx->layer_size[0],
-                                                       y.size(1), tmpX0.accessor<ValueType, 2>().data(),
-                                                       y.accessor<ValueType, 2>().data(), &(cache_ids_ptr[batch_start]),
-                                                       batch_start, W_version);
-
-                    auto batch_min_version = gnndatum->X_version[batch_start];
-                    write_min(&current_min_version, batch_min_version);
-
-                });
-                cpu_cal_time += get_time();
-                cpu_sample_time -= get_time();
-                cpu_round++;
-//                std::cout << "current_min_version: " << current_min_version << ", gpu version: " << P[0]->gpu_version << ", middle version: " << P[0]->middle_version << std::endl;
-                gnndatum->try_swap_buffer();
-                if(current_min_version > min_version) {
-                    min_version = current_min_version;
-//                    version_cv.notify_all();
+                if(i % epoch_super_batch_num == 0) {
+                    cpu_sampler->restart();
                 }
-                version_cv.notify_all();
-                current_min_version = std::numeric_limits<uint32_t>::max();
-                cpu_sampler->restart();
-                CPU_sg = cpu_sampler->sample_fast(cache_num);
+                cpu_sample_time -= get_time();
+                CPU_sg = cpu_sampler->sample_fast(batch_cache_num[i%epoch_super_batch_num]);
+                // CPU_sg = cpu_sampler->sample_fast_allPD(batch_cache_num[i%epoch_super_batch_num]);
                 cpu_sample_time += get_time();
+                // CPU采样完成，开始进行图计算
+                // TODO:解决下面的batch_start和batch_end分别是什么问题
+                assert(batch_cache_num[i%epoch_super_batch_num] == CPU_sg->sampled_sgs[0]->dst().size());
+                // assert(batch_end - batch_start == CPU_sg->sampled_sgs[0]->dst().size());
+                cpu_graph_time -= get_time();
+                tmpX0 = ctx->runGraphOpNoBackward<nts::op::PushDownBatchOp>(CPU_sg, graph, 0, F, 0, batch_cache_num[i%epoch_super_batch_num]);
+                // auto tmpX0 = cpu_sampler->load_aggresult(Y_PD);
+                cpu_graph_time += get_time();
+                // TODO: 需要检查tmpX0是否正常，即batch，即上面的参数是否正确
+                // TODO: 下面传参数的方式可能要改一下
+                cpu_wait_time -= get_time();
+                while(!shared_W_queue.try_pop(W)){
+                    std::this_thread::yield();
+                }
+                cpu_wait_time += get_time();
+                cpu_nn_time -= get_time();
+//                while(shared_W_queue.try_pop(W)){}
+//                std::printf("torch threads: %d\n", torch::get_num_threads());
+//                torch::set_num_threads(31);
+                torch::set_num_threads(max_threads - pipeline_num);
+                y = tmpX0.mm(W);
+                cpu_nn_time += get_time();
+
+                // TODO: 解决下面可能由于最后一个batch带来的memory空间不等问题
+                cpu_copy_time -= get_time();
+                gnndatum->move_embedding_to_gpu(top_cache_num, y.size(0), y.size(1), y.accessor<ValueType, 2>().data(),
+                                                cpu_cuda_stream);
+                cpu_copy_time += get_time();
+
             }
-            std::printf("#cpu sample time: %lf\n", cpu_sample_time);
-            std::printf("#cpu cal time: %lf\n", cpu_cal_time);
-            std::printf("# cpu round: %d\n", cpu_round);
+            cpu_total_time += get_time();
+            std::printf("CPU线程已经结束\n");
+            std::printf("最大线程数: %d\n", max_threads);
         });
 
 
@@ -629,17 +732,9 @@ public:
         int layer = graph->gnnctx->layer_size.size()-1;
 
         FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
+        // FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
+        // FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
 
-//        long in_degree_sum = 0;
-//        long out_degree_sum = 0;
-//#pragma omp parallel for reduction(+: in_degree_sum, out_degree_sum)
-//        for(long i = 0; i < graph->vertices; i++){
-//            in_degree_sum += graph->in_degree_for_backward[i];
-//            out_degree_sum += graph->out_degree_for_backward[i];
-//        }
-//        std::printf("in_degree_sum: %lu, out_degree_sum: %lu\n", in_degree_sum, out_degree_sum);
 
         auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch()).count();
@@ -677,24 +772,32 @@ public:
         printf("test_time:%lf(s)\n",train_sampler->test_time);
         printf("#wait time: %lf(s)\n", wait_time);
         printf("#gather_feature_time=%lf(s)\n", gather_feature_time);
-        std::printf("cpu inclusiveTime: %lf\n", train_sampler->cs->cpu_inclusiveTime);
-        std::printf("inclusiveTime: %lf\n", train_sampler->cs->inclusiveTime);
-        std::printf("init layer time: %lf\n", train_sampler->init_layer_time);
-        std::printf("init co time: %lf\n", train_sampler->init_co_time);
+
+
+        std::printf("cpu inclusiveTime: %.4lf (s)\n", train_sampler->cs->cpu_inclusiveTime);
+        std::printf("inclusiveTime: %.4lf (s)\n", train_sampler->cs->inclusiveTime);
+        std::printf("init layer time: %.4lf (s)\n", train_sampler->init_layer_time);
+        std::printf("init co time: %.4lf (s)\n", train_sampler->init_co_time);
+        std::printf("pro time: %.4lf (s)\n", train_sampler->pro_time);
+        std::printf("post pro time: %.4lf (s)\n", train_sampler->post_pro_time);
+
         std::printf("transfer share time: %lf (s)\n", transfer_share_time);
         std::printf("update cache time: %lf (s)\n", update_cache_time);
+        
+            // CPU相关时间
+            std::printf("cpu_total_time: %.4lf (s)\n", cpu_total_time);
+            std::printf("cpu_sample_time: %.4lf (s)\n", cpu_sample_time);
+            std::printf("cpu_graph_time: %.4lf (s)\n", cpu_graph_time);
+            std::printf("cpu_wait_time: %.4lf (s)\n", cpu_wait_time);
+            std::printf("cpu_nn_time: %.4lf (s)\n", cpu_nn_time);
+            std::printf("cpu_copy_time: %.4lf (s)\n", cpu_copy_time);
+
+        std::printf("# gpu wait time: %.4lf (s)\n", gpu_wait_time);
         std::printf("# gpu round: %d\n", gpu_round);
         printf("#sample_time= %.4lf (s)\n", (sample_time));
         printf("#transfer_feature_time= %.4lf (s)\n", (transfer_feature_time));
         printf("#training_time= %.4lf (s)\n", training_time);
         delete active;
-        is_pipeline_end.store(true);
-        Grad_back_flag.store(true);
-        W_CPU_flag.store(true);
-        W_GPU_flag.store(true);
-        W_CPU_cv.notify_all();
-        W_GPU_cv.notify_all();
-        Grad_back_cv.notify_all();
         cpu_thread.join();
         printf("#average epoch time: %lf\n", exec_time/iterations);
 //        printf("总采样数:%llu, 总命中数:%llu\n", Cuda_Stream::total_sample_num, Cuda_Stream::total_cache_hit);
@@ -704,36 +807,11 @@ public:
         printf("%lu\n%lu\n", start_time, end_time);
 
     }
-    //code by aix from 406 to 434
-    void CacheFlag_init(float Cacherate){
-        std::vector<VertexId> cache_node_idx_seq;
-        cache_node_idx_seq.resize(graph->vertices);
-        std::iota(cache_node_idx_seq.begin(), cache_node_idx_seq.end(), 0);
-        std::sort(std::execution::par ,cache_node_idx_seq.begin(), cache_node_idx_seq.end(), [&](const int x, const int y) {
-            return graph->out_degree_for_backward[x] > graph->out_degree_for_backward[y];
-        });
 
-        int max_threads = std::thread::hardware_concurrency();
 
-#pragma omp parallel for num_threads(max_threads)
-        for (int i = 0; i < graph->vertices; ++i) {
-            gnndatum->CacheFlag[i] = -1; //init
-            gnndatum->CacheMap[i] = -1;
-        }
-
-        int cache_node_num = graph->vertices * Cacherate;
-#pragma omp parallel for num_threads(max_threads)
-        for (int i = 0; i < cache_node_num; ++i) {
-            // LOG_DEBUG("cache_nodes[%d] = %d", i, cache_nodes[i]);
-            gnndatum->CacheFlag[cache_node_idx_seq[i]] = 0; //初始化为cache顶点
-            gnndatum->CacheMap[cache_node_idx_seq[i]] = i;
-        }
-
-        cache_ids.resize(cache_node_num);
-        std::copy(cache_node_idx_seq.begin(), cache_node_idx_seq.begin() + cache_node_num, cache_ids.begin());
-    }
-
-    inline void Forward(FastSampler* sampler, NtsVar& tmp_X0, SampledSubgraph* sg, Cuda_Stream* cudaStream){
+    inline void Forward(FastSampler* sampler, NtsVar& tmp_X0, SampledSubgraph* sg, Cuda_Stream* cudaStream,
+                        VertexId super_batch_id, CacheVars* cacheVars, NNVars* nnVars){
+//         print_tensor_size(tmp_X0);
         for(int l = 0; l < (graph->gnnctx->layer_size.size()-1); l++){//forward
             graph->rtminfo->curr_layer = l;
             int hop = (graph->gnnctx->layer_size.size()-2) - l;
@@ -748,20 +826,14 @@ public:
                 X[l + 1] = ctx->runVertexForward(
                         [&](NtsVar n_i,NtsVar v_i){
                             auto Y_W = MultiplyWeight(n_i);
-//                                        auto X_mask = sampler->get_X_mask(cudaStream, sg, gnndatum->dev_CacheFlag);
-//                                        auto mask_sum = X_mask.sum().item<int>();
-//                                        std::printf("X mask sum: %d\n", X_mask.sum().item<int>());
-//                                        auto cache_tensor = torch::masked_select(Y_i, X_mask);
-//                                        cache_tensor = cache_tensor.reshape({mask_sum, Y_i.size(1)});
-//                                        auto cache_sum = cache_tensor.abs().sum().item<double>();
-//                                        std::printf("before cache aggregate row: %d, sum: %lf, avg: %lf\n", cache_tensor.size(0), cache_sum, cache_sum/cache_tensor.size(0));
-//
-//                                        auto Y_sum = Y_i.abs().sum().item<double>();
-//                                        std::printf("before Y row: %d, sum: %lf, avg: %lf\n", Y_i.size(0), Y_sum, Y_sum/Y_i.size(0));
                             cudaStream->CUDA_DEVICE_SYNCHRONIZE();
                             update_cache_time -= get_time();
-                            sampler->load_share_embedding_and_feature(cudaStream, sg,gnndatum->dev_share_aggregate, gnndatum->dev_share_embedding,
-                                                                      Y_i, Y_W, gnndatum->dev_CacheMap,gnndatum->dev_CacheFlag);
+//                            sampler->load_share_embedding_and_feature(cudaStream, sg,nnVars->dev_shared_aggr, nnVars->dev_shared_embedding,
+//                                                                      Y_i, Y_W, cacheVars->dev_cache_map,cacheVars->dev_cache_location, super_batch_id);
+
+                            sampler->load_share_embedding(cudaStream, sg, nnVars->dev_shared_embedding,
+                                                          Y_W, cacheVars->dev_cache_map,
+                                                          cacheVars->dev_cache_location, super_batch_id);
                             cudaStream->CUDA_DEVICE_SYNCHRONIZE();
                             update_cache_time += get_time();
 //                                         Y_sum = Y_i.abs().sum().item<double>();
@@ -771,16 +843,6 @@ public:
                         Y_i,
                         tmp_X0
                 );
-                //load embedding of cacheflag = 2 or 3 to X[l + 1], GPU cache embedding
-//                X_mask = torch::zeros({X[l+1].size(0), 1}, at::TensorOptions().dtype(torch::kBool).device_index(0));
-//                sampler->load_share_embedding(cudaStream, sg, gnndatum->dev_share_embedding, X[l + 1],gnndatum->CacheMap,
-//                                              gnndatum->CacheFlag, X_mask, gnndatum->dev_mask_tensor);
-
-//                sampler->load_share_embedding(cudaStream, sg, gnndatum->dev_share_embedding, X[l + 1],gnndatum->CacheMap,gnndatum->CacheFlag);
-//                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-//                cudaDeviceSynchronize();
-//                auto X1_sum = X[1].sum().item<double>();
-//                std::printf("X1数量: %d, X1 sum: %lf, X1 avg: %lf\n", X[1].size(0), X1_sum, X1_sum/X[1].size(0));
             } else {
                 NtsVar Y_i = ctx->runGraphOp<nts::op::SingleGPUAllSampleGraphOp>(sg,graph,hop,X[l],cudaStream);
                 X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
@@ -803,62 +865,42 @@ public:
         }
     }
 
+    void initCacheVariable() {
+        // 进行预采样
+        VertexId sample_neighs = 1;
+        for(int i = 0; i < graph->gnnctx->fanout.size() - 1; i++) {
+            sample_neighs *= graph->gnnctx->fanout[i];
+        }
+        std::printf("sample last layer neighs: %u\n", sample_neighs);
+//        batch_cache_num = graph->config->batch_size * pipeline_num * cache_rate * sample_neighs;
+//        std::printf("batch cache num: %u\n", batch_cache_num);
+        super_batchsize = graph->config->batch_size * pipeline_num;
 
-//    void CacheFlga_refresh(int Cacherate){
-//        int cache_node_num = graph->vertices * Cacherate;
-//        for (int i = 0; i < cache_node_num; ++i) {
-//            // LOG_DEBUG("cache_nodes[%d] = %d", i, cache_nodes[i]);
-//            gnndatum->CacheFlag[cache_node_idx_seq[i]] = 0; //初始化为cache顶点
-//        }
-//    }
-    // void cachenode_select(){
-    //     MPI_Datatype vid_t = get_mpi_data_type<VertexId>();
-    //     ntsc->sample_num = graph->alloc_interleaved_vertex_array<VertexId>();
-    //     for (VertexId v_i = 0; v_i < graph->vertices; v_i++) {
-    //         ntsc->sample_num[v_i] = 0;
-    //     }
-    //     while(sampler_all->sample_not_finished()){
-    //           sampler_all->reservoir_sample_all(graph->gnnctx->layer_size.size()-1,
-    //                                     graph->config->batch_size,
-    //                                     graph->gnnctx->fanout,
-    //                                     ntsc->cacheflag);
-    //     }
+        auto pre_sample_time = -get_time();
+        std::printf("edge_filename: %s\n", graph->config->edge_file.c_str());
+//        cache_ids = nts::op::preSample(train_nids, graph->config->batch_size, batch_cache_num,
+//                                       gnndatum->gnnctx->layer_size.size() - 1, fully_rep_graph,
+//                                       pipeline_num);
 
-    //     SampledSubgraph *sg;
-    //     while(sampler_all->has_rest()){
-    //       sg=sampler_all->get_one();
-    //       for(auto id:sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->dst()){
-    //           ntsc->sample_num[id]++;
-    //       }
-    //     }
-    //     MPI_Allreduce(MPI_IN_PLACE, ntsc->sample_num, graph->vertices, vid_t, MPI_SUM,
-    //                 MPI_COMM_WORLD);
-    //     sampler_all->useagain();
-    //     for (VertexId v_i = 0; v_i < graph->vertices; v_i++) {
-    //         ntsc->sample_sort[v_i] = ntsc->sample_num[v_i];
-    //     }
-    //     sort(ntsc->sample_sort.begin(), ntsc->sample_sort.end());
-    //     ntsc->cacheSamplenum = ntsc->sample_sort[ntsc->cacheBoundary];
-    //     ntsc->fanoutBoundary = ntsc->fanoutRatio * graph->gnnctx->fanout[0];
+        cache_ids = nts::op::preSample(train_nids, graph->config->batch_size, batch_cache_num, cache_rate, top_cache_num,
+                                       gnndatum->gnnctx->layer_size.size() - 1, fully_rep_graph,
+                                       cache_rate / 0.3, graph,  pipeline_num);
+        pre_sample_time += get_time();
+        std::printf("预采样时间: %.4lf, cache num: %ld\n", pre_sample_time, cache_ids.size());
 
-    //     for(int idx = 0; idx < graph->vertices; idx++){
-    //         VertexId nbrs = fully_rep_graph->column_offset[idx+1] - fully_rep_graph->column_offset[idx];
-    //         bool cacheflag = (nbrs > ntsc->fanoutBoundary) ? false : true;
-    //         if(ntsc->sample_num[idx] > ntsc->cacheSamplenum && cacheflag){
-    //             ntsc->partition_cache[graph->get_partition_id(idx)].push_back(idx);
-    //             ntsc->cacheflag[idx] = 1;
-    //             ntsc->cachenum++;
-    //           }
-    //     }
-    //     printf("cachenum:%d,vertexs:%d",ntsc->cachenum,graph->vertices);
-    //     for(int i = 0; i < ntsc->partition_cache[graph->partition_id].size();i++){
-    //         VertexId idx = ntsc->partition_cache[graph->partition_id][i];
-    //         ntsc->map_cache.insert(std::make_pair(idx, i));
-    //     }
 
-    //     sampler_all->clear_queue();
-    //     sampler_all->restart();
-    // }
+        // 计算CPU循环次数
+        // CPU计算的次数可由epoch的数量和一个epoch内super batch的数量确定
+        epoch_super_batch_num = train_nids.size() / super_batchsize;
+        last_super_batch_num = train_nids.size() - super_batchsize * epoch_super_batch_num;
+        last_super_batch_num = std::ceil((double)last_super_batch_num/(double)graph->config->batch_size);
+        if(last_super_batch_num != 0) {
+            epoch_super_batch_num++;
+        } else {
+            last_super_batch_num = pipeline_num;
+        }
+
+    }
 
 };
 

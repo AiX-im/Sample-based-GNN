@@ -33,8 +33,8 @@ public:
     CSC_segment_pinned* graph_chunk;  
     
     SampledSubgraph(){
-        //threads = std::max(numa_num_configured_cpus() - 1, 1);
-        threads = 32;
+        threads = std::max(numa_num_configured_cpus() - 1, 1);
+//        threads = 32;
     }
     SampledSubgraph(int layers_, int batch_size_,std::vector<int>& feature_size,std::vector<int>& fanout_,
                     Graph<Empty> *graph){
@@ -222,17 +222,35 @@ public:
         //LOG_INFO("global_buffer_used %ld|global_buffer_capacity %ld",global_buffer_used,global_buffer_capacity);
         assert(global_buffer_used < global_buffer_capacity);
         sampled_sgs[curr_layer]->v_size = curr_dst_size;
+//        if(sampled_sgs[curr_layer]->dev_destination != nullptr) {
+//            free_gpu_mem_async(sampled_sgs[curr_layer]->dev_destination, cs->stream);
+//        }
+//        allocate_gpu_edge_async(&(sampled_sgs[curr_layer]->dev_destination), curr_dst_size, cs->stream);
         sampled_sgs[curr_layer]->dev_destination = global_data_buffer + global_buffer_used;
+        global_buffer_used += curr_dst_size;
 
         VertexId* tmp_ptr = global_data_buffer + curr_dst_size;
 //        std::printf("curr dis size: %d, need: %d, global data buffer before: %p, after: %p\n", curr_dst_size, sizeof(VertexId) * curr_dst_size, global_data_buffer, tmp_ptr);
-        global_buffer_used += curr_dst_size;
         sampled_sgs[curr_layer]->dev_column_offset = global_data_buffer + global_buffer_used;
         //sampled_sgs[curr_layer]->size_dev_co = curr_dst_size + 1;
         global_buffer_used += curr_dst_size+1;
         // 将顶点数据移动到设备端
         // move_bytes_in(sampled_sgs[curr_layer]->dev_destination, destination, (curr_dst_size) * sizeof(VertexId));
+//        printf("thread id: 0x%lx curr_dst_size: %d, layer num: %d, curr layer: %d, address: %p\n",
+//                 std::this_thread::get_id(),curr_dst_size, sampled_sgs.size(), curr_layer, sampled_sgs[curr_layer]->dev_destination);
+//        std::printf("last num: %d\n", destination[curr_dst_size-1]);
+//
+//        cudaError_t error = cudaGetLastError();
+//        printf("CUDA error: %s\n", cudaGetErrorString(error));
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
+        assert(global_buffer_used < global_buffer_capacity);
+
+//        allocate_gpu_edge_async(&sampled_sgs[curr_layer]->dev_destination, curr_dst_size, cs->stream);
         move_bytes_in_async(sampled_sgs[curr_layer]->dev_destination, destination, (curr_dst_size) * sizeof(VertexId), cs->stream);
+//        move_bytes_in_async(sampled_sgs[curr_layer]->dev_destination, destination, (curr_dst_size) * sizeof(VertexId), 0);
+//        cudaStreamSynchronize(0);
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
+
     }
 
     /**
@@ -303,6 +321,28 @@ public:
                                          edge_size);
     }
 
+    void gpu_sampling_init_co_omit(
+            int layer,
+            VertexId* CacheFlag,
+            VertexId src_index_size,
+            VertexId* global_column_offset,
+            VertexId* tmp_data_buffer, Cuda_Stream* cs,
+            VertexId& edge_size,
+            VertexId super_batch_id){
+        cs->sample_processing_get_co_gpu_omit(
+                CacheFlag,
+                sampled_sgs[curr_layer]->dev_destination,
+                sampled_sgs[curr_layer]->dev_column_offset,
+                global_column_offset,
+                sampled_sgs[curr_layer]->v_size,
+                tmp_data_buffer,
+                src_index_size,
+                queue_count,
+                src_index[layer],
+                fanout[layer],
+                edge_size,
+                super_batch_id);
+    }
     void gpu_sampling(int layer,
                 VertexId* global_column_offset,
                 VertexId* global_row_indices,
@@ -333,7 +373,7 @@ public:
         // move_bytes_in(queue_count, edge_size + 1, sizeof(VertexId)); //clear queue_count
         move_bytes_in_async(queue_count, edge_size + 1, sizeof(VertexId), cs->stream);
         
-        
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
         cs->sample_processing_traverse_gpu(
                 sampled_sgs[layer]->dev_destination,
                 sampled_sgs[layer]->dev_column_offset,
@@ -347,8 +387,11 @@ public:
                 sampled_sgs[layer]->dev_source,
                 queue_count,
                 layer,
-                fanout[layer]);
-        
+                fanout[layer], sampled_sgs[layer]->is_merge_src_dst);
+//        LOG_INFO("after sample_processing_traverse_gpu");
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
+//        LOG_INFO("before update ri: %d", sampled_sgs[layer]->is_merge_src_dst);
+
         //get src_size;
         
         // move_bytes_out(edge_size + 1, queue_count, sizeof(VertexId)); 
@@ -356,14 +399,79 @@ public:
         test_time += get_time();
          
         sampled_sgs[layer]->src_size=edge_size[1];
-        
+//        std::printf("layer: %d, e_size: %d\n", layer, sampled_sgs[layer]->e_size);
+        if(sampled_sgs[layer]->is_merge_src_dst) {
+            // 现在是只需要dst到src的映射即可
+            if(sampled_sgs[layer]->v_size > sampled_sgs[layer]->dev_dst_local_id_size) {
+                if(sampled_sgs[layer]->dev_dst_local_id_size != 0) {
+                    free_gpu_mem_async(sampled_sgs[layer]->dev_dst_local_id, cs->stream);
+                }
+                allocate_gpu_edge_async(&sampled_sgs[layer]->dev_dst_local_id, sampled_sgs[layer]->v_size * 2, cs->stream);
+                sampled_sgs[layer]->dev_dst_local_id_size = sampled_sgs[layer]->v_size*2;
+            }
+            // 将destination的全局id转为src里面的局部id
+            cs->set_dst_local_index(src_index[layer], sampled_sgs[layer]->dev_destination, sampled_sgs[layer]->v_size,
+                                    sampled_sgs[layer]->dev_dst_local_id);
+//            cs->check_dst_local_index(sampled_sgs[layer]->dev_dst_local_id, sampled_sgs[layer]->v_size, sampled_sgs[layer]->src_size);
+//            cs->CUDA_DEVICE_SYNCHRONIZE();
+        }
+// transfer row indice's global id to local id
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
+//        std::printf("edge size: %u, src index size: %u\n", sampled_sgs[layer]->e_size, whole_vertex_size);
         cs->sample_processing_update_ri_gpu(
                                 sampled_sgs[layer]->dev_row_indices,
                                 src_index[layer],
                                 sampled_sgs[layer]->e_size,
                                 whole_vertex_size);  
-        global_buffer_used += sampled_sgs[layer]->src_size;   
-        
+        global_buffer_used += sampled_sgs[layer]->src_size;
+//        LOG_INFO("after sample_processing_update_ri_gpu");
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
+//        LOG_INFO("finished");
+//
+//        if(sampled_sgs[layer]->is_merge_src_dst) {
+//            auto total_size = sampled_sgs[layer]->v_size + sampled_sgs[layer]->src_size;
+//            assert(whole_vertex_size > 0);
+//            total_size = std::min(total_size, whole_vertex_size);
+//            if(total_size > sampled_sgs[layer]->dev_local_to_global_size){
+//                if(sampled_sgs[layer]->dev_local_to_global_size != 0) {
+//                    free_gpu_mem_async(sampled_sgs[layer]->dev_local_to_global, cs->stream);
+//                }
+//                allocate_gpu_edge_async(&sampled_sgs[layer]->dev_local_to_global, total_size, cs->stream);
+//                sampled_sgs[layer]->dev_local_to_global_size = total_size;
+//            }
+//            if(sampled_sgs[layer]->v_size > sampled_sgs[layer]->dev_dst_local_id_size) {
+//                if(sampled_sgs[layer]->dev_dst_local_id_size != 0) {
+//                    free_gpu_mem_async(sampled_sgs[layer]->dev_dst_local_id, cs->stream);
+//                }
+//                allocate_gpu_edge_async(&sampled_sgs[layer]->dev_dst_local_id, sampled_sgs[layer]->v_size, cs->stream);
+//                sampled_sgs[layer]->dev_dst_local_id_size = sampled_sgs[layer]->v_size;
+//            }
+//            if(sampled_sgs[layer]->src_size > sampled_sgs[layer]->dev_src_local_id_size) {
+//                if(sampled_sgs[layer]->dev_src_local_id_size != 0) {
+//                    free_gpu_mem_async(sampled_sgs[layer]->dev_src_local_id, cs->stream);
+//                }
+//                allocate_gpu_edge_async(&sampled_sgs[layer]->dev_src_local_id, sampled_sgs[layer]->src_size, cs->stream);
+//                sampled_sgs[layer]->dev_src_local_id_size = sampled_sgs[layer]->src_size;
+//            }
+//            // TODO: src的初始化可能会有问题，就是前面使用src的地方可能有问题
+//            // 1. 先初始化src_index为-1，整型最大值
+//            // 2. 标记src_index看dst和src中哪些顶点出现了，标记为1，利用source和destination数组
+//            // 3. 利用上面的标记并结合atomicAdd得出local_to_global的数组，同时src_index的标记也改为其在数组中的位置
+//            // 4. 利用src_index标记遍历source和destination建立dst_to_local和src_to_local
+//            cs->set_total_local_index(src_index[layer], whole_vertex_size, queue_count, sampled_sgs[layer]->dev_source,
+//                                      sampled_sgs[layer]->src_size, sampled_sgs[layer]->dev_destination,
+//                                      sampled_sgs[layer]->v_size, sampled_sgs[layer]->dev_local_to_global,
+//                                      sampled_sgs[layer]->dev_src_local_id, sampled_sgs[layer]->dev_dst_local_id);
+//            move_bytes_out_async(&sampled_sgs[layer]->local_size, queue_count, sizeof(VertexId), cs->stream);
+////            cs->CUDA_DEVICE_SYNCHRONIZE();
+//            std::printf("local size: %d, total_size: %d, src size: %d, dst size: %d, whole vtx: %d\n", sampled_sgs[layer]->local_size, total_size,
+//                        sampled_sgs[layer]->src_size, sampled_sgs[layer]->v_size, whole_vertex_size);
+//            assert(sampled_sgs[layer]->local_size > 0 && sampled_sgs[layer]->local_size <= total_size);
+////            cs->
+//
+//        }
+
+//        cs->CUDA_DEVICE_SYNCHRONIZE();
        // LOG_INFO("edge_size %d, src_size %d",edge_size[0],edge_size[1]);                   
         //5) using cub to compact the array.and get the unique number,
         //6) then update the row_indice_array
@@ -432,7 +540,7 @@ public:
                         std::vector<VertexId>& row_indices,VertexId id)> vertex_sample, int layer_){
         {
           //  omp_set_dynamic(0);
-          //printf("sample_processing1 threads %d\n",cpu_threads_);
+        //   printf("sample_processing1 threads %d\n",threads);
           omp_set_num_threads(threads);
 #pragma omp parallel for
             for (VertexId begin_v_i = 0;begin_v_i < curr_dst_size;begin_v_i += 1) {
@@ -475,6 +583,7 @@ public:
         }
     }
 
+
     void compute_one_layer(std::function<void(VertexId local_dst, 
                           std::vector<VertexId>& column_offset, 
                               std::vector<VertexId>& row_indices)>sparse_slot,VertexId layer,std::vector<VertexId> cacheflag){
@@ -494,6 +603,10 @@ public:
     void compute_one_layer_batch(std::function<void(VertexId local_dst, std::vector<VertexId>& column_offset,
                                                     std::vector<VertexId>& row_indices)> sparse_slot, VertexId layer,
                                  VertexId batch_start, VertexId batch_end) {
+    // std::printf("线程数量: %d\n", threads);
+//    std::for_each(std::execution::par, )
+//        std::printf("sampled_sgs[layer]->c_o() size: %d, batch start: %d, batch end: %d\n",
+//                    sampled_sgs[layer]->c_o().size(), batch_start, batch_end);
 #pragma omp parallel for num_threads(threads)
         for(VertexId begin_v_i = batch_start; begin_v_i < batch_end; begin_v_i+=1){
             sparse_slot(begin_v_i, sampled_sgs[layer]->c_o(), sampled_sgs[layer]->r_i());
@@ -508,6 +621,7 @@ public:
     int curr_dst_size;
     int threads;
     bool gpu;
+
 
     VertexId* global_data_buffer;
     ValueType* global_value_buffer;
@@ -562,15 +676,15 @@ public:
       std::cout<<data<<std::endl;
   }
   void GenerateAll(){
-     
         ReadRepGraphFromRawFile();
         SyncAndLog("NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]");
      SyncAndLog("------------------finish graph preprocessing--------------\n");
   }
    void ReadRepGraphFromRawFile() {
     column_offset=new VertexId[global_vertices+1];
-    row_indices=new VertexId[global_edges];   
-    memset(column_offset, 0, sizeof(VertexId) * (global_vertices + 1));
+//    row_indices=new VertexId[global_edges];
+       row_indices=(VertexId *)cudaMallocPinned(((long)global_edges)*sizeof(VertexId));
+       memset(column_offset, 0, sizeof(VertexId) * (global_vertices + 1));
     memset(row_indices, 0, sizeof(VertexId) * global_edges);
     VertexId *tmp_offset = new VertexId[global_vertices + 1];
     memset(tmp_offset, 0, sizeof(VertexId) * (global_vertices + 1));

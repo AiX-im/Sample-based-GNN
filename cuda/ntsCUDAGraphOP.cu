@@ -5,12 +5,15 @@
 #include <iostream>
 #include <boost/stacktrace.hpp>
 
+
 #if CUDA_ENABLE
 #include "ntsCUDAFuseKernel.cuh"
 #include "ntsCUDADistKernel.cuh"
 #include "ntsCUDATransferKernel.cuh"
 #include "thrust/scan.h"
 #include "thrust/device_ptr.h"
+#include <thread>
+
 
 #endif
 
@@ -18,8 +21,8 @@
 #define CHECK_CUDA_RESULT(N) {											\
 	cudaError_t result = N;												\
 	if (result != 0) {													\
-		printf("CUDA call on file %s line %d returned code %d, error: %s\n", \
-        __FILE__, __LINE__, result, cudaGetErrorString(result));       \
+		printf("thread 0x%lx CUDA call on file %s line %d returned code %d, error: %s\n", \
+        std::this_thread::get_id(), __FILE__, __LINE__, result, cudaGetErrorString(result));       \
         std::cout << boost::stacktrace::stacktrace();                                 \
 		exit(1);														\
 	} }
@@ -29,8 +32,9 @@
 {                                                                              \
     cusparseStatus_t status = (func);                                          \
     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-        printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
-               __LINE__, cusparseGetErrorString(status), status);              \
+        printf("CUSPARSE API failed at file %s line %d with error: %s (%d)\n",         \
+               __FILE__, __LINE__, cusparseGetErrorString(status), status);    \
+        std::cout << boost::stacktrace::stacktrace();                             \
        exit(EXIT_FAILURE);                                                     \
     }                                                                          \
 }
@@ -39,11 +43,21 @@
 {                                                                              \
     cublasStatus_t status = (func);                                         \
     if (status != CUBLAS_STATUS_SUCCESS) {                                   \
-        printf("CUBLAS API failed at line %d with error: %d\n",         \
-               __LINE__, status);              \
+        printf("CUBLAS API failed at file %s line %d with error: %d\n",         \
+               __FILE__, __LINE__, status);                                  \
+        std::cout << boost::stacktrace::stacktrace();                       \
        exit(EXIT_FAILURE);                                                     \
     }                                                                          \
 }
+
+#define NCCLCHECK(cmd) do {                         \
+  ncclResult_t res = cmd;                           \
+  if (res != ncclSuccess) {                         \
+    printf("Failed, NCCL error %s:%d '%s'\n",       \
+        __FILE__,__LINE__,ncclGetErrorString(res)); \
+    exit(EXIT_FAILURE);                             \
+  }                                                 \
+} while(0)
 
 // TODO: Toao debug
 
@@ -93,6 +107,55 @@ void* cudaMallocPinned(long size_of_bytes){
 #endif
 }
 
+void * cudaMallocZero(long size_of_bytes){
+
+#if CUDA_ENABLE
+    void *data=NULL;
+    CHECK_CUDA_RESULT(cudaMallocManaged((void**)&data,size_of_bytes));
+    return data;
+#else
+    printf("CUDA DISABLED cudaMallocZero\n");
+    exit(0);
+#endif
+}
+
+
+void* cudaMallocPinnedMulti(long size_of_bytes){
+
+#if CUDA_ENABLE
+    void *data=NULL;
+    CHECK_CUDA_RESULT(cudaHostAlloc(&data,size_of_bytes, cudaHostAllocPortable));
+    return data;
+#else
+    printf("CUDA DISABLED cudaMallocPinnedMulti\n");
+    exit(0);
+#endif
+}
+
+void cudaSetMemAsync(void* mem, int value, size_t size, cudaStream_t stream){
+#if CUDA_ENABLE
+    CHECK_CUDA_RESULT(cudaMemsetAsync(mem, value, size, stream));
+#else
+    printf("CUDA DISABLED cudaSetMemAsync\n");
+    exit(0);
+#endif
+
+}
+
+void cudaSetUsingDevice(int device_id){
+#if CUDA_ENABLE
+//    if(device_id != 0) {
+//        std::cout << boost::stacktrace::stacktrace() << std::endl;
+//    }
+//    assert(device_id == 0);
+    CHECK_CUDA_RESULT(cudaSetDevice(device_id));
+//       printf("malloc finished\n");
+#else
+    printf("CUDA DISABLED cudaSetDevice\n");
+       exit(0);
+#endif
+}
+
 void* cudaMallocGPU(long size_of_bytes){
 #if CUDA_ENABLE
        void *data=NULL;
@@ -104,6 +167,38 @@ void* cudaMallocGPU(long size_of_bytes){
        exit(0);   
 #endif  
 }
+
+//ncclComm_t* NCCL_Communicator::ncclComms = nullptr;
+
+void initNCCLComm(ncclComm_t* comms, int nDev, int* devs) {
+    NCCLCHECK(ncclCommInitAll(comms, nDev, devs));
+}
+
+void destroyNCCLComm(ncclComm_t comm) {
+    NCCLCHECK(ncclCommDestroy(comm));
+}
+void allReduceNCCL(void* send_buffer, void* recv_buffer, size_t element_num, ncclComm_t comm,
+                   cudaStream_t cudaStream, int device_id) {
+//    std::printf("allReduce device id: %d\n", device_id);
+    CHECK_CUDA_RESULT(cudaSetDevice(device_id));
+    NCCLCHECK(ncclAllReduce(send_buffer, recv_buffer, element_num, ncclFloat,
+                            ncclSum, comm, cudaStream));
+}
+
+void broadcastNCCL(void* send_buffer, size_t element_num, ncclComm_t comm, cudaStream_t cudaStream,
+                   int device_id) {
+    CHECK_CUDA_RESULT(cudaSetDevice(device_id));
+    std::printf("device id: %d\n", device_id);
+    NCCLCHECK(ncclBcast(send_buffer, element_num, ncclFloat, device_id, comm,  cudaStream));
+}
+
+void allGatherNCCL(void*send_buffer, void* recv_buffer, size_t element_num, ncclComm_t comm,
+                   cudaStream_t cudaStream, int device_id) {
+    CHECK_CUDA_RESULT(cudaSetDevice(device_id));
+//    CHECK_CUDA_RESULT(cudaStreamSynchronize(cudaStream));
+    NCCLCHECK(ncclAllGather(send_buffer, recv_buffer, element_num, ncclFloat, comm, cudaStream));
+}
+
 
 
 Cuda_Stream::Cuda_Stream(){
@@ -121,7 +216,10 @@ Cuda_Stream::Cuda_Stream(){
 
 void Cuda_Stream::destory_Stream(){
 #if CUDA_ENABLE
+    CHECK_CUSPARSE(cusparseDestroy(sparse_handle));
+    CHECK_CUBLAS(cublasDestroy(blas_handle));
     CHECK_CUDA_RESULT(cudaStreamDestroy(stream));
+
 #else
        printf("CUDA DISABLED Cuda_Stream::Cuda_Stream\n");
        exit(0);   
@@ -140,7 +238,7 @@ inline cudaStream_t Cuda_Stream::getStream(){
 
 void Cuda_Stream::setNewStream(cudaStream_t cudaStream) {
 #if CUDA_ENABLE
-    destory_Stream();
+    CHECK_CUDA_RESULT(cudaStreamDestroy(stream));
     this->stream = cudaStream;
     CHECK_CUSPARSE(cusparseSetStream(sparse_handle, stream));
        CHECK_CUBLAS(cublasSetStream(blas_handle, stream));
@@ -264,25 +362,55 @@ void Cuda_Stream::Gather_By_Dst_From_Src(float* input,float* output,float* weigh
         
 }
 
-template<typename T>
-inline void print_cuda_sum(T* data, size_t len, char* msg, int pIndex = -1) {
-       T* tmp_result = new T[len];
 
-       cudaMemcpy(tmp_result, data, len * sizeof(T), cudaMemcpyDeviceToHost);
-       double sum = 0.0;
-       T max = std::numeric_limits<T>::min();
-       for(long i = 0; i < len; i++) {
-              sum += tmp_result[i];
-              max = std::max(max, tmp_result[i]);
-       }
-       if(pIndex == -1) {
-              pIndex = len - 1;
-       }
-       std::cout << msg << "第" << pIndex << "个元素: " << tmp_result[pIndex] << ", 最大值为："
-                 << max << ", 总和: " << sum << ", 均值: " << sum / len << std::endl;
-       // std::printf("%s最后一个元素：结果总和：%lf\n", msg, sum);
-       delete []tmp_result;
+template<typename T>
+void print_cuda_sum(T* data, size_t len, char* msg, int pIndex=-1) {
+    T* tmp_result = new T[len];
+
+    cudaMemcpy(tmp_result, data, len * sizeof(T), cudaMemcpyDeviceToHost);
+    double sum = 0.0;
+    T max = std::numeric_limits<T>::min();
+    for(long i = 0; i < len; i++) {
+        sum += tmp_result[i];
+        max = std::max(max, tmp_result[i]);
+    }
+    if(pIndex == -1) {
+        pIndex = len - 1;
+    }
+    std::cout << msg << "第" << pIndex << "个元素: " << tmp_result[pIndex] << ", 最大值为："
+              << max << ", 总和: " << sum << ", 均值: " << sum / len << std::endl;
+    // std::printf("%s最后一个元素：结果总和：%lf\n", msg, sum);
+    std::printf("\tthread 0x%lx gpu avg: %.4lf\n", std::this_thread::get_id(), sum/len);
+    delete []tmp_result;
 }
+
+
+template<typename T>
+void print_cpu_sum(T* tmp_result, size_t len, char* msg, int pIndex=-1) {
+//    T* tmp_result = new T[len];
+
+//    cudaMemcpy(tmp_result, data, len * sizeof(T), cudaMemcpyDeviceToHost);
+    double sum = 0.0;
+    T max = std::numeric_limits<T>::min();
+    for(long i = 0; i < len; i++) {
+        sum += tmp_result[i];
+        max = std::max(max, tmp_result[i]);
+    }
+    if(pIndex == -1) {
+        pIndex = len - 1;
+    }
+    std::cout << msg << "第" << pIndex << "个元素: " << tmp_result[pIndex] << ", 最大值为："
+              << max << ", 总和: " << sum << ", 均值: " << sum / len << std::endl;
+    std::printf("\tthread 0x%lx cpu avg: %.4lf\n", std::this_thread::get_id(), sum/len);
+    // std::printf("%s最后一个元素：结果总和：%lf\n", msg, sum);
+//    delete []tmp_result;
+}
+
+template<typename T>
+void single_print_cuda_sum(T* data, size_t len, char* msg, int pIndex) {
+    print_cuda_sum(data, len, msg, pIndex);
+}
+
 
 void Cuda_Stream::Gather_By_Dst_From_Src_Spmm(float* input,float* output,float* weight_forward,//data 
         VertexId_CUDA* row_indices,VertexId_CUDA *column_offset, VertexId_CUDA column_num, //graph
@@ -941,6 +1069,47 @@ void Cuda_Stream::Scatter_Src_Mirror_to_Msg(float* message,float* src_mirror_fea
 #endif
         
 }
+void Cuda_Stream::Scatter_Src_to_Msg(float* message,float* src_mirror_feature,//data
+                                            VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
+                                            VertexId_CUDA batch_size, VertexId_CUDA feature_size){
+#if CUDA_ENABLE
+    scatter_src_to_msg<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            message, src_mirror_feature, row_indices, column_offset,batch_size, feature_size);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Scatter_Src_to_Msg\n");
+       exit(0);
+#endif
+
+}
+
+void Cuda_Stream::Scatter_Src_Dst_to_Msg(float* message,float* src_mirror_feature,//data
+                                     VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
+                                     VertexId_CUDA batch_size, VertexId_CUDA feature_size, VertexId_CUDA* dst_to_local){
+#if CUDA_ENABLE
+    scatter_src_dst_to_msg_map<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            message, src_mirror_feature, row_indices, column_offset,batch_size, feature_size, dst_to_local);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Scatter_Src_to_Msg\n");
+       exit(0);
+#endif
+
+}
+
+
+void Cuda_Stream::Scatter_Src_to_Msg_Map(float* message,float* src_mirror_feature,//data
+                                     VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
+                                     VertexId_CUDA batch_size, VertexId_CUDA feature_size,
+                                     VertexId_CUDA* src_to_local){
+#if CUDA_ENABLE
+    scatter_src_to_msg_map<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            message, src_mirror_feature, row_indices, column_offset,batch_size, feature_size,
+            src_to_local);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Scatter_Src_to_Msg_Map\n");
+       exit(0);
+#endif
+
+}
 
 void Cuda_Stream::Gather_Msg_To_Src_Mirror(float* src_mirror_feature,float* message,//data 
         VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
@@ -958,6 +1127,54 @@ void Cuda_Stream::Gather_Msg_To_Src_Mirror(float* src_mirror_feature,float* mess
         
 }
 
+
+void Cuda_Stream::Gather_Msg_To_Src(float* src_mirror_feature,float* message,//data
+                                           VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
+                                           VertexId_CUDA batch_size, VertexId_CUDA feature_size){
+#if CUDA_ENABLE
+    //printf("CUDA_DEBUGE_INFO:FORWARD RUN_SYNC with \t BLOCK_SIZE:%d\tfeature_size:%d\n",BLOCK_SIZE,feature_size);
+    gather_msg_to_src<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            src_mirror_feature, message, row_indices, column_offset, batch_size, feature_size);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Gather_Msg_To_Src_Mirror\n");
+       exit(0);
+#endif
+
+}
+
+void Cuda_Stream::Gather_Msg_To_Src_Dst(float* src_mirror_feature,float* message,//data
+                                    VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
+                                    VertexId_CUDA batch_size, VertexId_CUDA feature_size,
+                                    VertexId_CUDA* dst_to_local){
+#if CUDA_ENABLE
+    //printf("CUDA_DEBUGE_INFO:FORWARD RUN_SYNC with \t BLOCK_SIZE:%d\tfeature_size:%d\n",BLOCK_SIZE,feature_size);
+    gather_msg_to_src_dst_map<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            src_mirror_feature, message, row_indices, column_offset, batch_size,
+            feature_size, dst_to_local);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Gather_Msg_To_Src_Mirror\n");
+       exit(0);
+#endif
+
+}
+
+void Cuda_Stream::Gather_Msg_To_Src_Map(float* src_mirror_feature,float* message,//data
+                                    VertexId_CUDA* row_indices,VertexId_CUDA *column_offset,
+                                    VertexId_CUDA batch_size, VertexId_CUDA feature_size,
+                                    VertexId_CUDA* src_to_local){
+#if CUDA_ENABLE
+    //printf("CUDA_DEBUGE_INFO:FORWARD RUN_SYNC with \t BLOCK_SIZE:%d\tfeature_size:%d\n",BLOCK_SIZE,feature_size);
+    gather_msg_to_src_map<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            src_mirror_feature, message, row_indices, column_offset, batch_size, feature_size,
+            src_to_local);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Gather_Msg_To_Src_Map\n");
+       exit(0);
+#endif
+
+}
+
+
 void Cuda_Stream::Scatter_Dst_to_Msg(float* message,float* dst_feature,//data 
         VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
         VertexId_CUDA batch_size, VertexId_CUDA feature_size){
@@ -972,6 +1189,21 @@ void Cuda_Stream::Scatter_Dst_to_Msg(float* message,float* dst_feature,//data
 #endif      
 }
 
+void Cuda_Stream::Scatter_Dst_to_Msg_Map(float* message,float* dst_feature,//data
+                                     VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
+                                     VertexId_CUDA batch_size, VertexId_CUDA feature_size,
+                                     VertexId_CUDA* dst_to_local){
+#if CUDA_ENABLE
+    //printf("CUDA_DEBUGE_INFO:FORWARD RUN_SYNC with \t BLOCK_SIZE:%d\tfeature_size:%d\n",BLOCK_SIZE,feature_size);
+    scatter_dst_to_msg_map<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            message, dst_feature, row_indices, column_offset,
+            batch_size, feature_size, dst_to_local);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Scatter_Dst_to_Msg\n");
+       exit(0);
+#endif
+}
+
 void Cuda_Stream::Gather_Msg_to_Dst(float* dst_feature,float* message,//data 
         VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
         VertexId_CUDA batch_size, VertexId_CUDA feature_size){
@@ -984,6 +1216,21 @@ void Cuda_Stream::Gather_Msg_to_Dst(float* dst_feature,float* message,//data
        printf("CUDA DISABLED Cuda_Stream::Gather_Msg_to_Dst\n");
        exit(0);   
 #endif      
+}
+
+void Cuda_Stream::Gather_Msg_to_Dst_Map(float* dst_feature,float* message,//data
+                                    VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
+                                    VertexId_CUDA batch_size, VertexId_CUDA feature_size,
+                                    VertexId_CUDA* dst_to_local){
+#if CUDA_ENABLE
+    //printf("CUDA_DEBUGE_INFO:FORWARD RUN_SYNC with \t BLOCK_SIZE:%d\tfeature_size:%d\n",BLOCK_SIZE,feature_size);
+    gather_msg_to_dst_map<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>(
+            dst_feature, message, row_indices, column_offset,
+            batch_size, feature_size, dst_to_local);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Gather_Msg_to_Dst\n");
+       exit(0);
+#endif
 }
 
 void Cuda_Stream::sample_processing_get_co_gpu(VertexId_CUDA *dst, 
@@ -1188,6 +1435,119 @@ void Cuda_Stream::sample_processing_get_co_gpu_omit(
 #endif     
 }
 
+
+void Cuda_Stream::sample_processing_get_co_gpu_omit(
+        VertexId_CUDA *CacheFlag,
+        VertexId_CUDA *dst,
+        VertexId_CUDA *local_column_offset,
+        VertexId_CUDA *global_column_offset,
+        VertexId_CUDA dst_size,
+        VertexId_CUDA* tmp_data_buffer,
+        VertexId_CUDA src_index_size,
+        VertexId_CUDA* src_count,
+        VertexId_CUDA* src_index,
+        VertexId_CUDA fanout,
+        VertexId_CUDA & edge_size,
+        VertexId_CUDA super_batch_id){
+#if CUDA_ENABLE
+    // 确定每个节点需要采的数量，方便为数组分配空间
+//    print_cache_num<<<1,1>>>(dst, CacheFlag, dst_size);
+    sample_processing_get_co_gpu_kernel_omit<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
+             src_index_size,src_count,src_index,fanout, super_batch_id);
+
+    // NOTE: Toao用于检测cache点数量
+    // TODO: Toao用于检测cache点的数量
+//    VertexId_CUDA* cache_count;
+//    cudaMallocAsync(&cache_count, sizeof(VertexId_CUDA), stream);
+//    cudaMemsetAsync(cache_count, 0, sizeof(VertexId_CUDA), stream);
+//    sample_processing_get_co_gpu_kernel_omit_lab<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+//                            (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
+//                            src_index_size,src_count,src_index,fanout, cache_count);
+//    VertexId_CUDA* cache_count_cpu = new VertexId_CUDA[1]();
+//    cudaMemcpyAsync(cache_count_cpu, cache_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
+////    std::printf("采样总结点数: %u, cache点数量: %u\n", dst_size, cache_count_cpu[0]);
+//    total_sample_num += dst_size;
+//    total_cache_hit += cache_count_cpu[0];
+//    delete []cache_count_cpu;
+//    cudaFreeAsync(cache_count, stream);
+
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+//    inclusiveTime -= get_time();
+//    int num_items = dst_size + 1;
+//    void *d_temp_storage = NULL;
+//    size_t temp_storage_bytes = 0;
+//    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, tmp_data_buffer, local_column_offset, num_items,stream);
+//    if(temp_storage_bytes < cuda_buffer_size) {
+//       d_temp_storage = cuda_buffer;
+//    } else {
+//       // std::printf("在这里进行了重分配\n\n\n");
+//       if(cuda_buffer_size != 0) {
+//              cudaFreeAsync(cuda_buffer, stream);
+//       }
+//       cuda_buffer_size = temp_storage_bytes * 2;
+//       cudaMallocAsync((void**)&cuda_buffer, cuda_buffer_size, stream);
+//       d_temp_storage = cuda_buffer;
+//
+//    }
+////     cudaMallocAsync(&d_temp_storage, temp_storage_bytes, stream);
+//    //printf("temp_storage_bytes:%d num_items:%d\n",temp_storage_bytes,num_items);
+//    cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, tmp_data_buffer, local_column_offset, num_items,stream);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+////     cudaFreeAsync(d_temp_storage, stream);
+//    inclusiveTime += get_time();
+
+//    inclusiveTime -= get_time();
+//    thrust::device_ptr<VertexId_CUDA> g_arr = thrust::device_pointer_cast(tmp_data_buffer);
+//    thrust::inclusive_scan(g_arr, g_arr + dst_size + 1, local_column_offset);
+//    inclusiveTime += get_time();
+
+    cpu_inclusiveTime -= get_time();
+    size_t arr_size = (dst_size + 1) * sizeof(VertexId_CUDA);
+    if(arr_size*2 > cpu_buffer_size) {
+        if(cpu_buffer_size != 0) {
+            delete []cpu_buffer;
+        }
+        cpu_buffer = new unsigned char[arr_size * 4];
+        cpu_buffer_size = arr_size * 4;
+    }
+    VertexId_CUDA* cpu_data_buffer = (VertexId_CUDA*)(cpu_buffer);
+    VertexId_CUDA* cpu_column_offset = (VertexId_CUDA*)(cpu_buffer +arr_size);
+    cudaMemcpyAsync(cpu_data_buffer, tmp_data_buffer, arr_size, cudaMemcpyDeviceToHost, stream);
+    cpu_column_offset[0] = cpu_data_buffer[0];
+    for(int i = 1; i < dst_size + 1; i++) {
+        cpu_column_offset[i] = cpu_data_buffer[i] + cpu_column_offset[i-1];
+    }
+    edge_size = cpu_column_offset[dst_size];
+    cudaMemcpyAsync(local_column_offset, cpu_column_offset, arr_size, cudaMemcpyHostToDevice, stream);
+
+//    delete []cpu_data_buffer;
+//    delete []cpu_column_offset;
+    cpu_inclusiveTime += get_time();
+
+//    VertexId_CUDA* gpu_column_offset = cpu_data_buffer;
+//    cudaMemcpyAsync(gpu_column_offset, local_column_offset, sizeof(VertexId_CUDA)*(dst_size + 1), cudaMemcpyDeviceToHost, stream);
+//    bool correct = true;
+//    for(int i = 0; i < dst_size + 1; i++) {
+//        if(cpu_column_offset[i] != gpu_column_offset[i]) {
+//            correct = false;
+//            break;
+//        }
+//    }
+//    if(correct) {
+//        std::printf("cpu结果和GPU结果一致\n");
+//    } else {
+//        std::printf("cpu结果和GPU结果不一致\n");
+//        exit(1);
+//    }
+
+
+#else
+    printf("CUDA DISABLED Cuda_Stream::sample_processing_get_co_gpu\n");
+       exit(0);
+#endif
+}
+
 __global__ void print_cuda_array(VertexId_CUDA* array, VertexId_CUDA len) {
     auto tid = threadIdx.x + blockIdx.x * blockDim.x;
     if(tid == 0) {
@@ -1222,8 +1582,9 @@ void Cuda_Stream::sample_processing_traverse_gpu(VertexId_CUDA *destination,
 							VertexId_CUDA src_index_size,
 							VertexId_CUDA* src,
 						       VertexId_CUDA* src_count,
-                                                 VertexId_CUDA layer,
-                                                 VertexId_CUDA max_sample_count){
+                             VertexId_CUDA layer,
+                             VertexId_CUDA max_sample_count,
+                             bool add_dst_to_src ){
 #if CUDA_ENABLE
 //    std::printf("vtx num: %u\n", vtx_size);
 //    if(layer == 0) {
@@ -1254,7 +1615,9 @@ void Cuda_Stream::sample_processing_traverse_gpu(VertexId_CUDA *destination,
     }
 
     // toao 注释掉同步
-//    this->CUDA_DEVICE_SYNCHRONIZE()
+//    std::printf("after sample_processing_traverse_gpu_kernel_stage2\n");
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+//    std::printf("before sample_processing_traverse_gpu_kernel_stage2\n");
 
 //    sample_processing_traverse_gpu_kernel_stage2<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
 //            (destination, c_o,r_i,global_c_o,global_r_i,src_index,vtx_size,layer);
@@ -1266,6 +1629,10 @@ void Cuda_Stream::sample_processing_traverse_gpu(VertexId_CUDA *destination,
 //    cudaMemcpyAsync(&count, gpu_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
 //    cudaDeviceSynchronize();
 //    std::printf("不存在的邻居的个数: %u\n", count);
+    if(add_dst_to_src) {
+        sample_add_dst_to_src<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(src_index, destination,
+                                                                                vtx_size, layer);
+    }
 
     int block_num = (src_index_size / CUDA_NUM_THREADS) + 1;
     block_num = std::max(block_num, CUDA_NUM_BLOCKS);
@@ -1296,6 +1663,41 @@ void Cuda_Stream::sample_processing_update_ri_gpu(VertexId_CUDA *r_i,
 #endif   
 }
 
+void Cuda_Stream::set_total_local_index(VertexId_CUDA* vtx_index, size_t vtx_size, VertexId_CUDA* vtx_count,
+                                        VertexId_CUDA* dev_source, size_t source_size,
+                                        VertexId_CUDA* dev_destination, size_t destination_size,
+                                        VertexId_CUDA* dev_local_to_global, VertexId_CUDA* dev_src_to_local,
+                                        VertexId_CUDA* dev_dst_to_local) {
+    // 1. 先初始化src_index为-1，整型最大值
+    cudaSetMemAsync(vtx_index, -1, sizeof(VertexId_CUDA) * vtx_size, stream);
+    cudaSetMemAsync(vtx_count, 0, sizeof(VertexId_CUDA), stream);
+    // 2. 标记src_index看dst和src中哪些顶点出现了，标记为1，利用source和destination数组
+    sample_mark_src_dst<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(vtx_index, dev_source, source_size,
+                                                               dev_destination, destination_size);
+    // 3. 利用上面的标记并结合atomicAdd得出local_to_global的数组，同时src_index的标记也改为其在数组中的位置
+    sample_set_local_to_global<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(vtx_index, vtx_size, vtx_count,
+                                                                      dev_local_to_global);
+    // 4. 利用src_index标记遍历source和destination建立dst_to_local和src_to_local
+    sample_set_src_dst_local<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(vtx_index, dev_source, source_size, dev_destination,
+                                                                    destination_size, dev_src_to_local, dev_dst_to_local);
+
+}
+
+void Cuda_Stream::set_dst_local_index(VertexId_CUDA* vtx_index, VertexId_CUDA* dev_destination,
+                                      size_t destination_size, VertexId_CUDA* dev_dst_to_local) {
+    // 结合destination遍历src_index得出dst在src中的标记位置
+    sample_set_dst_local<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(vtx_index, dev_destination,
+                                                                           destination_size, dev_dst_to_local);
+
+}
+
+
+void Cuda_Stream::check_dst_local_index(VertexId_CUDA* dev_dst_to_local,size_t destination_size,
+                                        VertexId_CUDA src_size) {
+    sample_check_dst_local<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(dev_dst_to_local, destination_size, src_size);
+
+}
+
 void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
 						float *pinned_host_feature,
 						VertexId_CUDA *src_vertex,
@@ -1306,7 +1708,7 @@ void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
     total_transfer_node += vertex_size;
     int block_num = ((vertex_size * WARP_SIZE)/CUDA_NUM_THREADS) + 1;
     block_num = std::min(CUDA_NUM_THREADS, block_num);
-    zero_copy_feature_move_gpu_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+    zero_copy_feature_move_gpu_kernel<<<block_num/2,CUDA_NUM_THREADS,0,stream>>>
                             (dev_feature,pinned_host_feature,src_vertex,feature_size,vertex_size);
 //     this->CUDA_DEVICE_SYNCHRONIZE();
 #else
@@ -1385,6 +1787,51 @@ void Cuda_Stream::dev_load_share_embedding_and_feature(float* dev_feature, float
 #endif
 }
 
+
+void Cuda_Stream::dev_load_share_embedding_and_feature(float* dev_feature, float *dev_embedding,
+                                                       float* share_feature, float *share_embedding,
+                                                       VertexId_CUDA *dev_cacheflag,
+                                                       VertexId_CUDA *dev_cachelocation,
+                                                       VertexId_CUDA feature_size, VertexId_CUDA embedding_size,
+                                                       VertexId_CUDA *destination_vertex,
+                                                       VertexId_CUDA vertex_size, VertexId_CUDA super_batch_id){
+#if CUDA_ENABLE
+//    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+
+    dev_load_share_embedding_and_feature_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (dev_feature, dev_embedding, share_feature, share_embedding,dev_cacheflag,dev_cachelocation,
+             feature_size,embedding_size, destination_vertex,vertex_size, super_batch_id);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+//    cudaDeviceSynchronize();
+#else
+    printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);
+#endif
+}
+
+
+void Cuda_Stream::dev_load_share_embedding(float *dev_embedding,
+                                                       float *share_embedding,
+                                                       VertexId_CUDA *dev_cacheflag,
+                                                       VertexId_CUDA *dev_cachelocation,
+                                                       VertexId_CUDA embedding_size,
+                                                       VertexId_CUDA *destination_vertex,
+                                                       VertexId_CUDA vertex_size, VertexId_CUDA super_batch_id){
+#if CUDA_ENABLE
+//    print_cache_num<<<1, 1>>>(destination_vertex, dev_cachemap, vertex_size);
+//    this->CUDA_DEVICE_SYNCHRONIZE();
+
+    dev_load_share_embedding_kernel<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+            (dev_embedding, share_embedding,dev_cacheflag,dev_cachelocation,
+             embedding_size, destination_vertex,vertex_size, super_batch_id);
+    this->CUDA_DEVICE_SYNCHRONIZE();
+//    cudaDeviceSynchronize();
+#else
+    printf("CUDA DISABLED Cuda_Stream::copy_label_from_global\n");
+       exit(0);
+#endif
+}
 
 void Cuda_Stream::dev_load_share_aggregate(float* dev_feature,
                                                        float* share_feature,
@@ -1624,6 +2071,39 @@ void Cuda_Stream::Edge_Softmax_Forward_Block(float* msg_output,float* msg_input,
 #endif      
 }
 
+void Cuda_Stream::Edge_Softmax_Forward_Norm_Block(float* msg_output,float* msg_input,//data
+                                             float* msg_cached,
+                                             VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
+                                             VertexId_CUDA batch_size, VertexId_CUDA feature_size){
+#if CUDA_ENABLE
+    float* node_max;
+    allocate_gpu_buffer_async(&node_max, batch_size, stream);
+    // TODO: node max 有问题
+    get_node_max<float, VertexId_CUDA><<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>
+            (msg_input, column_offset, batch_size, node_max);
+    edge_softmax_forward_norm_block<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS_SOFTMAX,CUDA_NUM_THREADS_SOFTMAX,0,stream>>>(
+            msg_output, msg_input, msg_cached, row_indices, column_offset,
+            batch_size, feature_size, node_max);
+    free_gpu_mem_async(node_max, stream);
+#else
+    printf("CUDA DISABLED Cuda_Stream::Edge_Softmax_Forward_Block\n");
+       exit(0);
+#endif
+}
+
+//void Cuda_Stream::Get_Src_Max(float* msg_output,float* msg_input,//data
+//                                             VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
+//                                             VertexId_CUDA batch_size, VertexId_CUDA feature_size){
+//#if CUDA_ENABLE
+//    edge_softmax_forward_block<float,VertexId_CUDA><<<CUDA_NUM_BLOCKS_SOFTMAX,CUDA_NUM_THREADS_SOFTMAX,0,stream>>>(
+//            msg_output, msg_input, msg_cached, row_indices, column_offset,
+//            batch_size, feature_size);
+//#else
+//    printf("CUDA DISABLED Cuda_Stream::Edge_Softmax_Forward_Block\n");
+//       exit(0);
+//#endif
+//}
+
 void Cuda_Stream::Edge_Softmax_Backward_Block(float* msg_input_grad,float* msg_output_grad,//data 
         float* msg_cached,
         VertexId_CUDA* row_indices, VertexId_CUDA *column_offset,
@@ -1706,6 +2186,24 @@ void move_bytes_in(void * d_pointer,void* h_pointer, long bytes, bool sync){
 #endif 
 }
 
+void move_bytes_in_async_check(void * d_pointer,void* h_pointer, long bytes, cudaStream_t cs){
+#if CUDA_ENABLE
+    print_cpu_sum((VertexId_CUDA*)h_pointer, bytes/sizeof(VertexId_CUDA), "cpu_destiantion");
+    print_cuda_sum<VertexId_CUDA>((VertexId_CUDA*)d_pointer, bytes/sizeof(VertexId_CUDA), "dev destination");
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("CUDA error: %s\n", cudaGetErrorString(error));
+        // 处理错误
+    }
+    CHECK_CUDA_RESULT(cudaMemcpy(d_pointer, h_pointer, bytes, cudaMemcpyHostToDevice));
+//    CHECK_CUDA_RESULT(cudaMemcpyAsync(d_pointer,h_pointer,bytes, cudaMemcpyHostToDevice, nullptr));
+    cudaDeviceSynchronize();
+#else
+    printf("CUDA DISABLED move_bytes_in\n");
+       exit(0);
+#endif
+}
+
 void move_bytes_in_async(void * d_pointer,void* h_pointer, long bytes, cudaStream_t cs){
 #if CUDA_ENABLE
     CHECK_CUDA_RESULT(cudaMemcpyAsync(d_pointer,h_pointer,bytes, cudaMemcpyHostToDevice, cs));
@@ -1714,6 +2212,7 @@ void move_bytes_in_async(void * d_pointer,void* h_pointer, long bytes, cudaStrea
        exit(0);   
 #endif 
 }
+
 
 void move_bytes_out(void * h_pointer,void* d_pointer, long bytes, bool sync){
 #if CUDA_ENABLE
@@ -1835,11 +2334,21 @@ void allocate_gpu_buffer_async(float** input, int size, cudaStream_t cs){
 
 }
 
+void free_gpu_mem_async(void* mem, cudaStream_t cs) {
+#if CUDA_ENABLE
+    CHECK_CUDA_RESULT(cudaFreeAsync(mem, cs));
+#else
+    printf("CUDA DISABLED free_gpu_mem_async\n");
+     exit(0);
+
+#endif
+}
+
 void allocate_gpu_edge_async(VertexId_CUDA** input, int size, cudaStream_t cs){
 #if CUDA_ENABLE
      CHECK_CUDA_RESULT(cudaMallocAsync(input,sizeof(VertexId_CUDA)*(size), cs));
 #else 
-     printf("CUDA DISABLED Cuda_Stream::Gather_By_Dst_From_Message\n");
+     printf("CUDA DISABLED Cuda_Stream::allocate_gpu_edge_async\n");
      exit(0);   
    
 #endif 

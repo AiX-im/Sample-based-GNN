@@ -56,7 +56,7 @@ public:
   NtsVar forward(NtsVar &f_input_){// input edge  output vertex
     int feature_size = f_input_.size(1);
     NtsVar f_input=f_input_.cpu();
-    //LOG_INFO("owned_mirrors (%d)",partitioned_graph_->owned_mirrors);
+    LOG_INFO("owned_mirrors (%d), input size: (%d)",partitioned_graph_->owned_mirrors, f_input_.size(0));
     NtsVar f_output=graph_->Nts->NewKeyTensor({partitioned_graph_->owned_mirrors, 
                 feature_size},torch::DeviceType::CPU);
     ValueType *f_input_buffer =
@@ -94,6 +94,8 @@ public:
       },
       subgraphs, feature_size, active_);
       NtsVar f_output_cuda=f_output.cuda();
+      std::printf("input sum: %.4f, output sum: %.4f\n", f_input_.abs().sum().item<float>(),
+              f_output.abs().sum().item<float>());
     return f_output_cuda;
   }
   NtsVar forward(NtsVar &f_input,std::vector<VertexId> cacheflag){        

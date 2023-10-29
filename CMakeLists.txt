@@ -4,7 +4,7 @@ add_definitions(-w)
 set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 # please change this to the path where you put libtorch
 # TODO: torch path should not hard coded in cmake file
-list(APPEND CMAKE_PREFIX_PATH "/home/toao/lib/libtorch/")
+list(APPEND CMAKE_PREFIX_PATH "~/lib/libtorch/")
 
 project(GNNmini)
 set(ENV{LANG} "C")
@@ -105,10 +105,10 @@ ${MPI_INCLUDE_PATH}
 )
 
 # setting debug flags
-#set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++17 -g -fopenmp -march=native")
+# set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++17 -g -fopenmp -march=native")
 set(CMAKE_CXX_FLAGS "-O0 -Wall -std=c++17 -g -fopenmp -march=native")
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++17 -fopenmp -march=native -O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++17 -fopenmp -O0 -march=native -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++17 -fopenmp -march=native -O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -std=c++17 -fopenmp -O0 -march=native -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
@@ -128,19 +128,26 @@ set(NEUTRONSTAR_TEST_SRC_FILES
 message(STATUS "CUDA_LIBRARIES = ${CUDA_LIBRARIES}.")
 
 add_executable(nts ${NEUTRONSTAR_SRC_FILES})
+target_compile_definitions(nts PRIVATE BOOST_STACKTRACE_USE_ADDR2LINE)
 if (CUDA_ENABLE)
-        target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${EXTRA_LIBS} ${CUDA_LIBRARIES} ${BOOST_LIBRARIES} cuda_propagate numa TBB::tbb)
+	target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${EXTRA_LIBS} ${CUDA_LIBRARIES} ${BOOST_LIBRARIES} cuda_propagate numa TBB::tbb ${NCCL_LIBRARIES} ${CMAKE_DL_LIBS})
 else()
-        target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${BOOST_LIBRARIES} numa TBB::tbb)
+	target_link_libraries(nts  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${BOOST_LIBRARIES} numa TBB::tbb ${CMAKE_DL_LIBS})
 endif (CUDA_ENABLE)
 
+target_link_options(nts PRIVATE "-no-pie")
+target_link_options(nts PRIVATE "-fno-pie")
 
 add_executable(nts_test ${NEUTRONSTAR_TEST_SRC_FILES})
+target_compile_definitions(nts_test PRIVATE BOOST_STACKTRACE_USE_ADDR2LINE)
 if (CUDA_ENABLE)
-        target_link_libraries(nts_test  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${EXTRA_LIBS} ${CUDA_LIBRARIES} cuda_propagate numa TBB::tbb)
+	target_link_libraries(nts_test  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} ${EXTRA_LIBS} ${CUDA_LIBRARIES} cuda_propagate numa TBB::tbb ${NCCL_LIBRARIES} ${CMAKE_DL_LIBS})
 else()
         target_link_libraries(nts_test  ${TORCH_LIBRARIES} ${MPI_LIBRARIES} numa TBB::tbb)
 endif (CUDA_ENABLE)
+
+target_link_options(nts_test PRIVATE "-no-pie")
+target_link_options(nts_test PRIVATE "-fno-pie")
 
 
 

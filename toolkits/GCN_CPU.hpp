@@ -105,7 +105,9 @@ public:
     // gnndatum->random_generate();
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
-    } else {
+    } else if(0 == graph->config->feature_file.compare("mask")){
+        gnndatum->read_mask_random_other(graph->config->mask_file);
+    }  else {
       gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                        graph->config->label_file,
                                        graph->config->mask_file);
@@ -182,7 +184,8 @@ public:
     int layer = graph->rtminfo->curr_layer;
     // nn operation. Here is just a simple matmul. i.e. y = activate(a * w)
     if (layer == 0) {
-      y = torch::relu(P[layer]->forward(a)).set_requires_grad(true);
+//        std::printf("ctx->is_train: %d\n", ctx->is_train());
+      y = torch::dropout(torch::relu(P[layer]->forward(a)).set_requires_grad(true), drop_rate, ctx->is_train());
     } else if (layer == 1) {
       y = P[layer]->forward(a);
       y = y.log_softmax(1);
@@ -215,9 +218,9 @@ public:
     graph->rtminfo->forward = true;
     for (int i = 0; i < graph->gnnctx->layer_size.size() - 1; i++) {
       graph->rtminfo->curr_layer = i;
-      if (i != 0) {
-        X[i] = drpmodel(X[i]);
-      }
+//      if (i != 0) {
+//        X[i] = drpmodel(X[i]);
+//      }
        NtsVar Y_i= ctx->runGraphOp<nts::op::ForwardCPUfuseOp>(partitioned_graph,active,X[i]);
         X[i + 1]=ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
             return vertexForward(n_i, v_i);
@@ -254,6 +257,8 @@ public:
     }
     exec_time += get_time();
 
+      printf("#communicate_processing_received.wait=%lf(s)\n",
+             graph->all_recv_wait_time);
     delete active;
   }
 

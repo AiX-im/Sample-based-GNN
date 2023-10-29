@@ -252,6 +252,8 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       this->label_file = cfg_v;
     } else if (0 == cfg_k.compare("MASK_FILE")) {
       this->mask_file = cfg_v;
+    } else if (0 == cfg_k.compare("PRE_SAMPLE_FILE")) {
+        this->pre_sample_file = cfg_v;
     } else if (0 == cfg_k.compare("PROC_OVERLAP")) {
       this->overlap = false;
       if (1 == std::atoi(cfg_v.c_str()))
@@ -332,9 +334,9 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       this->pipeline_num = std::atoi(cfg_v.c_str());
     } else if(0 == cfg_k.compare("CACHE_RATE")) {
         this->cache_rate = std::atof(cfg_v.c_str());
+    } else if(0 == cfg_k.compare("GPU_NUM")) {
+        this->gpu_num = std::atoi(cfg_v.c_str());
     }
-
-
     else {
       printf("not supported configure\n");
     }

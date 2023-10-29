@@ -104,7 +104,9 @@ public:
     GNNDatum *gnndatum = new GNNDatum(graph->gnnctx, graph);
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
-    } else {
+    } else if(0 == graph->config->feature_file.compare("mask")){
+        gnndatum->read_mask_random_other(graph->config->mask_file);
+    }  else {
       gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                        graph->config->label_file,
                                        graph->config->mask_file);

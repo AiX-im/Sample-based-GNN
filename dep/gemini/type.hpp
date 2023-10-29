@@ -92,6 +92,7 @@ struct COOChunk {
   }
 };
 
+// 存储边数据的结构体，成员主要是源节点、目的节点和边的数据
 template <typename EdgeData> struct EdgeUnit {
   VertexId src;
   VertexId dst;

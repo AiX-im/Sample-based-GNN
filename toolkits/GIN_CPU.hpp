@@ -101,7 +101,9 @@ public:
     // gnndatum->random_generate();
     if (0 == graph->config->feature_file.compare("random")) {
       gnndatum->random_generate();
-    } else {
+    } else if(0 == graph->config->feature_file.compare("mask")){
+        gnndatum->read_mask_random_other(graph->config->mask_file);
+    }  else {
       // gnndatum->readFtrFrom1(graph->config->feature_file,graph->config->label_file);
       gnndatum->readFeature_Label_Mask(graph->config->feature_file,
                                        graph->config->label_file,

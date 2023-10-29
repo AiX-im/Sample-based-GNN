@@ -107,7 +107,7 @@ __global__ void zero_copy_feature_move_gpu_kernel(float *dev_feature,
 	for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
 		VertexId_CUDA vtx_idx=i/WARPSIZE;
 		VertexId_CUDA vtx_id=src_vertex[vtx_idx];
-		for(int j=laneId;j<feature_size;j+=32){
+		for(int j=laneId;j<feature_size;j+=WARPSIZE){
 			dev_feature[vtx_idx*feature_size+j]=
 				pinned_host_feature[vtx_id*feature_size+j];
 		}
@@ -336,6 +336,96 @@ __global__ void dev_load_share_embedding_and_feature_kernel(float* dev_feature, 
 }
 
 
+__global__ void dev_load_share_embedding_and_feature_kernel(float* dev_feature, float *dev_embedding,
+                                                            float* share_feature, float *share_embedding,
+                                                            VertexId_CUDA *dev_cacheflag,
+                                                            VertexId_CUDA *dev_cachelocation,
+                                                            VertexId_CUDA feature_size, VertexId_CUDA embedding_size,
+                                                            VertexId_CUDA *destination_vertex,
+                                                            VertexId_CUDA vertex_size, VertexId_CUDA super_batch_id){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;   // 这里代表的是batch内的偏移id，所以取的目的地应该是这个
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];   // 这里代表的是全局的id
+        // 检查cache flag中是否为相应的batch id，为的话则代表已经进行了缓存
+        if(dev_cacheflag[vtx_id] == super_batch_id){    // 使用全局ID来判断是否相等
+            // 从cache location中获取节点的本地位置
+            VertexId_CUDA vtx_id_local = dev_cachelocation[vtx_id]; // 利用全局ID获取相应位置
+
+//            assert(vtx_id_local < 640);
+//            if(laneId == 0) {
+//                std::printf("vertex size: %d, vtx_idx: %d, vtx_id_local: %d, feature size: %d, embedding size: %d\n",
+//                            vertex_size, vtx_idx, vtx_id_local, feature_size, embedding_size);
+//            }
+            // 首先将节点embedding从cache中移到这里
+            for(int j=laneId;j<embedding_size;j+=WARPSIZE){
+//                assert(dev_embedding[vtx_idx*embedding_size+j] < 1e-3);
+//                if(dev_embedding[vtx_idx*embedding_size+j] > 1e-1) {
+//                    std::printf("embedding: %f\n", dev_embedding[vtx_idx*embedding_size+j]);
+//                }
+                dev_embedding[vtx_idx*embedding_size+j] = share_embedding[vtx_id_local*embedding_size+j];
+            }
+            // 接着将节点聚合后的feature传到batch相应位置
+            for(int j=laneId;j<feature_size;j+=WARPSIZE){
+//                assert(dev_feature[vtx_idx*feature_size+j] < 1e-3);
+//                if(dev_feature[vtx_idx*feature_size+j] > 1e-1){
+//                    std::printf("feature: %f, share: %f\n", dev_feature[vtx_idx*feature_size+j], share_feature[vtx_id_local*feature_size+j]);
+//                }
+                dev_feature[vtx_idx*feature_size+j] = share_feature[vtx_id_local*feature_size+j];
+            }
+        }
+    }
+}
+
+__global__ void dev_load_share_embedding_kernel(float *dev_embedding,
+                                                            float *share_embedding,
+                                                            VertexId_CUDA *dev_cacheflag,
+                                                            VertexId_CUDA *dev_cachelocation,
+                                                            VertexId_CUDA embedding_size,
+                                                            VertexId_CUDA *destination_vertex,
+                                                            VertexId_CUDA vertex_size, VertexId_CUDA super_batch_id){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;   // 这里代表的是batch内的偏移id，所以取的目的地应该是这个
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];   // 这里代表的是全局的id
+        // 检查cache flag中是否为相应的batch id，为的话则代表已经进行了缓存
+        if(dev_cacheflag[vtx_id] == super_batch_id){    // 使用全局ID来判断是否相等
+            // 从cache location中获取节点的本地位置
+            VertexId_CUDA vtx_id_local = dev_cachelocation[vtx_id]; // 利用全局ID获取相应位置
+
+//            assert(vtx_id_local < 640);
+//            if(laneId == 0) {
+//                std::printf("vertex size: %d, vtx_idx: %d, vtx_id_local: %d, feature size: %d, embedding size: %d\n",
+//                            vertex_size, vtx_idx, vtx_id_local, feature_size, embedding_size);
+//            }
+            // 首先将节点embedding从cache中移到这里
+            for(int j=laneId;j<embedding_size;j+=WARPSIZE){
+//                assert(dev_embedding[vtx_idx*embedding_size+j] < 1e-3);
+//                if(dev_embedding[vtx_idx*embedding_size+j] > 1e-1) {
+//                    std::printf("embedding: %f\n", dev_embedding[vtx_idx*embedding_size+j]);
+//                }
+                dev_embedding[vtx_idx*embedding_size+j] = share_embedding[vtx_id_local*embedding_size+j];
+            }
+            // 接着将节点聚合后的feature传到batch相应位置
+//            for(int j=laneId;j<feature_size;j+=WARPSIZE){
+////                assert(dev_feature[vtx_idx*feature_size+j] < 1e-3);
+////                if(dev_feature[vtx_idx*feature_size+j] > 1e-1){
+////                    std::printf("feature: %f, share: %f\n", dev_feature[vtx_idx*feature_size+j], share_feature[vtx_id_local*feature_size+j]);
+////                }
+//                dev_feature[vtx_idx*feature_size+j] = share_feature[vtx_id_local*feature_size+j];
+//            }
+        }
+    }
+}
+
 __global__ void dev_load_share_aggregate_kernel(float* dev_feature,
                                                             float* share_feature,
                                                             VertexId_CUDA *dev_cacheflag,
@@ -556,6 +646,40 @@ __global__ void dev_update_share_embedding_and_feature_kernel(float *dev_aggrega
     }
 }
 
+
+
+__global__ void dev_update_share_embedding_and_feature_kernel(float *dev_aggregate,
+                                                              float *dev_embedding,
+                                                              float *share_aggregate,
+                                                              float *share_embedding,
+                                                              VertexId_CUDA *dev_cachemap,
+                                                              VertexId_CUDA *dev_cachelocation,
+                                                              VertexId_CUDA feature_size,
+                                                              VertexId_CUDA embedding_size,
+                                                              VertexId_CUDA *destination_vertex,
+                                                              VertexId_CUDA vertex_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    const int WARPSIZE=32;
+    size_t laneId =threadId%WARPSIZE;
+    size_t warp_id=threadId/WARPSIZE;
+
+    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
+        VertexId_CUDA vtx_idx=i/WARPSIZE;
+        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];
+        VertexId_CUDA vtx_id_local = dev_cachemap[vtx_id];
+            for(int j=laneId;j<feature_size;j+=WARP_SIZE){
+                //dev_embedding[vtx_idx*feature_size+j] = share_embedding[vtx_id*feature_size+j];
+                share_aggregate[vtx_id_local*feature_size+j] = dev_aggregate[vtx_id_local*feature_size+j];
+            }
+            for(int j = laneId; j < embedding_size; j+=WARP_SIZE) {
+                share_embedding[vtx_id_local * embedding_size + j] = dev_embedding[vtx_id_local * embedding_size + j];
+            }
+    }
+}
+
+
+
+
 // 确定每个节点要采的数量，比配置的少则直接为出边数，结果存在第二个参数中
 __global__ void sample_processing_get_co_gpu_kernel(VertexId_CUDA *dst,
 								 	VertexId_CUDA *local_column_offset,
@@ -598,6 +722,33 @@ __global__ void sample_processing_get_co_gpu_kernel_omit(
         }
 		//local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];
 	}
+}
+
+__global__ void sample_processing_get_co_gpu_kernel_omit(
+        VertexId_CUDA *CacheFlag,
+        VertexId_CUDA *dst,
+        VertexId_CUDA *local_column_offset,
+        VertexId_CUDA *global_column_offset,
+        VertexId_CUDA dst_size,
+        VertexId_CUDA src_index_size,
+        VertexId_CUDA* src_count,
+        VertexId_CUDA* src_index,
+        VertexId_CUDA fanout,
+        VertexId_CUDA super_batch_id
+)
+{
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    for(long i = threadId; i < (long)dst_size; i += blockDim.x * gridDim.x){
+        VertexId_CUDA dst_vtx = dst[i];
+        // 采样符合super batch id的点
+        if(CacheFlag[dst_vtx] == super_batch_id) {
+//            printf("有缓存点\n");
+            local_column_offset[i + 1] = 0;
+        } else {
+            local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
+        }
+        //local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];
+    }
 }
 
 __global__ void sample_processing_get_co_gpu_kernel_omit_lab(
@@ -903,6 +1054,15 @@ __global__ void sample_processing_traverse_gpu_kernel_stage3(
 	}
 }
 
+__global__ void sample_add_dst_to_src(VertexId_CUDA *src_index, VertexId_CUDA* dst,
+                                      VertexId_CUDA dst_size, VertexId_CUDA layer) {
+    size_t threadId = blockIdx.x * blockDim.x + threadIdx.x;
+    for(size_t i = threadId; i < dst_size; i++) {
+        src_index[dst[i]] = layer+1;
+    }
+}
+
+
 __global__ void sample_processing_update_ri_gpu_kernel(VertexId_CUDA *r_i,
 								 	VertexId_CUDA *src_index,
                                    	VertexId_CUDA edge_size,
@@ -911,10 +1071,69 @@ __global__ void sample_processing_update_ri_gpu_kernel(VertexId_CUDA *r_i,
 	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
 	for(long i = threadId; i < (long)edge_size; i += blockDim.x*gridDim.x){
 	   	VertexId_CUDA src_vtx = r_i[i];
+        if(src_vtx >= src_index_size) {
+            printf("i: %ld, src vtx: %u, src size: %u\n", i, src_vtx, src_index_size);
+        }
+        assert(src_vtx < src_index_size);
 		r_i[i] = src_index[src_vtx];
 	}
 }
 
+__global__ void sample_mark_src_dst(VertexId_CUDA* vtx_index, VertexId_CUDA* src, size_t src_size,
+                                    VertexId_CUDA* dst, size_t dst_size){
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    for(size_t i = threadId; i < src_size; i+=blockDim.x * gridDim.x) {
+        vtx_index[src[i]] = 1;
+    }
+    __syncthreads();
+    for(size_t i = threadId; i < dst_size; i+=blockDim.x * gridDim.x) {
+        vtx_index[dst[i]] = 1;
+    }
+}
+
+__global__ void sample_set_local_to_global(VertexId_CUDA* vtx_index, size_t vtx_size,
+                                           VertexId_CUDA* vtx_count, VertexId_CUDA* local_to_global) {
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    for(long i = threadId; i < vtx_size; i += blockDim.x*gridDim.x){
+        if(vtx_index[i] ==  1){
+            uint32_t allocation = atomicAdd(vtx_count, 1); // Just a naive atomic add
+            local_to_global[allocation] = i;
+            vtx_index[i] = allocation;
+        }
+    }
+}
+
+__global__ void sample_set_src_dst_local(VertexId_CUDA* vtx_index, VertexId_CUDA* source, size_t source_size,
+                                         VertexId_CUDA* destination, size_t destination_size,
+                                         VertexId_CUDA* src_to_local, VertexId_CUDA* dst_to_local) {
+    size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
+    for(size_t i = threadId; i < source_size; i+=blockDim.x * gridDim.x) {
+        src_to_local[i] = vtx_index[source[i]];
+    }
+    __syncthreads();
+    for(size_t i = threadId; i < destination_size; i+=blockDim.x * gridDim.x) {
+        dst_to_local[i] = vtx_index[destination[i]];
+    }
+}
+
+__global__ void sample_set_dst_local(VertexId_CUDA* src_index, VertexId_CUDA* destination, size_t destination_size,
+                                     VertexId_CUDA* dst_to_local) {
+    size_t threadId = blockIdx.x * blockDim.x + threadIdx.x;
+    for(size_t i = threadId; i < destination_size; i+=blockDim.x * gridDim.x) {
+        // 利用src_index存储的局部id将global id 转为src里面的local id
+        dst_to_local[i] = src_index[destination[i]];
+    }
+}
+
+__global__ void sample_check_dst_local(VertexId_CUDA* dst_local, VertexId_CUDA dst_size, VertexId_CUDA src_size) {
+    size_t  threadId = blockIdx.x * blockDim.x + threadIdx.x;
+    for(size_t i = threadId; i < dst_size; i+=blockDim.x * gridDim.x) {
+        if(dst_local[i] > src_size) {
+            printf("dst_local[%d]: %d, src_size: %d", i, dst_local[i], src_size);
+        }
+        assert(dst_local[i] < src_size);
+    }
+}
 
 
 

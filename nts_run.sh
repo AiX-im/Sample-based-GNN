@@ -54,6 +54,7 @@ mkdir -p ${FILENAME}
 mv ./cpu_sgnn.log ${FILENAME}
 mv ./nvidia_sgnn.log ${FILENAME}
 mv  ./output.log ${FILENAME}
+cp ${cfg_file} ${FILENAME}
 cd ${FILENAME}
 awk '{print $1","$9,","$NF}' ./cpu_sgnn.log > ./cpu_two.csv
 # 本地是12，服务器是13
@@ -64,7 +65,7 @@ cd ${run_dir}
 python3.8 get_rate.py ${FILENAME} ${start_time} ${end_time}
 
 cd ${FILENAME}
-tail -n 12 output.log >> ./rate_result.txt
+tail -n 20 output.log >> ./rate_result.txt
 cat ./rate_result.txt
 cd ${run_dir}
 
