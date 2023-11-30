@@ -1,0 +1,161 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.7533 (s)
+load directed time: 22.4199 (s)
+pipeline num: 3
+2023-10-15 10:39:38 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:169:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 1
+2023-10-15 10:39:38 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:174:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 1
+nts-server:169678:169678 [0] NCCL INFO cudaDriverVersion 11040
+nts-server:169678:169678 [0] NCCL INFO Bootstrap : Using eth0:172.29.232.209<0>
+nts-server:169678:169678 [0] NCCL INFO NET/Plugin : No plugin found (libnccl-net.so), using internal implementation
+NCCL version 2.14.3+cuda11.6
+nts-server:169678:170907 [0] NCCL INFO NET/IB : No device found.
+nts-server:169678:170907 [0] NCCL INFO NET/Socket : Using [0]eth0:172.29.232.209<0>
+nts-server:169678:170907 [0] NCCL INFO Using network Socket
+nts-server:169678:170907 [0] NCCL INFO NCCL_P2P_LEVEL set by environment to NVL
+nts-server:169678:170907 [0] NCCL INFO Channel 00/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 01/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 02/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 03/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 04/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 05/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 06/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 07/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 08/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 09/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 10/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 11/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 12/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 13/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 14/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 15/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 16/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 17/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 18/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 19/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 20/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 21/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 22/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 23/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 24/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 25/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 26/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 27/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 28/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 29/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 30/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Channel 31/32 :    0
+nts-server:169678:170907 [0] NCCL INFO Trees [0] -1/-1/-1->0->-1 [1] -1/-1/-1->0->-1 [2] -1/-1/-1->0->-1 [3] -1/-1/-1->0->-1 [4] -1/-1/-1->0->-1 [5] -1/-1/-1->0->-1 [6] -1/-1/-1->0->-1 [7] -1/-1/-1->0->-1 [8] -1/-1/-1->0->-1 [9] -1/-1/-1->0->-1 [10] -1/-1/-1->0->-1 [11] -1/-1/-1->0->-1 [12] -1/-1/-1->0->-1 [13] -1/-1/-1->0->-1 [14] -1/-1/-1->0->-1 [15] -1/-1/-1->0->-1 [16] -1/-1/-1->0->-1 [17] -1/-1/-1->0->-1 [18] -1/-1/-1->0->-1 [19] -1/-1/-1->0->-1 [20] -1/-1/-1->0->-1 [21] -1/-1/-1->0->-1 [22] -1/-1/-1->0->-1 [23] -1/-1/-1->0->-1 [24] -1/-1/-1->0->-1 [25] -1/-1/-1->0->-1 [26] -1/-1/-1->0->-1 [27] -1/-1/-1->0->-1 [28] -1/-1/-1->0->-1 [29] -1/-1/-1->0->-1 [30] -1/-1/-1->0->-1 [31] -1/-1/-1->0->-1
+nts-server:169678:170907 [0] NCCL INFO Connected all rings
+nts-server:169678:170907 [0] NCCL INFO Connected all trees
+nts-server:169678:170907 [0] NCCL INFO 32 coll channels, 32 p2p channels, 32 p2p channels per peer
+nts-server:169678:170907 [0] NCCL INFO comm 0x587c36a0 rank 0 nranks 1 cudaDev 0 busId 70 - Init COMPLETE
+nts-server:169678:170911 [0] NCCL INFO Using network Socket
+nts-server:169678:170911 [0] NCCL INFO Channel 00/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 01/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 02/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 03/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 04/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 05/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 06/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 07/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 08/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 09/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 10/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 11/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 12/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 13/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 14/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 15/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 16/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 17/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 18/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 19/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 20/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 21/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 22/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 23/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 24/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 25/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 26/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 27/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 28/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 29/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 30/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Channel 31/32 :    0
+nts-server:169678:170911 [0] NCCL INFO Trees [0] -1/-1/-1->0->-1 [1] -1/-1/-1->0->-1 [2] -1/-1/-1->0->-1 [3] -1/-1/-1->0->-1 [4] -1/-1/-1->0->-1 [5] -1/-1/-1->0->-1 [6] -1/-1/-1->0->-1 [7] -1/-1/-1->0->-1 [8] -1/-1/-1->0->-1 [9] -1/-1/-1->0->-1 [10] -1/-1/-1->0->-1 [11] -1/-1/-1->0->-1 [12] -1/-1/-1->0->-1 [13] -1/-1/-1->0->-1 [14] -1/-1/-1->0->-1 [15] -1/-1/-1->0->-1 [16] -1/-1/-1->0->-1 [17] -1/-1/-1->0->-1 [18] -1/-1/-1->0->-1 [19] -1/-1/-1->0->-1 [20] -1/-1/-1->0->-1 [21] -1/-1/-1->0->-1 [22] -1/-1/-1->0->-1 [23] -1/-1/-1->0->-1 [24] -1/-1/-1->0->-1 [25] -1/-1/-1->0->-1 [26] -1/-1/-1->0->-1 [27] -1/-1/-1->0->-1 [28] -1/-1/-1->0->-1 [29] -1/-1/-1->0->-1 [30] -1/-1/-1->0->-1 [31] -1/-1/-1->0->-1
+nts-server:169678:170911 [0] NCCL INFO Connected all rings
+nts-server:169678:170911 [0] NCCL INFO Connected all trees
+nts-server:169678:170911 [0] NCCL INFO 32 coll channels, 32 p2p channels, 32 p2p channels per peer
+nts-server:169678:170911 [0] NCCL INFO comm 0x58779e90 rank 0 nranks 1 cudaDev 0 busId 70 - Init COMPLETE
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /home/hdd/toao/dataset/products/reorder/reorder.edge.pre_sample_b512_f25-10-5_p3.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.1873
+cache ids size: 6402147
+device 0 train num: 196615
+start: 196608, last_per_device: 7, num_devices: 1, last_batchsize: 7, total_batchsize: 512, last_per_device_end: 7
+前者: 196615, 后者: 196615
+train id size: 196615
+sampler train id size: 196615
+batch_cache_num: 50881, device_cache_offset: 50881, sg dst: 50881
+cache size: 13787648 byte
+pipeline num: 3, batch size: 512
+cache size: 13787648 byte
+2023-10-15 10:41:15 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:349:TestMiniBatchAll] INFO  - Train Acc: 0.502927 98883 196615
+GNNmini::Running.Epoch[0]:Times[21.9968(s)]
+pipeline num: 3, batch size: 512
+2023-10-15 10:41:36 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:349:TestMiniBatchAll] INFO  - Train Acc: 0.719492 141463 196615
+GNNmini::Running.Epoch[1]:Times[21.6718(s)]
+pipeline num: 3, batch size: 512
+2023-10-15 10:41:58 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:349:TestMiniBatchAll] INFO  - Train Acc: 0.829316 163056 196615
+GNNmini::Running.Epoch[2]:Times[21.4387(s)]
+#run_time=65.107475(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 1.6638 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 5.6851 (s)
+init co time: 5.9464 (s)
+pro time: 6.9364 (s)
+post pro time: 1.0000 (s)
+#sample_time= 19.5753 (s)
+#transfer_feature_time= 46.7390 (s)
+#training_time= 44.1173 (s)
+#average epoch time: 21.7025 (s)
+#cpu wait time: 23.4357 (s)
+#gpu wait time: 0.0036 (s)
+总传输节点数: 271286645
+1697337653025
+1697337718133
+exec_time=191.224814(s)

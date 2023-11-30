@@ -1,0 +1,349 @@
+algorithm	:	GCNSAMPLEALLGPU
+vertices	:	232965
+epochs		:	100
+layers		:	602-256-41
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/reddit/reddit.edge
+feature_file	:	/home/hdd/toao/dataset/reddit/reddit.feat
+label_file	:	/home/hdd/toao/dataset/reddit/reddit.label
+mask_file	:	/home/hdd/toao/dataset/reddit/reddit-real.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.001
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [100] Epochs
+2023-07-04 19:05:03 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.591901 90816 153431
+GNNmini::Running.Epoch[0]:Times[0.443603(s)]:loss	1.19046
+[ CUDAFloatType{} ]
+2023-07-04 19:05:04 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.784418 120354 153431
+GNNmini::Running.Epoch[1]:Times[0.43127(s)]:loss	0.898813
+[ CUDAFloatType{} ]
+2023-07-04 19:05:04 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.808650 124072 153431
+GNNmini::Running.Epoch[2]:Times[0.431267(s)]:loss	0.802295
+[ CUDAFloatType{} ]
+2023-07-04 19:05:05 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.819274 125702 153431
+GNNmini::Running.Epoch[3]:Times[0.426726(s)]:loss	0.717234
+[ CUDAFloatType{} ]
+2023-07-04 19:05:05 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.826939 126878 153431
+GNNmini::Running.Epoch[4]:Times[0.428057(s)]:loss	0.699248
+[ CUDAFloatType{} ]
+2023-07-04 19:05:05 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.829572 127282 153431
+GNNmini::Running.Epoch[5]:Times[0.428903(s)]:loss	0.739779
+[ CUDAFloatType{} ]
+2023-07-04 19:05:06 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.832113 127672 153431
+GNNmini::Running.Epoch[6]:Times[0.429887(s)]:loss	0.704739
+[ CUDAFloatType{} ]
+2023-07-04 19:05:06 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.833873 127942 153431
+GNNmini::Running.Epoch[7]:Times[0.428241(s)]:loss	0.669454
+[ CUDAFloatType{} ]
+2023-07-04 19:05:07 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.835542 128198 153431
+GNNmini::Running.Epoch[8]:Times[0.427554(s)]:loss	0.679554
+[ CUDAFloatType{} ]
+2023-07-04 19:05:07 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.836858 128400 153431
+GNNmini::Running.Epoch[9]:Times[0.429079(s)]:loss	0.672369
+[ CUDAFloatType{} ]
+2023-07-04 19:05:08 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.837301 128468 153431
+GNNmini::Running.Epoch[10]:Times[0.429449(s)]:loss	0.64783
+[ CUDAFloatType{} ]
+2023-07-04 19:05:08 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.839739 128842 153431
+GNNmini::Running.Epoch[11]:Times[0.426943(s)]:loss	0.684203
+[ CUDAFloatType{} ]
+2023-07-04 19:05:08 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.838436 128642 153431
+GNNmini::Running.Epoch[12]:Times[0.428688(s)]:loss	0.633937
+[ CUDAFloatType{} ]
+2023-07-04 19:05:09 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.841043 129042 153431
+GNNmini::Running.Epoch[13]:Times[0.427139(s)]:loss	0.652121
+[ CUDAFloatType{} ]
+2023-07-04 19:05:09 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.841264 129076 153431
+GNNmini::Running.Epoch[14]:Times[0.427416(s)]:loss	0.6541
+[ CUDAFloatType{} ]
+2023-07-04 19:05:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.842392 129249 153431
+GNNmini::Running.Epoch[15]:Times[0.428836(s)]:loss	0.64358
+[ CUDAFloatType{} ]
+2023-07-04 19:05:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.843597 129434 153431
+GNNmini::Running.Epoch[16]:Times[0.430191(s)]:loss	0.651629
+[ CUDAFloatType{} ]
+2023-07-04 19:05:11 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.843376 129400 153431
+GNNmini::Running.Epoch[17]:Times[0.432429(s)]:loss	0.629642
+[ CUDAFloatType{} ]
+2023-07-04 19:05:11 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.844314 129544 153431
+GNNmini::Running.Epoch[18]:Times[0.430396(s)]:loss	0.641687
+[ CUDAFloatType{} ]
+2023-07-04 19:05:11 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.843415 129406 153431
+GNNmini::Running.Epoch[19]:Times[0.425858(s)]:loss	0.633371
+[ CUDAFloatType{} ]
+2023-07-04 19:05:12 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.844269 129537 153431
+GNNmini::Running.Epoch[20]:Times[0.431493(s)]:loss	0.612765
+[ CUDAFloatType{} ]
+2023-07-04 19:05:12 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.846413 129866 153431
+GNNmini::Running.Epoch[21]:Times[0.429311(s)]:loss	0.625619
+[ CUDAFloatType{} ]
+2023-07-04 19:05:13 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.844399 129557 153431
+GNNmini::Running.Epoch[22]:Times[0.430423(s)]:loss	0.650393
+[ CUDAFloatType{} ]
+2023-07-04 19:05:13 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.844399 129557 153431
+GNNmini::Running.Epoch[23]:Times[0.429618(s)]:loss	0.640991
+[ CUDAFloatType{} ]
+2023-07-04 19:05:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.845136 129670 153431
+GNNmini::Running.Epoch[24]:Times[0.431747(s)]:loss	0.615958
+[ CUDAFloatType{} ]
+2023-07-04 19:05:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.846550 129887 153431
+GNNmini::Running.Epoch[25]:Times[0.428209(s)]:loss	0.637807
+[ CUDAFloatType{} ]
+2023-07-04 19:05:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.845624 129745 153431
+GNNmini::Running.Epoch[26]:Times[0.427677(s)]:loss	0.627012
+[ CUDAFloatType{} ]
+2023-07-04 19:05:15 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.845083 129662 153431
+GNNmini::Running.Epoch[27]:Times[0.431155(s)]:loss	0.623968
+[ CUDAFloatType{} ]
+2023-07-04 19:05:15 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.847664 130058 153431
+GNNmini::Running.Epoch[28]:Times[0.429853(s)]:loss	0.618177
+[ CUDAFloatType{} ]
+2023-07-04 19:05:16 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.846641 129901 153431
+GNNmini::Running.Epoch[29]:Times[0.428519(s)]:loss	0.641602
+[ CUDAFloatType{} ]
+2023-07-04 19:05:16 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848368 130166 153431
+GNNmini::Running.Epoch[30]:Times[0.433675(s)]:loss	0.626439
+[ CUDAFloatType{} ]
+2023-07-04 19:05:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.844608 129589 153431
+GNNmini::Running.Epoch[31]:Times[0.431001(s)]:loss	0.633582
+[ CUDAFloatType{} ]
+2023-07-04 19:05:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.846354 129857 153431
+GNNmini::Running.Epoch[32]:Times[0.430725(s)]:loss	0.595492
+[ CUDAFloatType{} ]
+2023-07-04 19:05:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848720 130220 153431
+GNNmini::Running.Epoch[33]:Times[0.432744(s)]:loss	0.594726
+[ CUDAFloatType{} ]
+2023-07-04 19:05:18 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.847260 129996 153431
+GNNmini::Running.Epoch[34]:Times[0.429886(s)]:loss	0.604145
+[ CUDAFloatType{} ]
+2023-07-04 19:05:18 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.847756 130072 153431
+GNNmini::Running.Epoch[35]:Times[0.429417(s)]:loss	0.653721
+[ CUDAFloatType{} ]
+2023-07-04 19:05:19 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848140 130131 153431
+GNNmini::Running.Epoch[36]:Times[0.432237(s)]:loss	0.609153
+[ CUDAFloatType{} ]
+2023-07-04 19:05:19 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.847176 129983 153431
+GNNmini::Running.Epoch[37]:Times[0.428887(s)]:loss	0.636647
+[ CUDAFloatType{} ]
+2023-07-04 19:05:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848505 130187 153431
+GNNmini::Running.Epoch[38]:Times[0.431822(s)]:loss	0.625288
+[ CUDAFloatType{} ]
+2023-07-04 19:05:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848329 130160 153431
+GNNmini::Running.Epoch[39]:Times[0.426103(s)]:loss	0.618811
+[ CUDAFloatType{} ]
+2023-07-04 19:05:21 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848623 130205 153431
+GNNmini::Running.Epoch[40]:Times[0.430365(s)]:loss	0.599752
+[ CUDAFloatType{} ]
+2023-07-04 19:05:21 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849255 130302 153431
+GNNmini::Running.Epoch[41]:Times[0.431993(s)]:loss	0.588909
+[ CUDAFloatType{} ]
+2023-07-04 19:05:21 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.847580 130045 153431
+GNNmini::Running.Epoch[42]:Times[0.42725(s)]:loss	0.639495
+[ CUDAFloatType{} ]
+2023-07-04 19:05:22 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848042 130116 153431
+GNNmini::Running.Epoch[43]:Times[0.426524(s)]:loss	0.586976
+[ CUDAFloatType{} ]
+2023-07-04 19:05:22 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848127 130129 153431
+GNNmini::Running.Epoch[44]:Times[0.431784(s)]:loss	0.593699
+[ CUDAFloatType{} ]
+2023-07-04 19:05:23 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850415 130480 153431
+GNNmini::Running.Epoch[45]:Times[0.427227(s)]:loss	0.644787
+[ CUDAFloatType{} ]
+2023-07-04 19:05:23 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848740 130223 153431
+GNNmini::Running.Epoch[46]:Times[0.430641(s)]:loss	0.644127
+[ CUDAFloatType{} ]
+2023-07-04 19:05:24 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848473 130182 153431
+GNNmini::Running.Epoch[47]:Times[0.430433(s)]:loss	0.608413
+[ CUDAFloatType{} ]
+2023-07-04 19:05:24 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850304 130463 153431
+GNNmini::Running.Epoch[48]:Times[0.431302(s)]:loss	0.603062
+[ CUDAFloatType{} ]
+2023-07-04 19:05:24 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849268 130304 153431
+GNNmini::Running.Epoch[49]:Times[0.426238(s)]:loss	0.592668
+[ CUDAFloatType{} ]
+2023-07-04 19:05:25 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850428 130482 153431
+GNNmini::Running.Epoch[50]:Times[0.429954(s)]:loss	0.610144
+[ CUDAFloatType{} ]
+2023-07-04 19:05:25 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850043 130423 153431
+GNNmini::Running.Epoch[51]:Times[0.433588(s)]:loss	0.61907
+[ CUDAFloatType{} ]
+2023-07-04 19:05:26 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849385 130322 153431
+GNNmini::Running.Epoch[52]:Times[0.427455(s)]:loss	0.616617
+[ CUDAFloatType{} ]
+2023-07-04 19:05:26 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849144 130285 153431
+GNNmini::Running.Epoch[53]:Times[0.431736(s)]:loss	0.619541
+[ CUDAFloatType{} ]
+2023-07-04 19:05:27 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850122 130435 153431
+GNNmini::Running.Epoch[54]:Times[0.427085(s)]:loss	0.615151
+[ CUDAFloatType{} ]
+2023-07-04 19:05:27 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849528 130344 153431
+GNNmini::Running.Epoch[55]:Times[0.430312(s)]:loss	0.567732
+[ CUDAFloatType{} ]
+2023-07-04 19:05:27 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849809 130387 153431
+GNNmini::Running.Epoch[56]:Times[0.432764(s)]:loss	0.627527
+[ CUDAFloatType{} ]
+2023-07-04 19:05:28 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849991 130415 153431
+GNNmini::Running.Epoch[57]:Times[0.429842(s)]:loss	0.567132
+[ CUDAFloatType{} ]
+2023-07-04 19:05:28 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850767 130534 153431
+GNNmini::Running.Epoch[58]:Times[0.428451(s)]:loss	0.595624
+[ CUDAFloatType{} ]
+2023-07-04 19:05:29 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849398 130324 153431
+GNNmini::Running.Epoch[59]:Times[0.431145(s)]:loss	0.589474
+[ CUDAFloatType{} ]
+2023-07-04 19:05:29 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849587 130353 153431
+GNNmini::Running.Epoch[60]:Times[0.43495(s)]:loss	0.625283
+[ CUDAFloatType{} ]
+2023-07-04 19:05:30 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.848440 130177 153431
+GNNmini::Running.Epoch[61]:Times[0.429994(s)]:loss	0.601972
+[ CUDAFloatType{} ]
+2023-07-04 19:05:30 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850441 130484 153431
+GNNmini::Running.Epoch[62]:Times[0.430885(s)]:loss	0.624372
+[ CUDAFloatType{} ]
+2023-07-04 19:05:30 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.849659 130364 153431
+GNNmini::Running.Epoch[63]:Times[0.42716(s)]:loss	0.600671
+[ CUDAFloatType{} ]
+2023-07-04 19:05:31 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850721 130527 153431
+GNNmini::Running.Epoch[64]:Times[0.430667(s)]:loss	0.600473
+[ CUDAFloatType{} ]
+2023-07-04 19:05:31 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851034 130575 153431
+GNNmini::Running.Epoch[65]:Times[0.429713(s)]:loss	0.579525
+[ CUDAFloatType{} ]
+2023-07-04 19:05:32 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851301 130616 153431
+GNNmini::Running.Epoch[66]:Times[0.430448(s)]:loss	0.580136
+[ CUDAFloatType{} ]
+2023-07-04 19:05:32 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851660 130671 153431
+GNNmini::Running.Epoch[67]:Times[0.428868(s)]:loss	0.58655
+[ CUDAFloatType{} ]
+2023-07-04 19:05:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850408 130479 153431
+GNNmini::Running.Epoch[68]:Times[0.431655(s)]:loss	0.600251
+[ CUDAFloatType{} ]
+2023-07-04 19:05:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.852109 130740 153431
+GNNmini::Running.Epoch[69]:Times[0.429348(s)]:loss	0.58093
+[ CUDAFloatType{} ]
+2023-07-04 19:05:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851295 130615 153431
+GNNmini::Running.Epoch[70]:Times[0.432956(s)]:loss	0.580957
+[ CUDAFloatType{} ]
+2023-07-04 19:05:34 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850571 130504 153431
+GNNmini::Running.Epoch[71]:Times[0.42881(s)]:loss	0.589165
+[ CUDAFloatType{} ]
+2023-07-04 19:05:34 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850669 130519 153431
+GNNmini::Running.Epoch[72]:Times[0.431106(s)]:loss	0.596665
+[ CUDAFloatType{} ]
+2023-07-04 19:05:35 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851986 130721 153431
+GNNmini::Running.Epoch[73]:Times[0.431332(s)]:loss	0.576639
+[ CUDAFloatType{} ]
+2023-07-04 19:05:35 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850584 130506 153431
+GNNmini::Running.Epoch[74]:Times[0.431612(s)]:loss	0.627705
+[ CUDAFloatType{} ]
+2023-07-04 19:05:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851021 130573 153431
+GNNmini::Running.Epoch[75]:Times[0.426869(s)]:loss	0.614172
+[ CUDAFloatType{} ]
+2023-07-04 19:05:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851360 130625 153431
+GNNmini::Running.Epoch[76]:Times[0.429898(s)]:loss	0.625322
+[ CUDAFloatType{} ]
+2023-07-04 19:05:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851119 130588 153431
+GNNmini::Running.Epoch[77]:Times[0.430327(s)]:loss	0.606815
+[ CUDAFloatType{} ]
+2023-07-04 19:05:37 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850995 130569 153431
+GNNmini::Running.Epoch[78]:Times[0.430793(s)]:loss	0.615193
+[ CUDAFloatType{} ]
+2023-07-04 19:05:37 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851829 130697 153431
+GNNmini::Running.Epoch[79]:Times[0.428485(s)]:loss	0.610266
+[ CUDAFloatType{} ]
+2023-07-04 19:05:38 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851549 130654 153431
+GNNmini::Running.Epoch[80]:Times[0.433164(s)]:loss	0.595762
+[ CUDAFloatType{} ]
+2023-07-04 19:05:38 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851608 130663 153431
+GNNmini::Running.Epoch[81]:Times[0.432055(s)]:loss	0.602393
+[ CUDAFloatType{} ]
+2023-07-04 19:05:39 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851823 130696 153431
+GNNmini::Running.Epoch[82]:Times[0.432656(s)]:loss	0.601368
+[ CUDAFloatType{} ]
+2023-07-04 19:05:39 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851073 130581 153431
+GNNmini::Running.Epoch[83]:Times[0.42751(s)]:loss	0.626637
+[ CUDAFloatType{} ]
+2023-07-04 19:05:39 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850447 130485 153431
+GNNmini::Running.Epoch[84]:Times[0.429568(s)]:loss	0.602617
+[ CUDAFloatType{} ]
+2023-07-04 19:05:40 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850402 130478 153431
+GNNmini::Running.Epoch[85]:Times[0.429957(s)]:loss	0.613427
+[ CUDAFloatType{} ]
+2023-07-04 19:05:40 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.852370 130780 153431
+GNNmini::Running.Epoch[86]:Times[0.430728(s)]:loss	0.600278
+[ CUDAFloatType{} ]
+2023-07-04 19:05:41 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851621 130665 153431
+GNNmini::Running.Epoch[87]:Times[0.43015(s)]:loss	0.62777
+[ CUDAFloatType{} ]
+2023-07-04 19:05:41 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850995 130569 153431
+GNNmini::Running.Epoch[88]:Times[0.42752(s)]:loss	0.597087
+[ CUDAFloatType{} ]
+2023-07-04 19:05:42 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851151 130593 153431
+GNNmini::Running.Epoch[89]:Times[0.432089(s)]:loss	0.608208
+[ CUDAFloatType{} ]
+2023-07-04 19:05:42 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850917 130557 153431
+GNNmini::Running.Epoch[90]:Times[0.429912(s)]:loss	0.596386
+[ CUDAFloatType{} ]
+2023-07-04 19:05:42 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851660 130671 153431
+GNNmini::Running.Epoch[91]:Times[0.430392(s)]:loss	0.59307
+[ CUDAFloatType{} ]
+2023-07-04 19:05:43 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851836 130698 153431
+GNNmini::Running.Epoch[92]:Times[0.42872(s)]:loss	0.594402
+[ CUDAFloatType{} ]
+2023-07-04 19:05:43 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851608 130663 153431
+GNNmini::Running.Epoch[93]:Times[0.430595(s)]:loss	0.604705
+[ CUDAFloatType{} ]
+2023-07-04 19:05:44 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851177 130597 153431
+GNNmini::Running.Epoch[94]:Times[0.431497(s)]:loss	0.600946
+[ CUDAFloatType{} ]
+2023-07-04 19:05:44 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.850871 130550 153431
+GNNmini::Running.Epoch[95]:Times[0.43057(s)]:loss	0.582166
+[ CUDAFloatType{} ]
+2023-07-04 19:05:45 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.853074 130888 153431
+GNNmini::Running.Epoch[96]:Times[0.431367(s)]:loss	0.624565
+[ CUDAFloatType{} ]
+2023-07-04 19:05:45 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.852025 130727 153431
+GNNmini::Running.Epoch[97]:Times[0.431496(s)]:loss	0.583271
+[ CUDAFloatType{} ]
+2023-07-04 19:05:45 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.852983 130874 153431
+GNNmini::Running.Epoch[98]:Times[0.42941(s)]:loss	0.638963
+[ CUDAFloatType{} ]
+2023-07-04 19:05:46 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALLGPU.hpp:377:Forward] INFO  - Train Acc: 0.851797 130692 153431
+GNNmini::Running.Epoch[99]:Times[0.428853(s)]:loss	0.594167
+[ CUDAFloatType{} ]
+#run_time=43.026618(s)
+all:12.323659(s) prepro:4.049303(s) pro:6.997853(s) post:1.275402(s) copy:0.000000(s)
+test_time:6.920085(s)
+#wait time: 81.623540(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.213574
+inclusiveTime: 0.000000
+init layer time: 0.037745
+init co time: 4.011024
+#sample_time= 14.2808 (s)
+#transfer_feature_time= 32.3577 (s)
+#training_time= 39.4617 (s)
+#average epoch time: 0.430266
+总传输节点数: 123911641
+1688468703373
+1688468746400
+exec_time=103.249983(s)

@@ -47,6 +47,7 @@ Copyright (c) 2021-2022 Qiange Wang, Northeastern University
 #include "GCN_SAMPLE_PC_MULTI.hpp"
 #include "GAT_SAMPLE_ALL_MULTI.hpp"
 #include "GAT_SAMPLE_PC_MULTI.hpp"
+#include "GCN_SLOW.hpp"
 #endif
 
 void segment_fault_handler(int signum) {
@@ -259,7 +260,7 @@ int main(int argc, char **argv) {
       ntsGCN->init_graph();
       ntsGCN->init_nn();
       ntsGCN->run();
-  }else if (graph->config->algorithm == std::string("GCNSAMPLEALLMULTI")) {
+  } else if (graph->config->algorithm == std::string("GCNSAMPLEALLMULTI")) {
       graph->load_directed(graph->config->edge_file, graph->config->vertices);
       graph->generate_backward_structure();
       auto *ntsGCN =
@@ -267,7 +268,7 @@ int main(int argc, char **argv) {
       ntsGCN->init_graph();
       ntsGCN->init_nn();
       ntsGCN->run();
-  }else if (graph->config->algorithm == std::string("GCNSAMPLEPCMULTI")) {
+  } else if (graph->config->algorithm == std::string("GCNSAMPLEPCMULTI")) {
       graph->load_directed(graph->config->edge_file, graph->config->vertices);
       graph->generate_backward_structure();
       auto *ntsGCN =
@@ -337,6 +338,13 @@ int main(int argc, char **argv) {
     ntsGIN->init_graph();
     ntsGIN->init_nn();
     ntsGIN->run();
+  } else if(graph->config->algorithm == std::string("GCNSLOW")) {
+      graph->load_directed(graph->config->edge_file, graph->config->vertices);
+      graph->generate_backward_structure();
+      auto *ntsAlg = new GCN_SLOW_impl(graph, iterations);
+      ntsAlg->init_graph();
+      ntsAlg->init_nn();
+      ntsAlg->run();
   }
 #endif
   exec_time += get_time();

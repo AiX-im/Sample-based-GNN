@@ -1,0 +1,98 @@
+algorithm	:	GCNSAMPLEPDCACHE
+vertices	:	2449029
+epochs		:	10
+layers		:	100-64-47
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4, cache rate: 0.300 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 4
+batch cache num: 48000
+train ids num: 1591868, cache ids num: 1920000, super batch num: 40
+预采样完成，预采样时间: 7.603768 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+2023-08-30 03:14:28 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.574800 915006 1591868
+GNNmini::Running.Epoch[0]:Times[4.54173(s)]:loss	0.809143
+[ CUDAFloatType{} ]
+2023-08-30 03:14:32 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.723339 1151460 1591868
+GNNmini::Running.Epoch[1]:Times[4.62027(s)]:loss	0.784929
+[ CUDAFloatType{} ]
+2023-08-30 03:14:37 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.736502 1172414 1591868
+GNNmini::Running.Epoch[2]:Times[4.6522(s)]:loss	0.758825
+[ CUDAFloatType{} ]
+2023-08-30 03:14:42 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.739618 1177375 1591868
+GNNmini::Running.Epoch[3]:Times[4.68537(s)]:loss	0.786823
+[ CUDAFloatType{} ]
+2023-08-30 03:14:46 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.738152 1175041 1591868
+GNNmini::Running.Epoch[4]:Times[4.592(s)]:loss	0.760433
+[ CUDAFloatType{} ]
+2023-08-30 03:14:51 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.741836 1180905 1591868
+GNNmini::Running.Epoch[5]:Times[4.64453(s)]:loss	0.764671
+[ CUDAFloatType{} ]
+2023-08-30 03:14:55 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.740148 1178218 1591868
+GNNmini::Running.Epoch[6]:Times[4.61742(s)]:loss	0.789092
+[ CUDAFloatType{} ]
+2023-08-30 03:15:00 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.742006 1181175 1591868
+GNNmini::Running.Epoch[7]:Times[4.5949(s)]:loss	0.787152
+[ CUDAFloatType{} ]
+2023-08-30 03:15:05 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.743416 1183420 1591868
+GNNmini::Running.Epoch[8]:Times[4.69565(s)]:loss	0.723809
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 80
+2023-08-30 03:15:09 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.743504 1183560 1591868
+GNNmini::Running.Epoch[9]:Times[4.56801(s)]:loss	0.8058
+[ CUDAFloatType{} ]
+#run_time=46.213418(s)
+all:11.141541(s) prepro:6.779975(s) pro:3.944566(s) post:0.415844(s) copy:0.000000(s)
+test_time:3.756947(s)
+#wait time: 86.374465(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 1.612694
+inclusiveTime: 0.000000
+init layer time: 0.062633
+init co time: 6.716728
+transfer share time: 0.000000 (s)
+update cache time: 0.722965 (s)
+cpu_total_time: 47.1972 (s)
+cpu_sample_time: 27.8117 (s)
+cpu_graph_time: 2.6796 (s)
+cpu_wait_time: 0.7739 (s)
+cpu_nn_time: 14.7223 (s)
+cpu_copy_time: 1.2087 (s)
+# gpu wait time: 21.9490 (s)
+# gpu round: 1600
+# pre sample time: 7.603768 (s)
+#sample_time= 11.2774 (s)
+#transfer_feature_time= 18.3327 (s)
+#training_time= 29.3306 (s)
+#average epoch time: 4.621342
+总传输节点数: 152208912
+1693336463530
+1693336509743
+exec_time=135.220449(s)

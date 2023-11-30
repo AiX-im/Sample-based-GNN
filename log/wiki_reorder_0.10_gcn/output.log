@@ -1,0 +1,99 @@
+algorithm	:	GCNSAMPLEPDCACHE
+vertices	:	13593032
+epochs		:	10
+layers		:	600-128-16
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/wikipedia/reorder/reorder.edge.self
+feature_file	:	random
+label_file	:	/home/hdd/toao/dataset/orkut/orkut.label
+mask_file	:	/home/hdd/toao/dataset/orkut/orkut.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 3, cache rate: 0.100 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 4
+batch cache num: 12000
+train ids num: 8835470, cache ids num: 3540000, super batch num: 295
+预采样完成，预采样时间: 197.565233 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars
+2023-07-03 13:34:50 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062658 553612 8835470
+GNNmini::Running.Epoch[0]:Times[16.5476(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:35:07 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062658 553612 8835470
+GNNmini::Running.Epoch[1]:Times[16.4468(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:35:23 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062656 553598 8835470
+GNNmini::Running.Epoch[2]:Times[16.3896(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:35:39 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062663 553656 8835470
+GNNmini::Running.Epoch[3]:Times[16.4066(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:35:56 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062652 553564 8835470
+GNNmini::Running.Epoch[4]:Times[16.3917(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:36:12 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062632 553385 8835470
+GNNmini::Running.Epoch[5]:Times[16.3918(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:36:29 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062708 554057 8835470
+GNNmini::Running.Epoch[6]:Times[16.3913(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+2023-07-03 13:36:45 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062650 553545 8835470
+GNNmini::Running.Epoch[7]:Times[16.3359(s)]:loss	2.77259
+[ CUDAFloatType{} ]
+2023-07-03 13:37:01 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062687 553869 8835470
+GNNmini::Running.Epoch[8]:Times[16.3364(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 32
+2023-07-03 13:37:18 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.062641 553461 8835470
+GNNmini::Running.Epoch[9]:Times[16.4466(s)]:loss	2.77258
+[ CUDAFloatType{} ]
+#run_time=164.086104(s)
+all:31.998351(s) prepro:10.661604(s) pro:14.719803(s) post:6.609839(s) copy:0.000000(s)
+test_time:12.767965(s)
+#wait time: 83.448755(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 3.397250
+inclusiveTime: 0.000000
+init layer time: 0.258719
+init co time: 10.399035
+transfer share time: 0.000000 (s)
+update cache time: 2.536184 (s)
+cpu_total_time: 166.0609 (s)
+cpu_sample_time: 84.2899 (s)
+cpu_graph_time: 14.9085 (s)
+cpu_wait_time: 33.2815 (s)
+cpu_nn_time: 21.9510 (s)
+cpu_copy_time: 11.6269 (s)
+# gpu wait time: 1.0065 (s)
+# gpu round: 8840
+# pre sample time: 197.565233 (s)
+#sample_time= 33.0506 (s)
+#transfer_feature_time= 119.2868 (s)
+#training_time= 41.7059 (s)
+#average epoch time: 16.408610
+总传输节点数: 456946926
+1688362474150
+1688362638236
+exec_time=520.425493(s)

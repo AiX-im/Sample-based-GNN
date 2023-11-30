@@ -1,0 +1,99 @@
+algorithm	:	GCNSAMPLECACHE
+vertices	:	2449029
+epochs		:	10
+layers		:	100-64-47
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4, cache rate: 0.300 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 4
+batch cache num: 48000
+train ids num: 1591868, cache ids num: 1920000, super batch num: 40
+预采样完成，预采样时间: 8.161624 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars
+2023-08-30 03:16:57 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.583827 929376 1591868
+GNNmini::Running.Epoch[0]:Times[3.4405(s)]:loss	0.874017
+[ CUDAFloatType{} ]
+2023-08-30 03:17:00 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.736350 1172172 1591868
+GNNmini::Running.Epoch[1]:Times[3.41562(s)]:loss	0.766004
+[ CUDAFloatType{} ]
+2023-08-30 03:17:03 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.746994 1189116 1591868
+GNNmini::Running.Epoch[2]:Times[3.38651(s)]:loss	0.762685
+[ CUDAFloatType{} ]
+2023-08-30 03:17:07 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.749702 1193427 1591868
+GNNmini::Running.Epoch[3]:Times[3.44763(s)]:loss	0.758056
+[ CUDAFloatType{} ]
+2023-08-30 03:17:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.751067 1195599 1591868
+GNNmini::Running.Epoch[4]:Times[3.38556(s)]:loss	0.732276
+[ CUDAFloatType{} ]
+2023-08-30 03:17:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.752958 1198610 1591868
+GNNmini::Running.Epoch[5]:Times[3.37653(s)]:loss	0.736613
+[ CUDAFloatType{} ]
+2023-08-30 03:17:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.753183 1198968 1591868
+GNNmini::Running.Epoch[6]:Times[3.39499(s)]:loss	0.759646
+[ CUDAFloatType{} ]
+2023-08-30 03:17:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.751108 1195665 1591868
+GNNmini::Running.Epoch[7]:Times[3.45985(s)]:loss	0.766065
+[ CUDAFloatType{} ]
+2023-08-30 03:17:24 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.748572 1191627 1591868
+GNNmini::Running.Epoch[8]:Times[3.37266(s)]:loss	0.741408
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 80
+2023-08-30 03:17:27 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_CACHE.hpp:501:Train] INFO  - Train Acc: 0.749850 1193662 1591868
+GNNmini::Running.Epoch[9]:Times[3.43324(s)]:loss	0.739487
+[ CUDAFloatType{} ]
+#run_time=34.114834(s)
+all:12.985986(s) prepro:4.853185(s) pro:6.722855(s) post:1.408882(s) copy:0.000000(s)
+test_time:5.458854(s)
+#wait time: 34.443168(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 1.058443
+inclusiveTime: 0.000000
+init layer time: 0.123507
+init co time: 4.729058
+transfer share time: 0.000000 (s)
+update cache time: 0.794658 (s)
+cpu_total_time: 35.1343 (s)
+cpu_sample_time: 3.3651 (s)
+cpu_graph_time: 0.5401 (s)
+cpu_wait_time: 13.6663 (s)
+cpu_nn_time: 17.3082 (s)
+cpu_copy_time: 0.2541 (s)
+# gpu wait time: 0.0041 (s)
+# gpu round: 1600
+# pre sample time: 8.161624 (s)
+#sample_time= 13.3449 (s)
+#transfer_feature_time= 19.9646 (s)
+#training_time= 8.9959 (s)
+#average epoch time: 3.411483
+总传输节点数: 208961112
+1693336613658
+1693336647772
+exec_time=134.907579(s)

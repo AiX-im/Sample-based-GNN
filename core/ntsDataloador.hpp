@@ -89,7 +89,7 @@ public:
   Graph<Empty> *graph;
   ValueType *local_feature; // features of local partition
   ValueType *dev_local_feature;
-    ValueType **dev_local_feature_multi;
+  ValueType **dev_local_feature_multi;
 
   ValueType *local_embedding; // embedding of local partition
   ValueType *dev_local_embedding;

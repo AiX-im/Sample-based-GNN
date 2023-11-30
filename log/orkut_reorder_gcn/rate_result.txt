@@ -1,0 +1,20 @@
+------------------input info--------------
+first read time: 1.6276 (s)
+load directed time: 32.9710 (s)
+pipeline num: 4, cache rate: 0.350 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 250
+edge_filename: /home/hdd/toao/dataset/orkut/reorder/reorder.edge.self
+pre sample filename: /home/hdd/toao/dataset/orkut/reorder/reorder.edge.pre_sample_b1024_f25-10-5.bin
+loading data from file to batch_cache_ids
+预采样时间: 2.3808
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars
+2023-10-06 22:06:00 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:506:Train] INFO  - Train Acc: 0.050127 100114 1997206
+GNNmini::Running.Epoch[0]:Times[608.171(s)]:loss	2.99573
+[ CUDAFloatType{} ]

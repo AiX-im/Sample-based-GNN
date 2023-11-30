@@ -334,6 +334,8 @@ void InputInfo::readFromCfgFile(std::string config_file) {
       this->pipeline_num = std::atoi(cfg_v.c_str());
     } else if(0 == cfg_k.compare("CACHE_RATE")) {
         this->cache_rate = std::atof(cfg_v.c_str());
+    } else if(0 == cfg_k.compare("FEATURE_CACHE_RATE")) {
+        this->feature_cache_rate = std::atof(cfg_v.c_str());
     } else if(0 == cfg_k.compare("GPU_NUM")) {
         this->gpu_num = std::atoi(cfg_v.c_str());
     }

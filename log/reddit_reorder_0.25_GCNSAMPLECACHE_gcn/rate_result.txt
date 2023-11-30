@@ -1,0 +1,23 @@
+CPU使用率:
+693749: 1583.1
+GPU使用率: 
+init co time: 1.744562
+transfer share time: 0.000000 (s)
+update cache time: 0.066195 (s)
+cpu_total_time: 5.9900 (s)
+cpu_sample_time: 0.5144 (s)
+cpu_graph_time: 0.1822 (s)
+cpu_wait_time: 3.3376 (s)
+cpu_nn_time: 1.9081 (s)
+cpu_copy_time: 0.0474 (s)
+# gpu wait time: 0.0006 (s)
+# gpu round: 160
+# pre sample time: 0.398698 (s)
+#sample_time= 2.7674 (s)
+#transfer_feature_time= 2.7866 (s)
+#training_time= 0.7640 (s)
+#average epoch time: 0.540319
+总传输节点数: 6940907
+1693187220145
+1693187225548
+exec_time=55.224459(s)

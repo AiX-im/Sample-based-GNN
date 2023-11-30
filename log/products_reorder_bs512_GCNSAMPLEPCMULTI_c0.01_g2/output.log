@@ -1,0 +1,266 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.7890 (s)
+load directed time: 18.9679 (s)
+pipeline num: 1
+2023-10-10 22:35:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:144:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 2
+2023-10-10 22:35:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:149:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 2
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /home/hdd/toao/dataset/products/reorder/reorder.edge.pre_sample_b1024_f25-10-5_p1.bin
+after get most
+i:0 batch_cache_num[i]:11742 
+i:1 batch_cache_num[i]:11699 
+i:2 batch_cache_num[i]:11836 
+i:3 batch_cache_num[i]:11527 
+i:4 batch_cache_num[i]:11492 
+i:5 batch_cache_num[i]:11597 
+i:6 batch_cache_num[i]:11894 
+i:7 batch_cache_num[i]:11631 
+i:8 batch_cache_num[i]:11626 
+i:9 batch_cache_num[i]:11691 
+i:10 batch_cache_num[i]:11609 
+i:11 batch_cache_num[i]:11922 
+i:12 batch_cache_num[i]:11759 
+i:13 batch_cache_num[i]:11602 
+i:14 batch_cache_num[i]:11782 
+i:15 batch_cache_num[i]:11478 
+i:16 batch_cache_num[i]:11777 
+i:17 batch_cache_num[i]:11632 
+i:18 batch_cache_num[i]:11747 
+i:19 batch_cache_num[i]:11713 
+i:20 batch_cache_num[i]:11878 
+i:21 batch_cache_num[i]:11699 
+i:22 batch_cache_num[i]:11653 
+i:23 batch_cache_num[i]:11782 
+i:24 batch_cache_num[i]:11830 
+i:25 batch_cache_num[i]:11588 
+i:26 batch_cache_num[i]:11763 
+i:27 batch_cache_num[i]:12029 
+i:28 batch_cache_num[i]:11622 
+i:29 batch_cache_num[i]:11449 
+i:30 batch_cache_num[i]:11635 
+i:31 batch_cache_num[i]:11812 
+i:32 batch_cache_num[i]:11835 
+i:33 batch_cache_num[i]:11753 
+i:34 batch_cache_num[i]:11603 
+i:35 batch_cache_num[i]:11717 
+i:36 batch_cache_num[i]:11696 
+i:37 batch_cache_num[i]:11893 
+i:38 batch_cache_num[i]:11491 
+i:39 batch_cache_num[i]:11551 
+i:40 batch_cache_num[i]:11531 
+i:41 batch_cache_num[i]:11585 
+i:42 batch_cache_num[i]:11615 
+i:43 batch_cache_num[i]:11503 
+i:44 batch_cache_num[i]:11692 
+i:45 batch_cache_num[i]:11900 
+i:46 batch_cache_num[i]:11759 
+i:47 batch_cache_num[i]:11689 
+i:48 batch_cache_num[i]:11732 
+i:49 batch_cache_num[i]:11723 
+i:50 batch_cache_num[i]:11770 
+i:51 batch_cache_num[i]:11753 
+i:52 batch_cache_num[i]:11639 
+i:53 batch_cache_num[i]:11573 
+i:54 batch_cache_num[i]:11647 
+i:55 batch_cache_num[i]:11667 
+i:56 batch_cache_num[i]:11640 
+i:57 batch_cache_num[i]:11674 
+i:58 batch_cache_num[i]:11588 
+i:59 batch_cache_num[i]:11519 
+i:60 batch_cache_num[i]:11741 
+i:61 batch_cache_num[i]:11777 
+i:62 batch_cache_num[i]:11656 
+i:63 batch_cache_num[i]:11635 
+i:64 batch_cache_num[i]:11632 
+i:65 batch_cache_num[i]:11830 
+i:66 batch_cache_num[i]:11590 
+i:67 batch_cache_num[i]:11707 
+i:68 batch_cache_num[i]:11638 
+i:69 batch_cache_num[i]:11455 
+i:70 batch_cache_num[i]:11526 
+i:71 batch_cache_num[i]:11636 
+i:72 batch_cache_num[i]:11656 
+i:73 batch_cache_num[i]:11728 
+i:74 batch_cache_num[i]:11770 
+i:75 batch_cache_num[i]:11680 
+i:76 batch_cache_num[i]:11894 
+i:77 batch_cache_num[i]:11467 
+i:78 batch_cache_num[i]:11677 
+i:79 batch_cache_num[i]:11930 
+i:80 batch_cache_num[i]:11535 
+i:81 batch_cache_num[i]:11870 
+i:82 batch_cache_num[i]:11567 
+i:83 batch_cache_num[i]:11847 
+i:84 batch_cache_num[i]:11658 
+i:85 batch_cache_num[i]:11567 
+i:86 batch_cache_num[i]:11563 
+i:87 batch_cache_num[i]:11338 
+i:88 batch_cache_num[i]:15310 
+i:89 batch_cache_num[i]:11096 
+i:90 batch_cache_num[i]:11465 
+i:91 batch_cache_num[i]:11337 
+i:92 batch_cache_num[i]:11159 
+i:93 batch_cache_num[i]:11154 
+i:94 batch_cache_num[i]:11398 
+i:95 batch_cache_num[i]:11037 
+i:96 batch_cache_num[i]:11225 
+i:97 batch_cache_num[i]:11069 
+i:98 batch_cache_num[i]:11073 
+i:99 batch_cache_num[i]:10919 
+i:100 batch_cache_num[i]:11451 
+i:101 batch_cache_num[i]:11002 
+i:102 batch_cache_num[i]:11076 
+i:103 batch_cache_num[i]:10792 
+i:104 batch_cache_num[i]:11007 
+i:105 batch_cache_num[i]:11291 
+i:106 batch_cache_num[i]:11155 
+i:107 batch_cache_num[i]:11068 
+i:108 batch_cache_num[i]:11117 
+i:109 batch_cache_num[i]:11069 
+i:110 batch_cache_num[i]:10874 
+i:111 batch_cache_num[i]:11327 
+i:112 batch_cache_num[i]:11095 
+i:113 batch_cache_num[i]:11082 
+i:114 batch_cache_num[i]:11017 
+i:115 batch_cache_num[i]:11230 
+i:116 batch_cache_num[i]:11119 
+i:117 batch_cache_num[i]:10977 
+i:118 batch_cache_num[i]:11192 
+i:119 batch_cache_num[i]:11405 
+i:120 batch_cache_num[i]:11243 
+i:121 batch_cache_num[i]:11298 
+i:122 batch_cache_num[i]:11278 
+i:123 batch_cache_num[i]:11038 
+i:124 batch_cache_num[i]:11343 
+i:125 batch_cache_num[i]:11219 
+i:126 batch_cache_num[i]:10912 
+i:127 batch_cache_num[i]:11684 
+i:128 batch_cache_num[i]:11113 
+i:129 batch_cache_num[i]:11145 
+i:130 batch_cache_num[i]:11106 
+i:131 batch_cache_num[i]:11222 
+i:132 batch_cache_num[i]:11008 
+i:133 batch_cache_num[i]:11251 
+i:134 batch_cache_num[i]:11266 
+i:135 batch_cache_num[i]:11184 
+i:136 batch_cache_num[i]:11327 
+i:137 batch_cache_num[i]:10927 
+i:138 batch_cache_num[i]:10950 
+i:139 batch_cache_num[i]:11019 
+i:140 batch_cache_num[i]:11133 
+i:141 batch_cache_num[i]:11318 
+i:142 batch_cache_num[i]:11308 
+i:143 batch_cache_num[i]:11350 
+i:144 batch_cache_num[i]:11256 
+i:145 batch_cache_num[i]:10962 
+i:146 batch_cache_num[i]:11280 
+i:147 batch_cache_num[i]:11298 
+i:148 batch_cache_num[i]:11127 
+i:149 batch_cache_num[i]:11031 
+i:150 batch_cache_num[i]:11382 
+i:151 batch_cache_num[i]:11575 
+i:152 batch_cache_num[i]:11029 
+i:153 batch_cache_num[i]:11104 
+i:154 batch_cache_num[i]:11271 
+i:155 batch_cache_num[i]:11219 
+i:156 batch_cache_num[i]:10887 
+i:157 batch_cache_num[i]:10815 
+i:158 batch_cache_num[i]:10988 
+i:159 batch_cache_num[i]:11153 
+i:160 batch_cache_num[i]:11438 
+i:161 batch_cache_num[i]:11226 
+i:162 batch_cache_num[i]:11080 
+i:163 batch_cache_num[i]:10822 
+i:164 batch_cache_num[i]:10949 
+i:165 batch_cache_num[i]:11180 
+i:166 batch_cache_num[i]:10926 
+i:167 batch_cache_num[i]:11186 
+i:168 batch_cache_num[i]:11102 
+i:169 batch_cache_num[i]:11138 
+i:170 batch_cache_num[i]:11141 
+i:171 batch_cache_num[i]:10983 
+i:172 batch_cache_num[i]:10805 
+i:173 batch_cache_num[i]:11300 
+i:174 batch_cache_num[i]:11217 
+i:175 batch_cache_num[i]:11052 
+i:176 batch_cache_num[i]:11248 
+i:177 batch_cache_num[i]:11169 
+i:178 batch_cache_num[i]:11126 
+i:179 batch_cache_num[i]:11391 
+i:180 batch_cache_num[i]:11396 
+i:181 batch_cache_num[i]:11165 
+i:182 batch_cache_num[i]:11271 
+i:183 batch_cache_num[i]:11361 
+i:184 batch_cache_num[i]:11320 
+i:185 batch_cache_num[i]:11204 
+i:186 batch_cache_num[i]:11268 
+i:187 batch_cache_num[i]:10882 
+i:188 batch_cache_num[i]:11007 
+i:189 batch_cache_num[i]:11038 
+i:190 batch_cache_num[i]:11552 
+i:191 batch_cache_num[i]:11007 
+i:192 batch_cache_num[i]:392 
+Data was successfully written to the binary file.
+Data was successfully written to the binary file.
+预采样时间: 36.4994
+cache ids size: 2192753
+device 0 train num: 98307
+device 1 train num: 98308
+start: 196608, last_per_device: 3, num_devices: 2, last_batchsize: 7, total_batchsize: 1024, last_per_device_end: 4
+前者: 196615, 后者: 196615
+train id size: 98307
+sampler train id size: 98307
+train id size: 98308
+sampler train id size: 98308
+cache size: 3919360 byte
+cache size: 3919360 byte
+2023-10-10 22:36:58 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:324:TestMiniBatchAll] INFO  - Train Acc: 0.501732 98648 196615
+GNNmini::Running.Epoch[0]:Times[14.4978(s)]
+2023-10-10 22:37:13 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:324:TestMiniBatchAll] INFO  - Train Acc: 0.779523 153266 196615
+GNNmini::Running.Epoch[1]:Times[15.7217(s)]
+2023-10-10 22:37:28 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:324:TestMiniBatchAll] INFO  - Train Acc: 0.822999 161814 196615
+GNNmini::Running.Epoch[2]:Times[14.831(s)]
+#run_time=45.050716(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+#sample_time= 6.1070 (s)
+#transfer_feature_time= 33.5151 (s)
+#training_time= 49.1943 (s)
+#average epoch time: 15.016905
+#cpu wait time: 0.5108 (s)
+#gpu wait time: 43.4127 (s)
+总传输节点数: 278287261
+1696948603628
+1696948648679
+exec_time=167.848395(s)

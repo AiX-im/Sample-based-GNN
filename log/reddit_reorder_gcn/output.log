@@ -1,0 +1,99 @@
+algorithm	:	GCNSAMPLEPDCACHE
+vertices	:	232965
+epochs		:	10
+layers		:	602-256-41
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4, cache rate: 0.130 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 4
+batch cache num: 20800
+train ids num: 151427, cache ids num: 83200, super batch num: 4
+预采样完成，预采样时间: 0.661405 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars
+2023-06-29 12:18:34 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.263790 39945 151427
+GNNmini::Running.Epoch[0]:Times[0.31141(s)]:loss	33.3131
+[ CUDAFloatType{} ]
+2023-06-29 12:18:35 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.427638 64756 151427
+GNNmini::Running.Epoch[1]:Times[0.302175(s)]:loss	25.4716
+[ CUDAFloatType{} ]
+2023-06-29 12:18:35 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.541885 82056 151427
+GNNmini::Running.Epoch[2]:Times[0.298993(s)]:loss	21.3428
+[ CUDAFloatType{} ]
+2023-06-29 12:18:35 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.596268 90291 151427
+GNNmini::Running.Epoch[3]:Times[0.302338(s)]:loss	13.5212
+[ CUDAFloatType{} ]
+2023-06-29 12:18:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.650551 98511 151427
+GNNmini::Running.Epoch[4]:Times[0.292263(s)]:loss	17.7759
+[ CUDAFloatType{} ]
+2023-06-29 12:18:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.688517 104260 151427
+GNNmini::Running.Epoch[5]:Times[0.284351(s)]:loss	9.27212
+[ CUDAFloatType{} ]
+2023-06-29 12:18:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.680229 103005 151427
+GNNmini::Running.Epoch[6]:Times[0.293374(s)]:loss	7.84392
+[ CUDAFloatType{} ]
+2023-06-29 12:18:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.731527 110773 151427
+GNNmini::Running.Epoch[7]:Times[0.297861(s)]:loss	5.26298
+[ CUDAFloatType{} ]
+2023-06-29 12:18:37 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.749886 113553 151427
+GNNmini::Running.Epoch[8]:Times[0.30976(s)]:loss	3.99722
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 32
+2023-06-29 12:18:37 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.731554 110777 151427
+GNNmini::Running.Epoch[9]:Times[0.299476(s)]:loss	4.11015
+[ CUDAFloatType{} ]
+#run_time=2.993735(s)
+all:1.174785(s) prepro:0.509430(s) pro:0.629421(s) post:0.035777(s) copy:0.000000(s)
+test_time:0.599757(s)
+#wait time: 3.225385(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.121278
+inclusiveTime: 0.000000
+init layer time: 0.010243
+init co time: 0.499114
+transfer share time: 0.000000 (s)
+update cache time: 0.137912 (s)
+cpu_total_time: 3.4422 (s)
+cpu_sample_time: 0.8206 (s)
+cpu_graph_time: 0.5873 (s)
+cpu_wait_time: 0.8068 (s)
+cpu_nn_time: 0.8849 (s)
+cpu_copy_time: 0.3424 (s)
+# gpu wait time: 0.0002 (s)
+# gpu round: 160
+# pre sample time: 0.661405 (s)
+#sample_time= 1.1863 (s)
+#transfer_feature_time= 1.8087 (s)
+#training_time= 1.0903 (s)
+#average epoch time: 0.299374
+总传输节点数: 6650978
+1688012314569
+1688012317563
+exec_time=52.172989(s)

@@ -1,0 +1,99 @@
+algorithm	:	GCNSAMPLEPDCACHE
+vertices	:	232965
+epochs		:	10
+layers		:	602-256-41
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/reddit/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4, cache rate: 0.100 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 4
+batch cache num: 16000
+train ids num: 151427, cache ids num: 64000, super batch num: 4
+预采样完成，预采样时间: 0.394143 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+2023-08-28 09:39:29 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.174044 26355 151427
+GNNmini::Running.Epoch[0]:Times[0.604925(s)]:loss	38.7573
+[ CUDAFloatType{} ]
+CPU创建了新的nnVars
+2023-08-28 09:39:30 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.443290 67126 151427
+GNNmini::Running.Epoch[1]:Times[0.627499(s)]:loss	15.6707
+[ CUDAFloatType{} ]
+2023-08-28 09:39:31 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.468219 70901 151427
+GNNmini::Running.Epoch[2]:Times[0.605038(s)]:loss	19.9135
+[ CUDAFloatType{} ]
+2023-08-28 09:39:31 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.555377 84099 151427
+GNNmini::Running.Epoch[3]:Times[0.566872(s)]:loss	15.639
+[ CUDAFloatType{} ]
+2023-08-28 09:39:32 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.595264 90139 151427
+GNNmini::Running.Epoch[4]:Times[0.568367(s)]:loss	9.27923
+[ CUDAFloatType{} ]
+2023-08-28 09:39:32 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.632470 95773 151427
+GNNmini::Running.Epoch[5]:Times[0.573583(s)]:loss	9.27426
+[ CUDAFloatType{} ]
+2023-08-28 09:39:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.650551 98511 151427
+GNNmini::Running.Epoch[6]:Times[0.598702(s)]:loss	9.09105
+[ CUDAFloatType{} ]
+2023-08-28 09:39:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.681325 103171 151427
+GNNmini::Running.Epoch[7]:Times[0.565534(s)]:loss	6.31886
+[ CUDAFloatType{} ]
+2023-08-28 09:39:34 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.714661 108219 151427
+GNNmini::Running.Epoch[8]:Times[0.58361(s)]:loss	5.31602
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 80
+2023-08-28 09:39:35 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.701427 106215 151427
+GNNmini::Running.Epoch[9]:Times[0.555627(s)]:loss	7.12294
+[ CUDAFloatType{} ]
+#run_time=5.851492(s)
+all:2.628605(s) prepro:0.900890(s) pro:1.635938(s) post:0.091634(s) copy:0.000000(s)
+test_time:1.616888(s)
+#wait time: 7.035377(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.214297
+inclusiveTime: 0.000000
+init layer time: 0.029106
+init co time: 0.871711
+transfer share time: 0.000000 (s)
+update cache time: 0.028798 (s)
+cpu_total_time: 6.6709 (s)
+cpu_sample_time: 0.7843 (s)
+cpu_graph_time: 0.5995 (s)
+cpu_wait_time: 2.4669 (s)
+cpu_nn_time: 2.0301 (s)
+cpu_copy_time: 0.7898 (s)
+# gpu wait time: 0.0004 (s)
+# gpu round: 160
+# pre sample time: 0.394143 (s)
+#sample_time= 2.6375 (s)
+#transfer_feature_time= 4.1229 (s)
+#training_time= 0.6077 (s)
+#average epoch time: 0.585149
+总传输节点数: 7156393
+1693186769211
+1693186775062
+exec_time=57.398871(s)

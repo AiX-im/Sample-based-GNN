@@ -988,54 +988,54 @@ public:
 //            gnndatum->CacheFlag[cache_node_idx_seq[i]] = 0; //初始化为cache顶点
 //        }
 //    }
-    // void cachenode_select(){
-    //     MPI_Datatype vid_t = get_mpi_data_type<VertexId>();
-    //     ntsc->sample_num = graph->alloc_interleaved_vertex_array<VertexId>();
-    //     for (VertexId v_i = 0; v_i < graph->vertices; v_i++) {
-    //         ntsc->sample_num[v_i] = 0;
-    //     }
-    //     while(sampler_all->sample_not_finished()){
-    //           sampler_all->reservoir_sample_all(graph->gnnctx->layer_size.size()-1,
-    //                                     graph->config->batch_size,
-    //                                     graph->gnnctx->fanout,
-    //                                     ntsc->cacheflag);
-    //     }
+//     void cachenode_select(){
+//         MPI_Datatype vid_t = get_mpi_data_type<VertexId>();
+//         ntsc->sample_num = graph->alloc_interleaved_vertex_array<VertexId>();
+//         for (VertexId v_i = 0; v_i < graph->vertices; v_i++) {
+//             ntsc->sample_num[v_i] = 0;
+//         }
+//         while(sampler_all->sample_not_finished()){
+//               sampler_all->reservoir_sample_all(graph->gnnctx->layer_size.size()-1,
+//                                         graph->config->batch_size,
+//                                         graph->gnnctx->fanout,
+//                                         ntsc->cacheflag);
+//         }
 
-    //     SampledSubgraph *sg;
-    //     while(sampler_all->has_rest()){
-    //       sg=sampler_all->get_one();
-    //       for(auto id:sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->dst()){
-    //           ntsc->sample_num[id]++;
-    //       }
-    //     }
-    //     MPI_Allreduce(MPI_IN_PLACE, ntsc->sample_num, graph->vertices, vid_t, MPI_SUM,
-    //                 MPI_COMM_WORLD);
-    //     sampler_all->useagain();
-    //     for (VertexId v_i = 0; v_i < graph->vertices; v_i++) {
-    //         ntsc->sample_sort[v_i] = ntsc->sample_num[v_i];
-    //     }
-    //     sort(ntsc->sample_sort.begin(), ntsc->sample_sort.end());
-    //     ntsc->cacheSamplenum = ntsc->sample_sort[ntsc->cacheBoundary];
-    //     ntsc->fanoutBoundary = ntsc->fanoutRatio * graph->gnnctx->fanout[0];
+//         SampledSubgraph *sg;
+//         while(sampler_all->has_rest()){
+//           sg=sampler_all->get_one();
+//           for(auto id:sg->sampled_sgs[graph->gnnctx->layer_size.size()-2]->dst()){
+//               ntsc->sample_num[id]++;
+//           }
+//         }
+//         MPI_Allreduce(MPI_IN_PLACE, ntsc->sample_num, graph->vertices, vid_t, MPI_SUM,
+//                     MPI_COMM_WORLD);
+//         sampler_all->useagain();
+//         for (VertexId v_i = 0; v_i < graph->vertices; v_i++) {
+//             ntsc->sample_sort[v_i] = ntsc->sample_num[v_i];
+//         }
+//         sort(ntsc->sample_sort.begin(), ntsc->sample_sort.end());
+//         ntsc->cacheSamplenum = ntsc->sample_sort[ntsc->cacheBoundary];
+//         ntsc->fanoutBoundary = ntsc->fanoutRatio * graph->gnnctx->fanout[0];
 
-    //     for(int idx = 0; idx < graph->vertices; idx++){
-    //         VertexId nbrs = fully_rep_graph->column_offset[idx+1] - fully_rep_graph->column_offset[idx];
-    //         bool cacheflag = (nbrs > ntsc->fanoutBoundary) ? false : true;
-    //         if(ntsc->sample_num[idx] > ntsc->cacheSamplenum && cacheflag){
-    //             ntsc->partition_cache[graph->get_partition_id(idx)].push_back(idx);
-    //             ntsc->cacheflag[idx] = 1;
-    //             ntsc->cachenum++;
-    //           }
-    //     }
-    //     printf("cachenum:%d,vertexs:%d",ntsc->cachenum,graph->vertices);
-    //     for(int i = 0; i < ntsc->partition_cache[graph->partition_id].size();i++){
-    //         VertexId idx = ntsc->partition_cache[graph->partition_id][i];
-    //         ntsc->map_cache.insert(std::make_pair(idx, i));
-    //     }
+//         for(int idx = 0; idx < graph->vertices; idx++){
+//             VertexId nbrs = fully_rep_graph->column_offset[idx+1] - fully_rep_graph->column_offset[idx];
+//             bool cacheflag = (nbrs > ntsc->fanoutBoundary) ? false : true;
+//             if(ntsc->sample_num[idx] > ntsc->cacheSamplenum && cacheflag){
+//                 ntsc->partition_cache[graph->get_partition_id(idx)].push_back(idx);
+//                 ntsc->cacheflag[idx] = 1;
+//                 ntsc->cachenum++;
+//               }
+//         }
+//         printf("cachenum:%d,vertexs:%d",ntsc->cachenum,graph->vertices);
+//         for(int i = 0; i < ntsc->partition_cache[graph->partition_id].size();i++){
+//             VertexId idx = ntsc->partition_cache[graph->partition_id][i];
+//             ntsc->map_cache.insert(std::make_pair(idx, i));
+//         }
 
-    //     sampler_all->clear_queue();
-    //     sampler_all->restart();
-    // }
+//         sampler_all->clear_queue();
+//         sampler_all->restart();
+//     }
 
 };
 

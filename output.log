@@ -1,0 +1,132 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	10
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 8.3942 (s)
+load directed time: 48.5745 (s)
+pipeline num: 4
+2023-10-17 16:02:28 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:169:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 2
+2023-10-17 16:02:28 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:174:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 2
+nts-server:3213:3213 [0] NCCL INFO cudaDriverVersion 11040
+nts-server:3213:3213 [0] NCCL INFO Bootstrap : Using eth0:172.27.145.164<0>
+nts-server:3213:3213 [0] NCCL INFO NET/Plugin : No plugin found (libnccl-net.so), using internal implementation
+NCCL version 2.14.3+cuda11.6
+nts-server:3213:4746 [0] NCCL INFO NET/IB : No device found.
+nts-server:3213:4746 [0] NCCL INFO NET/Socket : Using [0]eth0:172.27.145.164<0>
+nts-server:3213:4746 [0] NCCL INFO Using network Socket
+nts-server:3213:4747 [1] NCCL INFO Using network Socket
+nts-server:3213:4747 [1] NCCL INFO NCCL_P2P_LEVEL set by environment to NVL
+nts-server:3213:4747 [1] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] -1/-1/-1->1->0
+nts-server:3213:4746 [0] NCCL INFO Channel 00/02 :    0   1
+nts-server:3213:4746 [0] NCCL INFO Channel 01/02 :    0   1
+nts-server:3213:4746 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] 1/-1/-1->0->-1
+nts-server:3213:4746 [0] NCCL INFO Channel 00/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:3213:4747 [1] NCCL INFO Channel 00/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:3213:4746 [0] NCCL INFO Channel 01/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:3213:4747 [1] NCCL INFO Channel 01/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:3213:4746 [0] NCCL INFO Connected all rings
+nts-server:3213:4747 [1] NCCL INFO Connected all rings
+nts-server:3213:4746 [0] NCCL INFO Connected all trees
+nts-server:3213:4747 [1] NCCL INFO Connected all trees
+nts-server:3213:4747 [1] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:3213:4747 [1] NCCL INFO 2 coll channels, 2 p2p channels, 2 p2p channels per peer
+nts-server:3213:4746 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:3213:4746 [0] NCCL INFO 2 coll channels, 2 p2p channels, 2 p2p channels per peer
+nts-server:3213:4747 [1] NCCL INFO comm 0x59267630 rank 1 nranks 2 cudaDev 1 busId 80 - Init COMPLETE
+nts-server:3213:4746 [0] NCCL INFO comm 0x59264ba0 rank 0 nranks 2 cudaDev 0 busId 70 - Init COMPLETE
+nts-server:3213:4800 [0] NCCL INFO Using network Socket
+nts-server:3213:4801 [1] NCCL INFO Using network Socket
+nts-server:3213:4801 [1] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] -1/-1/-1->1->0
+nts-server:3213:4800 [0] NCCL INFO Channel 00/02 :    0   1
+nts-server:3213:4800 [0] NCCL INFO Channel 01/02 :    0   1
+nts-server:3213:4800 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] 1/-1/-1->0->-1
+nts-server:3213:4800 [0] NCCL INFO Channel 00/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:3213:4801 [1] NCCL INFO Channel 00/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:3213:4801 [1] NCCL INFO Channel 01/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:3213:4800 [0] NCCL INFO Channel 01/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:3213:4800 [0] NCCL INFO Connected all rings
+nts-server:3213:4801 [1] NCCL INFO Connected all rings
+nts-server:3213:4800 [0] NCCL INFO Connected all trees
+nts-server:3213:4801 [1] NCCL INFO Connected all trees
+nts-server:3213:4801 [1] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:3213:4801 [1] NCCL INFO 2 coll channels, 2 p2p channels, 2 p2p channels per peer
+nts-server:3213:4800 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:3213:4800 [0] NCCL INFO 2 coll channels, 2 p2p channels, 2 p2p channels per peer
+nts-server:3213:4800 [0] NCCL INFO comm 0x3f9bc090 rank 0 nranks 2 cudaDev 0 busId 70 - Init COMPLETE
+nts-server:3213:4801 [1] NCCL INFO comm 0x3f9bed50 rank 1 nranks 2 cudaDev 1 busId 80 - Init COMPLETE
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /home/hdd/toao/dataset/products/reorder/reorder.edge.pre_sample_b1024_f25-10-5_p4.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.0784
+cache ids size: 2883706
+device 0 train num: 98307
+device 1 train num: 98308
+2023-10-17 16:03:47 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:973:initMultiSampler] INFO  - out of loop
+train_nids.size(): 196615, total_batchsize: 1024, last_batchsize: 7, num_device: 2
+start copy ids to multi device array
+start: 196608, last_per_device: 3, num_devices: 2, last_batchsize: 7, total_batchsize: 1024, last_per_device_end: 4
+前者: 196615, 后者: 196615
+start new device sampler
+train id size: 98307
+sampler train id size: 98307
+train id size: 98308
+sampler train id size: 98308
+finish new device sampler
+2023-10-17 16:03:47 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:719:run] INFO  - Finished init_multi_cache_var
+2023-10-17 16:03:47 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:730:run] INFO  - start cpu_sampler->sample_fast
+2023-10-17 16:03:47 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:734:run] INFO  - start CPU_Forward
+batch_cache_num: 61182, device_cache_offset: 61182, sg dst: 61182
+cache size: 19058432 byte
+cache size: 19058432 byte
+pipeline num: 4, batch size: 512
+pipeline num: 4, batch size: 512
+thread 0x7ffa5e676000 CUDA call on file /root/Sample-based-GNN/cuda/ntsCUDAGraphOP.cu line 263 returned code 700, error: an illegal memory access was encountered
+thread 0x7ffa6f698000 CUDA call on file /root/Sample-based-GNN/cuda/ntsCUDAGraphOP.cu line 263 returned code 700, error: an illegal memory access was encountered
+ 0# Cuda_Stream::CUDA_DEVICE_SYNCHRONIZE() at /usr/include/boost/stacktrace/stacktrace.hpp:127 (discriminator 1)
+ 1# GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}::operator()(int) const at /root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:523
+ 2# void std::__invoke_impl<void, GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int>(std::__invoke_other, GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}&&, int&&) at /usr/include/c++/9/bits/invoke.h:60
+ 3# std::__invoke_result<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int>::type std::__invoke<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int>(std::__invoke_result&&, (GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}&&)...) at /usr/include/c++/9/bits/invoke.h:96
+ 4# void std::thread::_Invoker<std::tuple<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int> >::_M_invoke<0ul, 1ul>(std::_Index_tuple<0ul, 1ul>) at /usr/include/c++/9/thread:244
+ 5# std::thread::_Invoker<std::tuple<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int> >::operator()() at /usr/include/c++/9/thread:252
+ 6# std::thread::_State_impl<std::thread::_Invoker<std::tuple<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int> > >::_M_run() at /usr/include/c++/9/thread:195
+ 7# 0x00007FFABA76CDE4 in /lib/x86_64-linux-gnu/libstdc++.so.6
+ 8# 0x00007FFAEFCB5609 in /lib/x86_64-linux-gnu/libpthread.so.0
+ 9# clone in /lib/x86_64-linux-gnu/libc.so.6
+ 0# Cuda_Stream::CUDA_DEVICE_SYNCHRONIZE() at /usr/include/boost/stacktrace/stacktrace.hpp:127 (discriminator 1)
+ 1# GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}::operator()(int) const at /root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:523
+ 2# void std::__invoke_impl<void, GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int>(std::__invoke_other, GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}&&, int&&) at /usr/include/c++/9/bits/invoke.h:60
+ 3# std::__invoke_result<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int>::type std::__invoke<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int>(std::__invoke_result&&, (GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}&&)...) at /usr/include/c++/9/bits/invoke.h:96
+ 4# void std::thread::_Invoker<std::tuple<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int> >::_M_invoke<0ul, 1ul>(std::_Index_tuple<0ul, 1ul>) at /usr/include/c++/9/thread:244
+ 5# std::thread::_Invoker<std::tuple<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int> >::operator()() at /usr/include/c++/9/thread:252
+ 6# std::thread::_State_impl<std::thread::_Invoker<std::tuple<GCN_SAMPLE_PC_MULTI_impl::Train(FastSampler*, int, int, int)::{lambda(int)#1}, int> > >::_M_run() at /usr/include/c++/9/thread:195
+ 7# 0x00007FFABA76CDE4 in /lib/x86_64-linux-gnu/libstdc++.so.6
+ 8# 0x00007FFAEFCB5609 in /lib/x86_64-linux-gnu/libpthread.so.0
+ 9# clone in /lib/x86_64-linux-gnu/libc.so.6

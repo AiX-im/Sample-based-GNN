@@ -260,6 +260,63 @@ public:
                                        subgraph->sampled_sgs[layer-1]->src_size);
     }
 
+    void load_feature_gpu_cache(Cuda_Stream* cuda_stream, SampledSubgraph* ssg,
+                                                   NtsVar& local_feature, ValueType* global_feature_buffer,
+                                                   ValueType* dev_cache_feature, VertexId* local_idx,
+                                                   VertexId* local_idx_cache,
+                                                   VertexId* cache_node_hashmap, VertexId* dev_local_idx, 
+                                                   VertexId* dev_local_idx_cache,
+                                                   VertexId* dev_cache_node_hashmap, VertexId* outmost_vertex) {
+    // std::vector<int> &cache_node_hashmap) {
+
+        auto csc_layer = ssg->sampled_sgs[layer-1];
+        if (local_feature.size(0) != csc_layer->src_size) {
+            local_feature.resize_({csc_layer->src_size, local_feature.size(1)});
+        }
+        ValueType* local_feature_buffer =
+            whole_graph->graph_->Nts->getWritableBuffer(local_feature, torch::DeviceType::CUDA);
+
+        // std::vector<int> local_idx_cache, local_idx;
+        int local_idx_cnt = 0;
+        int local_idx_cache_cnt = 0;
+        
+        // std::vector<int> local_idx_cache, global_idx_cache, local_idx, global_idx;
+        cuda_stream->move_bytes_out(outmost_vertex, csc_layer->dev_source, (csc_layer->src_size));
+        //LOG_DEBUG("src_size %d vertices %d", csc_layer->src_size, whole_graph->graph_->vertices);
+        for (int i = 0; i < csc_layer->src_size; ++i) {
+            int node_id = outmost_vertex[i];
+            // LOG_DEBUG("node_id %d ", node_id);
+            // LOG_DEBUG("cache_node_hashmap[node_id] %d", cache_node_hashmap[node_id]);
+            if (cache_node_hashmap[node_id] != -1) {
+                local_idx_cache[local_idx_cache_cnt++] = i;
+                // local_idx_cache.push_back(cache_node_hashmap[node_id]);
+                // global_idx_cache.push_back(csc_layer->src[i]);
+            } else {
+                local_idx[local_idx_cnt++] = i;
+                // global_idx.push_back(csc_layer->src[i]);
+            }
+        }
+        
+        // //区分cache点与非cache点
+        // cuda_stream->init_cache_map(csc_layer->dev_source, dev_cache_node_hashmap, dev_local_idx_cache, dev_local_idx, dev_local_idx_cache);
+
+        // LOG_DEBUG("start zero_copy_feature_move_gpU_cache");
+        double trans_feature_cost = -get_time();
+        //dev_local_idx_cache[0] 非cache点个数
+        cuda_stream->zero_copy_feature_move_gpu_cache(local_feature_buffer, global_feature_buffer, csc_layer->dev_source,
+                                                    local_feature.size(1), local_idx_cnt, dev_local_idx);
+        trans_feature_cost += get_time();
+        // LOG_DEBUG("gather_fature_from_gpu_cache");
+        double gather_gpu_cache_cost = -get_time();
+        //dev_local_idx_cache[1] cache点个数
+        cuda_stream->gather_feature_from_gpu_cache(local_feature_buffer, dev_cache_feature, csc_layer->dev_source,
+                                                local_feature.size(1), local_idx_cache_cnt, dev_local_idx_cache,
+                                                dev_cache_node_hashmap);
+        gather_gpu_cache_cost += get_time();
+        return;
+    }
+
+
     void load_dst_src_feature_gpu(Cuda_Stream * cudaStream, SampledSubgraph* subgraph, NtsVar& local_feature,
                                   ValueType* global_feature_buffer) {
 //        std::printf("local size: %d, dst size: %d, src size: %d\n", subgraph->sampled_sgs[layer-1]->local_size,

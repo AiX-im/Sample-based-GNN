@@ -1,0 +1,24 @@
+CPU使用率:
+289228: 1607.7555555555555
+GPU使用率: 
+44.365624999999994
+cache size: 47646208 byte
+2023-10-10 12:19:17 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:323:TestMiniBatchAll] INFO  - Train Acc: 0.399776 78602 196615
+GNNmini::Running.Epoch[0]:Times[16.4369(s)]
+2023-10-10 12:19:34 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:323:TestMiniBatchAll] INFO  - Train Acc: 0.505943 99476 196615
+GNNmini::Running.Epoch[1]:Times[16.1888(s)]
+2023-10-10 12:19:50 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:323:TestMiniBatchAll] INFO  - Train Acc: 0.546316 107414 196615
+GNNmini::Running.Epoch[2]:Times[16.5449(s)]
+#run_time=49.170845(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+#sample_time= 30.1967 (s)
+#transfer_feature_time= 114.0452 (s)
+#training_time= 146.2149 (s)
+#average epoch time: 16.390282
+#cpu wait time: 0.6554 (s)
+#gpu wait time: 58.9468 (s)
+总传输节点数: 302749153
+1696911541509
+1696911590680
+exec_time=178.758780(s)

@@ -1,0 +1,99 @@
+algorithm	:	GSSAMPLEPDCACHE
+vertices	:	3072626
+epochs		:	10
+layers		:	600-128-128-20
+fanout		:	4-4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/orkut/reorder/reorder.edge.self
+feature_file	:	random
+label_file	:	/home/hdd/sanzo/graph-learn/examples/data/orkut/orkut.label
+mask_file	:	/home/hdd/sanzo/graph-learn/examples/data/orkut/orkut.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 3, cache rate: 0.350 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+sample last layer neighs: 16
+batch cache num: 168000
+train ids num: 1997206, cache ids num: 11256000, super batch num: 67
+预采样完成，预采样时间: 41.045673 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars
+2023-08-30 06:55:39 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.050035 99931 1997206
+GNNmini::Running.Epoch[0]:Times[38.2257(s)]:loss	2.99574
+[ CUDAFloatType{} ]
+2023-08-30 06:56:17 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.050236 100332 1997206
+GNNmini::Running.Epoch[1]:Times[38.1208(s)]:loss	2.99573
+[ CUDAFloatType{} ]
+2023-08-30 06:56:55 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.050225 100310 1997206
+GNNmini::Running.Epoch[2]:Times[38.1197(s)]:loss	2.99575
+[ CUDAFloatType{} ]
+2023-08-30 06:57:33 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.050098 100057 1997206
+GNNmini::Running.Epoch[3]:Times[38.0797(s)]:loss	2.99566
+[ CUDAFloatType{} ]
+2023-08-30 06:58:11 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.050097 100054 1997206
+GNNmini::Running.Epoch[4]:Times[38.1616(s)]:loss	2.99546
+[ CUDAFloatType{} ]
+2023-08-30 06:58:49 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.049695 99251 1997206
+GNNmini::Running.Epoch[5]:Times[38.0196(s)]:loss	2.99576
+[ CUDAFloatType{} ]
+2023-08-30 06:59:27 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.049868 99597 1997206
+GNNmini::Running.Epoch[6]:Times[37.9626(s)]:loss	2.99574
+[ CUDAFloatType{} ]
+2023-08-30 07:00:05 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.049951 99763 1997206
+GNNmini::Running.Epoch[7]:Times[38.1086(s)]:loss	2.99582
+[ CUDAFloatType{} ]
+2023-08-30 07:00:43 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.049984 99829 1997206
+GNNmini::Running.Epoch[8]:Times[37.9288(s)]:loss	2.99579
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 80
+2023-08-30 07:01:21 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.049830 99521 1997206
+GNNmini::Running.Epoch[9]:Times[38.0689(s)]:loss	2.99572
+[ CUDAFloatType{} ]
+#run_time=380.800287(s)
+all:66.988754(s) prepro:20.440175(s) pro:42.470257(s) post:4.074597(s) copy:0.000000(s)
+test_time:40.759890(s)
+#wait time: 124.354743(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 6.423150
+inclusiveTime: 0.000000
+init layer time: 0.273063
+init co time: 20.164871
+transfer share time: 0.000000 (s)
+update cache time: 6.106937 (s)
+cpu_total_time: 382.4861 (s)
+cpu_sample_time: 107.1870 (s)
+cpu_graph_time: 54.9594 (s)
+cpu_wait_time: 98.4024 (s)
+cpu_nn_time: 70.3168 (s)
+cpu_copy_time: 51.6190 (s)
+# gpu wait time: 0.0085 (s)
+# gpu round: 2000
+# pre sample time: 41.045673 (s)
+#sample_time= 68.8694 (s)
+#transfer_feature_time= 354.9087 (s)
+#training_time= 41.4230 (s)
+#average epoch time: 38.080029
+总传输节点数: 518942713
+1693349700876
+1693350081676
+exec_time=518.167484(s)

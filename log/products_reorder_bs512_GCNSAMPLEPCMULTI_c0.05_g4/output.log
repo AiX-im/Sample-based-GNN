@@ -1,0 +1,83 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/root/dataset/products/reorder/reorder.edge.self
+feature_file	:	/root/dataset/products/reorder/reorder.featuretable
+label_file	:	/root/dataset/products/reorder/reorder.labeltable
+mask_file	:	/root/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.6081 (s)
+load directed time: 22.3882 (s)
+pipeline num: 4
+2023-10-10 11:27:21 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:144:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 4
+2023-10-10 11:27:21 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:149:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 4
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /root/dataset/products/reorder/reorder.edge.pre_sample_b512_f25-10-5_p4.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.0572
+cache ids size: 1063192
+device 0 train num: 49153
+device 1 train num: 49153
+device 2 train num: 49153
+device 3 train num: 49156
+start: 196608, last_per_device: 1, num_devices: 4, last_batchsize: 7, total_batchsize: 512, last_per_device_end: 4
+前者: 196615, 后者: 196615
+train id size: 49153
+sampler train id size: 49153
+train id size: 49153
+sampler train id size: 49153
+train id size: 49153
+sampler train id size: 49153
+train id size: 49156
+sampler train id size: 49156
+cache size: 3685632 byte
+cache size: 3685632 byte
+cache size: 3685632 byte
+cache size: 3685632 byte
+cache size: 3685632 byte
+cache size: 3685632 byte
+cache size: 3685632 byte
+cache size: 3685632 byte
+2023-10-10 11:29:00 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:323:TestMiniBatchAll] INFO  - Train Acc: 0.394868 77637 196615
+GNNmini::Running.Epoch[0]:Times[10.956(s)]
+2023-10-10 11:29:10 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:323:TestMiniBatchAll] INFO  - Train Acc: 0.453450 89155 196615
+GNNmini::Running.Epoch[1]:Times[10.3803(s)]
+2023-10-10 11:29:20 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:323:TestMiniBatchAll] INFO  - Train Acc: 0.495603 97443 196615
+GNNmini::Running.Epoch[2]:Times[10.2835(s)]
+#run_time=31.619976(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+#sample_time= 20.1067 (s)
+#transfer_feature_time= 68.9558 (s)
+#training_time= 96.8687 (s)
+#average epoch time: 10.539992
+#cpu wait time: 12.4573 (s)
+#gpu wait time: 0.0089 (s)
+总传输节点数: 398130498
+1696908529229
+1696908560849
+exec_time=170.781758(s)

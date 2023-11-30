@@ -175,6 +175,7 @@ public:
   std::string pre_sample_file;
   int pipeline_num;
   float cache_rate;
+  float feature_cache_rate;
   float del_frac = 0;
   bool with_cuda;
   bool up_degree;

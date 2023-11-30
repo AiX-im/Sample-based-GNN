@@ -113,6 +113,76 @@ __global__ void zero_copy_feature_move_gpu_kernel(float *dev_feature,
 		}
 	}
 }
+
+
+        // int local_idx_cnt = 0;
+        // int local_idx_cache_cnt = 0;
+        // std::vector<int> local_idx_cache, global_idx_cache, local_idx, global_idx;
+        
+        // LOG_DEBUG("src_size %d src_size_test:%d vertices %d", csc_layer->src_size, csc_layer->src().size(), whole_graph->graph_->vertices);
+        // for (int i = 0; i < csc_layer->src_size; ++i) {
+        //     int node_id = csc_layer->src()[i];
+        //     LOG_DEBUG("node_id %d ", node_id);
+        //     LOG_DEBUG("cache_node_hashmap[node_id] %d", cache_node_hashmap[node_id]);
+        //     if (cache_node_hashmap[node_id] != -1) {
+        //         local_idx_cache[local_idx_cache_cnt++] = i;
+        //         // local_idx_cache.push_back(cache_node_hashmap[node_id]);
+        //         // global_idx_cache.push_back(csc_layer->src[i]);
+        //     } else {
+        //         local_idx[local_idx_cnt++] = i;
+        //         // global_idx.push_back(csc_layer->src[i]);
+        //     }
+        // }
+
+
+// __global__ void init_cache_map_kernel(VertexId_CUDA *src_vertex, VertexId_CUDA *cache_node_hashmap, 
+//                                       VertexId_CUDA* vertex_size, VertexId_CUDA *local_idx, 
+//                                       VertexId_CUDA * local_idx_cache){
+//     size_t threadId = blockIdx.x * blockDim.x + threadIdx.x;
+// 	const int WARPSIZE = 32;
+// 	size_t laneId = threadId % WARPSIZE;
+// 	size_t warpId = threadId / WARPSIZE;
+// 	for (long i = threadId; i < (long) vertex_size[0] * WARPSIZE; i += blockDim.x * gridDim.x) {
+// 		VertexId_CUDA vtx_lid = local_idx[i / WARPSIZE];
+// 		VertexId_CUDA vtx_gid = src_vertex[vtx_lid];
+// 		for (int j = laneId; j < feature_size; j += 32) {
+// 			dev_feature[vtx_lid * feature_size + j] = pinned_host_feature[vtx_gid * feature_size + j];
+// 		}
+// 	}
+// }
+
+__global__ void zero_copy_feature_move_gpu_cache_kernel(float *dev_feature, float *pinned_host_feature, VertexId_CUDA *src_vertex, VertexId_CUDA feature_size, VertexId_CUDA vertex_size,
+																												VertexId_CUDA* local_idx) {
+	size_t threadId = blockIdx.x * blockDim.x + threadIdx.x;
+	const int WARPSIZE = 32;
+	size_t laneId = threadId % WARPSIZE;
+	size_t warpId = threadId / WARPSIZE;
+	for (long i = threadId; i < (long) vertex_size * WARPSIZE; i += blockDim.x * gridDim.x) {
+		VertexId_CUDA vtx_lid = local_idx[i / WARPSIZE];
+		VertexId_CUDA vtx_gid = src_vertex[vtx_lid];
+		for (int j = laneId; j < feature_size; j += 32) {
+			dev_feature[vtx_lid * feature_size + j] = pinned_host_feature[vtx_gid * feature_size + j];
+		}
+	}
+}
+
+__global__ void gather_feature_from_gpu_cache_kernel(float *dev_feature, float *dev_cache_feature, VertexId_CUDA *src_vertex, VertexId_CUDA feature_size, VertexId_CUDA vertex_size,
+																												VertexId_CUDA* local_idx_cache, VertexId_CUDA* cache_node_hashmap) {
+	size_t threadId = blockIdx.x * blockDim.x + threadIdx.x;
+	const int WARPSIZE = 32;
+	size_t laneId = threadId % WARPSIZE;
+	size_t warpId = threadId / WARPSIZE;
+	for (long i = threadId; i < (long) vertex_size * WARPSIZE; i += blockDim.x * gridDim.x) {
+		VertexId_CUDA vtx_lid = local_idx_cache[i / WARPSIZE];
+		VertexId_CUDA vtx_gid = cache_node_hashmap[src_vertex[vtx_lid]];
+		for (int j = laneId; j < feature_size; j += 32) {
+			// dev_feature[vtx_lid * feature_size + j] = dev_cache_feature[vtx_gid * feature_size + j];
+			dev_feature[vtx_lid * feature_size + j] = dev_cache_feature[vtx_gid * feature_size + j];
+		}
+	}
+}
+
+
 __global__ void zero_copy_embedding_move_gpu_kernel(float *dev_feature,
 								 	float *pinned_host_feature,
                                    	VertexId_CUDA feature_size,

@@ -1,0 +1,100 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.6619 (s)
+load directed time: 18.6796 (s)
+pipeline num: 4
+2023-10-17 16:27:24 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:169:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 2
+2023-10-17 16:27:24 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:174:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 2
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /home/hdd/toao/dataset/products/reorder/reorder.edge.pre_sample_b1024_f25-10-5_p4.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.5646
+cache ids size: 7209305
+device 0 train num: 98307
+device 1 train num: 98308
+2023-10-17 16:28:09 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:973:initMultiSampler] INFO  - out of loop
+train_nids.size(): 196615, total_batchsize: 1024, last_batchsize: 7, num_device: 2
+start copy ids to multi device array
+start: 196608, last_per_device: 3, num_devices: 2, last_batchsize: 7, total_batchsize: 1024, last_per_device_end: 4
+前者: 196615, 后者: 196615
+start new device sampler
+train id size: 98307
+sampler train id size: 98307
+train id size: 98308
+sampler train id size: 98308
+finish new device sampler
+2023-10-17 16:28:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:719:run] INFO  - Finished init_multi_cache_var
+2023-10-17 16:28:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:730:run] INFO  - start cpu_sampler->sample_fast
+2023-10-17 16:28:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:734:run] INFO  - start CPU_Forward
+batch_cache_num: 152974, device_cache_offset: 152974, sg dst: 152974
+cache size: 47646208 byte
+cache size: 47646208 byte
+pipeline num: 4, batch size: 512
+pipeline num: 4, batch size: 512
+cache size: 47646208 byte
+cache size: 47646208 byte
+2023-10-17 16:28:23 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:351:TestMiniBatchAll] INFO  - Train Acc: 0.384172 75534 196615
+GNNmini::Running.Epoch[0]:Times[13.2698(s)]
+pipeline num: 4, batch size: 512
+pipeline num: 4, batch size: 512
+2023-10-17 16:28:36 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:351:TestMiniBatchAll] INFO  - Train Acc: 0.491987 96732 196615
+GNNmini::Running.Epoch[1]:Times[13.3329(s)]
+pipeline num: 4, batch size: 512
+pipeline num: 4, batch size: 512
+2023-10-17 16:28:50 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:351:TestMiniBatchAll] INFO  - Train Acc: 0.567144 111509 196615
+GNNmini::Running.Epoch[2]:Times[13.1692(s)]
+#run_time=39.772138(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.3533 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 0.0335 (s)
+init co time: 1.6509 (s)
+pro time: 2.2495 (s)
+post pro time: 0.6069 (s)
+cpu inclusiveTime: 0.5199 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 0.1945 (s)
+init co time: 1.5591 (s)
+pro time: 1.9539 (s)
+post pro time: 0.5792 (s)
+#sample_time= 8.8338 (s)
+#transfer_feature_time= 31.0275 (s)
+#training_time= 68.8312 (s)
+#average epoch time: 13.2574 (s)
+#cpu wait time: 0.0012 (s)
+#gpu wait time: 39.0875 (s)
+总传输节点数: 252387940
+1697531290317
+1697531330089
+exec_time=125.938909(s)

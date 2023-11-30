@@ -126,14 +126,10 @@ public:
   template <typename GOPT>
   NtsVar runGraphOp(PartitionedGraph* partitioned_graph, VertexSubset *active,
         NtsVar &f_input){//graph op
-        std::printf("test 1 \n");
     static_assert(std::is_base_of<nts::op::ntsGraphOp,GOPT>::value,
                 "template must be a type of graph op!");
-std::printf("test 2 \n");
     nts::op::ntsGraphOp * curr=new GOPT(partitioned_graph,active);
-    std::printf("test 3 \n");
     NtsVar f_output=curr->forward(f_input);
-    std::printf("test 4 \n");
     if (this->training == true) {
       NtsVar ig;
       op.push(GRAPHOP);

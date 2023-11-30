@@ -1,0 +1,77 @@
+algorithm	:	GSSAMPLEPDCACHE
+vertices	:	7489073
+epochs		:	3
+layers		:	400-256-256-60
+fanout		:	4-4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/lj-large/reorder/reorder.edge.self
+feature_file	:	random
+label_file	:	/home/hdd/sanzo/graph-learn/examples/data/orkut/orkut.label
+mask_file	:	/home/hdd/sanzo/graph-learn/examples/data/orkut/orkut.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4, cache rate: 0.350 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 16
+batch cache num: 224000
+train ids num: 4867897, cache ids num: 27328000, super batch num: 122
+预采样完成，预采样时间: 118.708515 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+2023-08-30 04:45:57 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.016621 80910 4867897
+GNNmini::Running.Epoch[0]:Times[51.7459(s)]:loss	4.09435
+[ CUDAFloatType{} ]
+2023-08-30 04:46:49 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.016677 81180 4867897
+GNNmini::Running.Epoch[1]:Times[52.8538(s)]:loss	4.09435
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 80
+2023-08-30 04:47:42 [home/toao/Sample-based-GNN/toolkits/GS_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.016680 81196 4867897
+GNNmini::Running.Epoch[2]:Times[52.2983(s)]:loss	4.09444
+[ CUDAFloatType{} ]
+#run_time=156.898544(s)
+all:23.635257(s) prepro:14.267204(s) pro:8.192876(s) post:1.173765(s) copy:0.000000(s)
+test_time:8.005235(s)
+#wait time: 341.559744(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 3.456969
+inclusiveTime: 0.000000
+init layer time: 0.047591
+init co time: 14.218760
+transfer share time: 0.000000 (s)
+update cache time: 1.290176 (s)
+cpu_total_time: 158.5300 (s)
+cpu_sample_time: 68.9490 (s)
+cpu_graph_time: 22.5871 (s)
+cpu_wait_time: 0.8135 (s)
+cpu_nn_time: 43.9419 (s)
+cpu_copy_time: 22.2375 (s)
+# gpu wait time: 98.5821 (s)
+# gpu round: 1461
+# pre sample time: 118.708515 (s)
+#sample_time= 23.8923 (s)
+#transfer_feature_time= 44.5803 (s)
+#training_time= 113.8851 (s)
+#average epoch time: 52.299515
+总传输节点数: 103608209
+1693341905375
+1693342062274
+exec_time=382.035990(s)

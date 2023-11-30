@@ -182,6 +182,7 @@ public:
     }
   }
 
+  //only suppport 2-hop
   NtsVar vertexForward(NtsVar &a, NtsVar &x) {
     NtsVar y;
      int layer = graph->rtminfo->curr_layer;
@@ -248,6 +249,7 @@ public:
     // graph->print_info();
 
     exec_time -= get_time();
+      double run_time = -get_time();
     for (int i_i = 0; i_i < iterations; i_i++) {
       graph->rtminfo->epoch = i_i;
       if (i_i != 0) {
@@ -307,6 +309,8 @@ public:
     //                "<<Y[0][test-graph->gnnctx->p_v_s][15]<<std::endl;
     //            }
 
+      run_time += get_time();
+      std::printf("#run time: %.4lf (s)\n", run_time);
     exec_time += get_time();
 
       printf("#communicate_processing_received.wait=%lf(s)\n",

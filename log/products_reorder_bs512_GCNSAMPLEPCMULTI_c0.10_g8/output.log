@@ -1,0 +1,553 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.5891 (s)
+load directed time: 50.0139 (s)
+pipeline num: 3
+2023-10-15 10:27:07 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:169:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 8
+2023-10-15 10:27:07 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:174:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 8
+nts-server:133594:133594 [0] NCCL INFO cudaDriverVersion 11040
+nts-server:133594:133594 [0] NCCL INFO Bootstrap : Using eth0:172.29.232.209<0>
+nts-server:133594:133594 [0] NCCL INFO NET/Plugin : No plugin found (libnccl-net.so), using internal implementation
+NCCL version 2.14.3+cuda11.6
+nts-server:133594:135166 [0] NCCL INFO NET/IB : No device found.
+nts-server:133594:135166 [0] NCCL INFO NET/Socket : Using [0]eth0:172.29.232.209<0>
+nts-server:133594:135166 [0] NCCL INFO Using network Socket
+nts-server:133594:135168 [2] NCCL INFO Using network Socket
+nts-server:133594:135170 [4] NCCL INFO Using network Socket
+nts-server:133594:135169 [3] NCCL INFO Using network Socket
+nts-server:133594:135171 [5] NCCL INFO Using network Socket
+nts-server:133594:135172 [6] NCCL INFO Using network Socket
+nts-server:133594:135173 [7] NCCL INFO Using network Socket
+nts-server:133594:135167 [1] NCCL INFO Using network Socket
+nts-server:133594:135173 [7] NCCL INFO NCCL_P2P_LEVEL set by environment to NVL
+nts-server:133594:135166 [0] NCCL INFO Channel 00/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135173 [7] NCCL INFO Trees [0] 4/-1/-1->7->1 [1] 4/-1/-1->7->1 [2] 1/-1/-1->7->4 [3] 1/-1/-1->7->4 [4] 6/-1/-1->7->5 [5] 5/-1/-1->7->6 [6] 4/-1/-1->7->1 [7] 4/-1/-1->7->1 [8] 1/-1/-1->7->4 [9] 1/-1/-1->7->4 [10] 6/-1/-1->7->5 [11] 5/-1/-1->7->6
+nts-server:133594:135170 [4] NCCL INFO Trees [0] 5/-1/-1->4->7 [1] 5/-1/-1->4->7 [2] 7/-1/-1->4->5 [3] 7/-1/-1->4->5 [4] 2/-1/-1->4->6 [5] 6/-1/-1->4->2 [6] 5/-1/-1->4->7 [7] 5/-1/-1->4->7 [8] 7/-1/-1->4->5 [9] 7/-1/-1->4->5 [10] 2/-1/-1->4->6 [11] 6/-1/-1->4->2
+nts-server:133594:135171 [5] NCCL INFO Trees [0] 6/-1/-1->5->4 [1] 6/-1/-1->5->4 [2] 4/-1/-1->5->6 [3] 4/-1/-1->5->6 [4] 7/-1/-1->5->3 [5] 3/-1/-1->5->7 [6] 6/-1/-1->5->4 [7] 6/-1/-1->5->4 [8] 4/-1/-1->5->6 [9] 4/-1/-1->5->6 [10] 7/-1/-1->5->3 [11] 3/-1/-1->5->7
+nts-server:133594:135168 [2] NCCL INFO Trees [0] 1/-1/-1->2->3 [1] 1/-1/-1->2->3 [2] 3/-1/-1->2->1 [3] 3/-1/-1->2->1 [4] -1/-1/-1->2->4 [5] 4/-1/-1->2->0 [6] 1/-1/-1->2->3 [7] 1/-1/-1->2->3 [8] 3/-1/-1->2->1 [9] 3/-1/-1->2->1 [10] -1/-1/-1->2->4 [11] 4/-1/-1->2->0
+nts-server:133594:135169 [3] NCCL INFO Trees [0] 2/-1/-1->3->0 [1] 2/-1/-1->3->0 [2] -1/-1/-1->3->2 [3] -1/-1/-1->3->2 [4] 5/-1/-1->3->1 [5] 1/-1/-1->3->5 [6] 2/-1/-1->3->0 [7] 2/-1/-1->3->0 [8] -1/-1/-1->3->2 [9] -1/-1/-1->3->2 [10] 5/-1/-1->3->1 [11] 1/-1/-1->3->5
+nts-server:133594:135167 [1] NCCL INFO Trees [0] 7/-1/-1->1->2 [1] 7/-1/-1->1->2 [2] 2/-1/-1->1->7 [3] 2/-1/-1->1->7 [4] 3/-1/-1->1->0 [5] -1/-1/-1->1->3 [6] 7/-1/-1->1->2 [7] 7/-1/-1->1->2 [8] 2/-1/-1->1->7 [9] 2/-1/-1->1->7 [10] 3/-1/-1->1->0 [11] -1/-1/-1->1->3
+nts-server:133594:135172 [6] NCCL INFO Trees [0] -1/-1/-1->6->5 [1] -1/-1/-1->6->5 [2] 5/-1/-1->6->0 [3] 5/-1/-1->6->0 [4] 4/-1/-1->6->7 [5] 7/-1/-1->6->4 [6] -1/-1/-1->6->5 [7] -1/-1/-1->6->5 [8] 5/-1/-1->6->0 [9] 5/-1/-1->6->0 [10] 4/-1/-1->6->7 [11] 7/-1/-1->6->4
+nts-server:133594:135166 [0] NCCL INFO Channel 01/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135166 [0] NCCL INFO Channel 02/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135166 [0] NCCL INFO Channel 03/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135166 [0] NCCL INFO Channel 04/12 :    0   1   3   5   7   6   4   2
+nts-server:133594:135166 [0] NCCL INFO Channel 05/12 :    0   2   4   6   7   5   3   1
+nts-server:133594:135166 [0] NCCL INFO Channel 06/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135166 [0] NCCL INFO Channel 07/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135166 [0] NCCL INFO Channel 08/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135166 [0] NCCL INFO Channel 09/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135166 [0] NCCL INFO Channel 10/12 :    0   1   3   5   7   6   4   2
+nts-server:133594:135166 [0] NCCL INFO Channel 11/12 :    0   2   4   6   7   5   3   1
+nts-server:133594:135166 [0] NCCL INFO Trees [0] 3/-1/-1->0->-1 [1] 3/-1/-1->0->-1 [2] 6/-1/-1->0->-1 [3] 6/-1/-1->0->-1 [4] 1/-1/-1->0->-1 [5] 2/-1/-1->0->-1 [6] 3/-1/-1->0->-1 [7] 3/-1/-1->0->-1 [8] 6/-1/-1->0->-1 [9] 6/-1/-1->0->-1 [10] 1/-1/-1->0->-1 [11] 2/-1/-1->0->-1
+nts-server:133594:135166 [0] NCCL INFO Channel 04/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 00/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 10/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 01/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 06/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 02/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 07/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 03/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 08/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 00/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 02/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 05/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 09/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 01/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 03/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 11/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 06/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 08/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 07/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 09/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 02/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 05/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 03/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 05/0 : 0[70] -> 2[90] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 04/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 04/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 00/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 11/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 08/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 11/0 : 0[70] -> 2[90] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 10/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 10/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 01/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 09/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 06/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 07/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 04/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 05/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 10/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 11/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 05/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 02/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 11/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 03/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 00/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 00/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 08/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 01/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 01/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 04/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 04/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 09/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 06/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 06/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 10/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 10/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 07/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 07/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 00/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 02/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 01/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 03/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 06/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 08/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 07/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 09/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 04/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 02/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 05/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 10/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 03/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 11/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 05/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 08/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 11/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 00/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Channel 09/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 01/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 04/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 06/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 10/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 07/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 02/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 03/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 08/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 02/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 05/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 00/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 09/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 03/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 11/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 01/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 08/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 06/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Connected all rings
+nts-server:133594:135171 [5] NCCL INFO Channel 09/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135166 [0] NCCL INFO Connected all rings
+nts-server:133594:135168 [2] NCCL INFO Channel 07/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Connected all rings
+nts-server:133594:135172 [6] NCCL INFO Connected all rings
+nts-server:133594:135169 [3] NCCL INFO Connected all rings
+nts-server:133594:135170 [4] NCCL INFO Channel 02/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Connected all rings
+nts-server:133594:135167 [1] NCCL INFO Connected all rings
+nts-server:133594:135171 [5] NCCL INFO Connected all rings
+nts-server:133594:135167 [1] NCCL INFO Channel 00/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 03/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 01/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 08/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 06/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 09/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 07/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 04/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 02/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 00/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 10/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 03/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 01/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 08/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 06/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 09/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 07/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 00/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 04/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 01/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 10/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 04/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 02/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 06/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 05/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 05/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 10/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 03/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 07/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 11/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 11/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 08/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 05/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 09/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 11/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 00/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 05/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 00/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 01/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 05/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 11/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 01/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 06/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 04/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 02/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 11/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 06/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 07/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 10/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 03/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 07/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 08/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 02/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 09/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 03/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 04/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 08/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 10/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 09/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 02/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 03/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 08/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 05/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Channel 09/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135170 [4] NCCL INFO Channel 11/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 04/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 10/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 00/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 01/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 02/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 06/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 03/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135172 [6] NCCL INFO Channel 07/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 05/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 08/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Channel 11/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135168 [2] NCCL INFO Channel 09/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 04/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 00/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Channel 10/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135173 [7] NCCL INFO Connected all trees
+nts-server:133594:135173 [7] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135171 [5] NCCL INFO Channel 01/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135171 [5] NCCL INFO Channel 06/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135169 [3] NCCL INFO Connected all trees
+nts-server:133594:135166 [0] NCCL INFO Connected all trees
+nts-server:133594:135169 [3] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135166 [0] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135171 [5] NCCL INFO Channel 07/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135167 [1] NCCL INFO Connected all trees
+nts-server:133594:135167 [1] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135168 [2] NCCL INFO Connected all trees
+nts-server:133594:135168 [2] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135173 [7] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135170 [4] NCCL INFO Connected all trees
+nts-server:133594:135170 [4] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135169 [3] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135166 [0] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135172 [6] NCCL INFO Connected all trees
+nts-server:133594:135172 [6] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135171 [5] NCCL INFO Connected all trees
+nts-server:133594:135171 [5] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135167 [1] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135168 [2] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135170 [4] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135172 [6] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135171 [5] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135173 [7] NCCL INFO comm 0x580505c0 rank 7 nranks 8 cudaDev 7 busId e0 - Init COMPLETE
+nts-server:133594:135169 [3] NCCL INFO comm 0x58043f90 rank 3 nranks 8 cudaDev 3 busId a0 - Init COMPLETE
+nts-server:133594:135172 [6] NCCL INFO comm 0x5804d450 rank 6 nranks 8 cudaDev 6 busId d0 - Init COMPLETE
+nts-server:133594:135166 [0] NCCL INFO comm 0x5803b140 rank 0 nranks 8 cudaDev 0 busId 70 - Init COMPLETE
+nts-server:133594:135170 [4] NCCL INFO comm 0x58047170 rank 4 nranks 8 cudaDev 4 busId b0 - Init COMPLETE
+nts-server:133594:135167 [1] NCCL INFO comm 0x5803dbd0 rank 1 nranks 8 cudaDev 1 busId 80 - Init COMPLETE
+nts-server:133594:135171 [5] NCCL INFO comm 0x5804a2e0 rank 5 nranks 8 cudaDev 5 busId c0 - Init COMPLETE
+nts-server:133594:135168 [2] NCCL INFO comm 0x58040db0 rank 2 nranks 8 cudaDev 2 busId 90 - Init COMPLETE
+nts-server:133594:135422 [0] NCCL INFO Using network Socket
+nts-server:133594:135423 [1] NCCL INFO Using network Socket
+nts-server:133594:135424 [2] NCCL INFO Using network Socket
+nts-server:133594:135425 [3] NCCL INFO Using network Socket
+nts-server:133594:135426 [4] NCCL INFO Using network Socket
+nts-server:133594:135427 [5] NCCL INFO Using network Socket
+nts-server:133594:135428 [6] NCCL INFO Using network Socket
+nts-server:133594:135429 [7] NCCL INFO Using network Socket
+nts-server:133594:135425 [3] NCCL INFO Trees [0] 2/-1/-1->3->0 [1] 2/-1/-1->3->0 [2] -1/-1/-1->3->2 [3] -1/-1/-1->3->2 [4] 5/-1/-1->3->1 [5] 1/-1/-1->3->5 [6] 2/-1/-1->3->0 [7] 2/-1/-1->3->0 [8] -1/-1/-1->3->2 [9] -1/-1/-1->3->2 [10] 5/-1/-1->3->1 [11] 1/-1/-1->3->5
+nts-server:133594:135423 [1] NCCL INFO Trees [0] 7/-1/-1->1->2 [1] 7/-1/-1->1->2 [2] 2/-1/-1->1->7 [3] 2/-1/-1->1->7 [4] 3/-1/-1->1->0 [5] -1/-1/-1->1->3 [6] 7/-1/-1->1->2 [7] 7/-1/-1->1->2 [8] 2/-1/-1->1->7 [9] 2/-1/-1->1->7 [10] 3/-1/-1->1->0 [11] -1/-1/-1->1->3
+nts-server:133594:135424 [2] NCCL INFO Trees [0] 1/-1/-1->2->3 [1] 1/-1/-1->2->3 [2] 3/-1/-1->2->1 [3] 3/-1/-1->2->1 [4] -1/-1/-1->2->4 [5] 4/-1/-1->2->0 [6] 1/-1/-1->2->3 [7] 1/-1/-1->2->3 [8] 3/-1/-1->2->1 [9] 3/-1/-1->2->1 [10] -1/-1/-1->2->4 [11] 4/-1/-1->2->0
+nts-server:133594:135422 [0] NCCL INFO Channel 00/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135428 [6] NCCL INFO Trees [0] -1/-1/-1->6->5 [1] -1/-1/-1->6->5 [2] 5/-1/-1->6->0 [3] 5/-1/-1->6->0 [4] 4/-1/-1->6->7 [5] 7/-1/-1->6->4 [6] -1/-1/-1->6->5 [7] -1/-1/-1->6->5 [8] 5/-1/-1->6->0 [9] 5/-1/-1->6->0 [10] 4/-1/-1->6->7 [11] 7/-1/-1->6->4
+nts-server:133594:135427 [5] NCCL INFO Trees [0] 6/-1/-1->5->4 [1] 6/-1/-1->5->4 [2] 4/-1/-1->5->6 [3] 4/-1/-1->5->6 [4] 7/-1/-1->5->3 [5] 3/-1/-1->5->7 [6] 6/-1/-1->5->4 [7] 6/-1/-1->5->4 [8] 4/-1/-1->5->6 [9] 4/-1/-1->5->6 [10] 7/-1/-1->5->3 [11] 3/-1/-1->5->7
+nts-server:133594:135426 [4] NCCL INFO Trees [0] 5/-1/-1->4->7 [1] 5/-1/-1->4->7 [2] 7/-1/-1->4->5 [3] 7/-1/-1->4->5 [4] 2/-1/-1->4->6 [5] 6/-1/-1->4->2 [6] 5/-1/-1->4->7 [7] 5/-1/-1->4->7 [8] 7/-1/-1->4->5 [9] 7/-1/-1->4->5 [10] 2/-1/-1->4->6 [11] 6/-1/-1->4->2
+nts-server:133594:135429 [7] NCCL INFO Trees [0] 4/-1/-1->7->1 [1] 4/-1/-1->7->1 [2] 1/-1/-1->7->4 [3] 1/-1/-1->7->4 [4] 6/-1/-1->7->5 [5] 5/-1/-1->7->6 [6] 4/-1/-1->7->1 [7] 4/-1/-1->7->1 [8] 1/-1/-1->7->4 [9] 1/-1/-1->7->4 [10] 6/-1/-1->7->5 [11] 5/-1/-1->7->6
+nts-server:133594:135422 [0] NCCL INFO Channel 01/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135422 [0] NCCL INFO Channel 02/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135422 [0] NCCL INFO Channel 03/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135422 [0] NCCL INFO Channel 04/12 :    0   1   3   5   7   6   4   2
+nts-server:133594:135422 [0] NCCL INFO Channel 05/12 :    0   2   4   6   7   5   3   1
+nts-server:133594:135422 [0] NCCL INFO Channel 06/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135422 [0] NCCL INFO Channel 07/12 :    0   3   2   1   7   4   5   6
+nts-server:133594:135422 [0] NCCL INFO Channel 08/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135422 [0] NCCL INFO Channel 09/12 :    0   6   5   4   7   1   2   3
+nts-server:133594:135422 [0] NCCL INFO Channel 10/12 :    0   1   3   5   7   6   4   2
+nts-server:133594:135422 [0] NCCL INFO Channel 11/12 :    0   2   4   6   7   5   3   1
+nts-server:133594:135422 [0] NCCL INFO Trees [0] 3/-1/-1->0->-1 [1] 3/-1/-1->0->-1 [2] 6/-1/-1->0->-1 [3] 6/-1/-1->0->-1 [4] 1/-1/-1->0->-1 [5] 2/-1/-1->0->-1 [6] 3/-1/-1->0->-1 [7] 3/-1/-1->0->-1 [8] 6/-1/-1->0->-1 [9] 6/-1/-1->0->-1 [10] 1/-1/-1->0->-1 [11] 2/-1/-1->0->-1
+nts-server:133594:135426 [4] NCCL INFO Channel 00/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 04/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 01/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 10/0 : 0[70] -> 1[80] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 02/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 06/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 03/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 07/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 08/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 02/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 05/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 00/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 09/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 03/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 11/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 01/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 08/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 06/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 09/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 07/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 02/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 03/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 05/0 : 0[70] -> 2[90] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 08/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 05/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 11/0 : 0[70] -> 2[90] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 04/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 09/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 11/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 04/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 10/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 05/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 10/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 04/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 00/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 11/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 10/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 01/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 06/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 07/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 05/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 04/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 00/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 11/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 10/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 01/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 00/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 02/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 06/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 01/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 07/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 03/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 06/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 08/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 07/0 : 0[70] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 09/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 04/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 02/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 00/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 10/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 03/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 01/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 08/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 06/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 09/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 07/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 02/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 05/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 04/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 03/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 11/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 10/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 08/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 05/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Channel 09/0 : 0[70] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 11/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 00/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 04/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 01/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 10/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 06/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 02/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 07/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 03/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 00/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 08/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 05/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 02/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 01/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 09/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 11/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 03/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 06/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 08/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 07/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Connected all rings
+nts-server:133594:135422 [0] NCCL INFO Connected all rings
+nts-server:133594:135427 [5] NCCL INFO Channel 09/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Connected all rings
+nts-server:133594:135428 [6] NCCL INFO Connected all rings
+nts-server:133594:135424 [2] NCCL INFO Connected all rings
+nts-server:133594:135426 [4] NCCL INFO Connected all rings
+nts-server:133594:135426 [4] NCCL INFO Channel 02/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Connected all rings
+nts-server:133594:135423 [1] NCCL INFO Channel 00/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 03/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 01/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Connected all rings
+nts-server:133594:135426 [4] NCCL INFO Channel 08/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 06/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 04/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 09/0 : 4[b0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 00/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 07/0 : 1[80] -> 2[90] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 10/0 : 6[d0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 01/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 06/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 02/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 07/0 : 2[90] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 03/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 00/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 04/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 08/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 01/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 10/0 : 2[90] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 09/0 : 5[c0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 06/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 05/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 07/0 : 7[e0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 11/0 : 3[a0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 05/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 11/0 : 1[80] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 05/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 02/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 04/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 11/0 : 5[c0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 03/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 10/0 : 4[b0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 08/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 00/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 09/0 : 6[d0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 01/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 02/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 04/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 06/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 05/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 03/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 10/0 : 5[c0] -> 3[a0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 07/0 : 3[a0] -> 0[70] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 11/0 : 2[90] -> 0[70] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 05/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 08/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 00/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 11/0 : 6[d0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 09/0 : 1[80] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 01/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 06/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 07/0 : 4[b0] -> 7[e0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 02/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 03/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 04/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 08/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 10/0 : 3[a0] -> 1[80] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 09/0 : 7[e0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 02/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 03/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 08/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 05/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135425 [3] NCCL INFO Channel 09/0 : 3[a0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135426 [4] NCCL INFO Channel 11/0 : 4[b0] -> 2[90] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 04/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 10/0 : 7[e0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 00/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 01/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 06/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 02/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135428 [6] NCCL INFO Channel 07/0 : 6[d0] -> 5[c0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 03/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 05/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 08/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Channel 11/0 : 7[e0] -> 6[d0] via P2P/direct pointer
+nts-server:133594:135424 [2] NCCL INFO Channel 09/0 : 2[90] -> 1[80] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 00/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135429 [7] NCCL INFO Connected all trees
+nts-server:133594:135429 [7] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135425 [3] NCCL INFO Connected all trees
+nts-server:133594:135425 [3] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135427 [5] NCCL INFO Channel 01/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 04/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 06/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135423 [1] NCCL INFO Channel 10/0 : 1[80] -> 0[70] via P2P/direct pointer
+nts-server:133594:135427 [5] NCCL INFO Channel 07/0 : 5[c0] -> 4[b0] via P2P/direct pointer
+nts-server:133594:135422 [0] NCCL INFO Connected all trees
+nts-server:133594:135425 [3] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135422 [0] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135429 [7] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135423 [1] NCCL INFO Connected all trees
+nts-server:133594:135424 [2] NCCL INFO Connected all trees
+nts-server:133594:135423 [1] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135424 [2] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135426 [4] NCCL INFO Connected all trees
+nts-server:133594:135426 [4] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135427 [5] NCCL INFO Connected all trees
+nts-server:133594:135427 [5] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135428 [6] NCCL INFO Connected all trees
+nts-server:133594:135428 [6] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+nts-server:133594:135422 [0] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135423 [1] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135424 [2] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135426 [4] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135427 [5] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135428 [6] NCCL INFO 12 coll channels, 16 p2p channels, 2 p2p channels per peer
+nts-server:133594:135422 [0] NCCL INFO comm 0x42140fa0 rank 0 nranks 8 cudaDev 0 busId 70 - Init COMPLETE
+nts-server:133594:135426 [4] NCCL INFO comm 0x421575b0 rank 4 nranks 8 cudaDev 4 busId b0 - Init COMPLETE
+nts-server:133594:135425 [3] NCCL INFO comm 0x42151ab0 rank 3 nranks 8 cudaDev 3 busId a0 - Init COMPLETE
+nts-server:133594:135427 [5] NCCL INFO comm 0x4215d0b0 rank 5 nranks 8 cudaDev 5 busId c0 - Init COMPLETE
+nts-server:133594:135428 [6] NCCL INFO comm 0x42162bb0 rank 6 nranks 8 cudaDev 6 busId d0 - Init COMPLETE
+nts-server:133594:135424 [2] NCCL INFO comm 0x4214bfb0 rank 2 nranks 8 cudaDev 2 busId 90 - Init COMPLETE
+nts-server:133594:135423 [1] NCCL INFO comm 0x421464b0 rank 1 nranks 8 cudaDev 1 busId 80 - Init COMPLETE
+nts-server:133594:135429 [7] NCCL INFO comm 0x58055680 rank 7 nranks 8 cudaDev 7 busId e0 - Init COMPLETE
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /home/hdd/toao/dataset/products/reorder/reorder.edge.pre_sample_b4096_f25-10-5_p3.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.0014
+cache ids size: 14614
+device 0 train num: 24576
+device 1 train num: 24576
+device 2 train num: 24576
+device 3 train num: 24576
+device 4 train num: 24576
+device 5 train num: 24576
+device 6 train num: 24576
+device 7 train num: 24583

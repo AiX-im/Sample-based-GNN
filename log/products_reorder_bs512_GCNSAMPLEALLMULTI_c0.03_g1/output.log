@@ -1,0 +1,55 @@
+algorithm	:	GCNSAMPLEALLMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	512
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 1.1765 (s)
+load directed time: 17.7472 (s)
+pipeline num: 1
+2023-10-11 09:07:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:90:initMultiDeviceVar] INFO  - config gpu num: 1
+2023-10-11 09:07:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:95:initMultiDeviceVar] INFO  - GPU 数量: 1
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+train id size: 196615
+sampler train id size: 196615
+2023-10-11 09:08:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:328:TestMiniBatchAll] INFO  - Train Acc: 0.710653 139725 196615
+GNNmini::Running.Epoch[0]:Times[17.1711(s)]
+2023-10-11 09:08:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:328:TestMiniBatchAll] INFO  - Train Acc: 0.840256 165207 196615
+GNNmini::Running.Epoch[1]:Times[16.1097(s)]
+2023-10-11 09:08:50 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:328:TestMiniBatchAll] INFO  - Train Acc: 0.854157 167940 196615
+GNNmini::Running.Epoch[2]:Times[16.1886(s)]
+#run_time=49.469625(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+#sample_time= 4.8581 (s)
+#transfer_feature_time= 41.8804 (s)
+#training_time= 2.6507 (s)
+#average epoch time: 16.489875
+总传输节点数: 347906413
+1696986480629
+1696986530098
+exec_time=136.056524(s)

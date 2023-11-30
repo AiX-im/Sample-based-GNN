@@ -276,6 +276,16 @@ void Cuda_Stream::CUDA_SYNCHRONIZE_ALL(){
 #endif
 }
 
+void Cuda_Stream::move_bytes_out(VertexId_CUDA* h_pointer, VertexId_CUDA* d_pointer, int size){
+#if CUDA_ENABLE
+    CHECK_CUDA_RESULT(cudaMemcpyAsync(h_pointer, d_pointer, size * (sizeof(VertexId_CUDA)), cudaMemcpyDeviceToHost, stream));
+#else
+       printf("CUDA DISABLED Cuda_Stream::move_result_out\n");
+       exit(0);   
+#endif   
+}
+
+
 void Cuda_Stream::move_result_out(float* output,float* input, VertexId_CUDA src,VertexId_CUDA dst, int feature_size,bool sync){
 #if CUDA_ENABLE
     CHECK_CUDA_RESULT(cudaMemcpyAsync(output,input,((long)(dst-src))*feature_size*(sizeof(int)), cudaMemcpyDeviceToHost,stream));
@@ -1716,6 +1726,49 @@ void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
        exit(0);   
 #endif   
 }
+
+// void Cuda_Stream::init_cache_map(VertexId_CUDA *src_vertex, VertexId_CUDA *cache_node_hashmap, 
+//                                  VertexId_CUDA* vertex_size, VertexId_CUDA *local_idx, 
+//                                  VertexId_CUDA * local_idx_cache) {
+// #if CUDA_ENABLE
+//   init_cache_map_kernel<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(
+//       src_vertex, cache_node_hashmap, vertex_size, local_idx, local_idx_cache);
+//   this->CUDA_DEVICE_SYNCHRONIZE();
+// #else
+//   printf("CUDA DISABLED Cuda_Stream::init_cache_map\n");
+//   exit(0);
+// #endif
+// }
+
+void Cuda_Stream::zero_copy_feature_move_gpu_cache(float* dev_feature, float* host_pinned_feature,
+                                                   VertexId_CUDA* src_vertex, VertexId_CUDA feature_size,
+                                                   VertexId_CUDA vertex_size, VertexId_CUDA* local_idx) {
+#if CUDA_ENABLE
+  zero_copy_feature_move_gpu_cache_kernel<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(
+      dev_feature, host_pinned_feature, src_vertex, feature_size, vertex_size, local_idx);
+  this->CUDA_DEVICE_SYNCHRONIZE();
+#else
+  printf("CUDA DISABLED Cuda_Stream::zero_copy_feature_move_gpu\n");
+  exit(0);
+#endif
+}
+
+void Cuda_Stream::gather_feature_from_gpu_cache(float* dev_feature, float* dev_cache_feature, VertexId_CUDA* src_vertex,
+                                                VertexId_CUDA feature_size, VertexId_CUDA vertex_size,
+                                                VertexId_CUDA* local_idx, VertexId_CUDA* cache_node_hashmap) {
+  //  std::vector<int>& local_idx, std::vector<int>& cache_node_hashmap) {
+#if CUDA_ENABLE
+  gather_feature_from_gpu_cache_kernel<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(
+      dev_feature, dev_cache_feature, src_vertex, feature_size, vertex_size, local_idx, cache_node_hashmap);
+  this->CUDA_DEVICE_SYNCHRONIZE();
+#else
+  printf("CUDA DISABLED Cuda_Stream::zero_copy_feature_move_gpu\n");
+  exit(0);
+#endif
+}
+
+
+
 
 void Cuda_Stream::zero_copy_embedding_move_gpu(float *dev_feature,
 						float *pinned_host_feature,

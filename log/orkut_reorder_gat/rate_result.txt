@@ -1,0 +1,20 @@
+batch_norm	:	0
+------------------input info--------------
+first read time: 1.0542 (s)
+load directed time: 29.2468 (s)
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+2023-10-07 09:14:28 [home/toao/Sample-based-GNN/toolkits/GAT_SAMPLE_PD_CACHE.hpp:476:run] INFO  - GNNmini::[Dist.GPU.GATimpl] running [10] Epoches
+
+pipeline num: 2
+sample last layer neighs: 250
+edge_filename: /home/hdd/toao/dataset/orkut/reorder/reorder.edge.self
+pre sample filename: /home/hdd/toao/dataset/orkut/reorder/reorder.edge.pre_sample_b1024_f25-10-5.bin
+loading data from file to batch_cache_ids
+预采样时间: 1.8667
+cache ids size: 135164960
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars

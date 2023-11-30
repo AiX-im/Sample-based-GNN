@@ -1,0 +1,24 @@
+CPU使用率:
+1432365: 182.77037037037033
+GPU使用率: 
+85.91176470588233
+sampler train id size: 98307
+train id size: 98308
+sampler train id size: 98308
+2023-10-11 09:23:27 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:328:TestMiniBatchAll] INFO  - Train Acc: 0.639270 125690 196615
+GNNmini::Running.Epoch[0]:Times[7.19331(s)]
+2023-10-11 09:23:33 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:328:TestMiniBatchAll] INFO  - Train Acc: 0.788867 155103 196615
+GNNmini::Running.Epoch[1]:Times[5.47702(s)]
+2023-10-11 09:23:38 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_ALL_MULTI.hpp:328:TestMiniBatchAll] INFO  - Train Acc: 0.828650 162925 196615
+GNNmini::Running.Epoch[2]:Times[5.48451(s)]
+#run_time=18.155025(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+#sample_time= 3.0815 (s)
+#transfer_feature_time= 27.6756 (s)
+#training_time= 5.5035 (s)
+#average epoch time: 6.051675
+总传输节点数: 232642804
+1696987400690
+1696987418845
+exec_time=117.535212(s)

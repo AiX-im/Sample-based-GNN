@@ -1,0 +1,369 @@
+algorithm	:	GCNSAMPLEPDCACHE
+vertices	:	232965
+epochs		:	100
+layers		:	602-256-41
+fanout		:	4-4
+batch_size	:	10000
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/reddit/reddit.edge
+feature_file	:	/home/hdd/toao/dataset/reddit/reddit.feat
+label_file	:	/home/hdd/toao/dataset/reddit/reddit.label
+mask_file	:	/home/hdd/toao/dataset/reddit/reddit-real.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+pipeline num: 4, cache rate: 0.000 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [100] Epochs
+sample last layer neighs: 4
+batch cache num: 16
+train ids num: 153431, cache ids num: 64, super batch num: 4
+预采样完成，预采样时间: 0.849382 (s)
+CPU创建了新的nnVars
+创建了新的CacheVar
+CPU创建了新的nnVars
+2023-07-04 09:53:43 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.318136 48812 153431
+GNNmini::Running.Epoch[0]:Times[0.414869(s)]:loss	15.6847
+[ CUDAFloatType{} ]
+2023-07-04 09:53:43 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.474669 72829 153431
+GNNmini::Running.Epoch[1]:Times[0.398782(s)]:loss	24.4294
+[ CUDAFloatType{} ]
+2023-07-04 09:53:44 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.591315 90726 153431
+GNNmini::Running.Epoch[2]:Times[0.399788(s)]:loss	30.1983
+[ CUDAFloatType{} ]
+2023-07-04 09:53:44 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.616362 94569 153431
+GNNmini::Running.Epoch[3]:Times[0.394116(s)]:loss	9.08465
+[ CUDAFloatType{} ]
+2023-07-04 09:53:44 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.673997 103412 153431
+GNNmini::Running.Epoch[4]:Times[0.39546(s)]:loss	6.70158
+[ CUDAFloatType{} ]
+2023-07-04 09:53:45 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.699076 107260 153431
+GNNmini::Running.Epoch[5]:Times[0.408223(s)]:loss	6.50031
+[ CUDAFloatType{} ]
+2023-07-04 09:53:45 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.712164 109268 153431
+GNNmini::Running.Epoch[6]:Times[0.397642(s)]:loss	4.36678
+[ CUDAFloatType{} ]
+2023-07-04 09:53:46 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.733405 112527 153431
+GNNmini::Running.Epoch[7]:Times[0.401923(s)]:loss	3.11388
+[ CUDAFloatType{} ]
+2023-07-04 09:53:46 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.744302 114199 153431
+GNNmini::Running.Epoch[8]:Times[0.396103(s)]:loss	2.82232
+[ CUDAFloatType{} ]
+2023-07-04 09:53:46 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.747659 114714 153431
+GNNmini::Running.Epoch[9]:Times[0.405654(s)]:loss	2.61048
+[ CUDAFloatType{} ]
+2023-07-04 09:53:47 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.750442 115141 153431
+GNNmini::Running.Epoch[10]:Times[0.398087(s)]:loss	2.33747
+[ CUDAFloatType{} ]
+2023-07-04 09:53:47 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.745560 114392 153431
+GNNmini::Running.Epoch[11]:Times[0.402293(s)]:loss	4.78175
+[ CUDAFloatType{} ]
+2023-07-04 09:53:48 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.757513 116226 153431
+GNNmini::Running.Epoch[12]:Times[0.394448(s)]:loss	1.95362
+[ CUDAFloatType{} ]
+2023-07-04 09:53:48 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.764858 117353 153431
+GNNmini::Running.Epoch[13]:Times[0.413061(s)]:loss	1.58333
+[ CUDAFloatType{} ]
+2023-07-04 09:53:48 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.766162 117553 153431
+GNNmini::Running.Epoch[14]:Times[0.408975(s)]:loss	1.65887
+[ CUDAFloatType{} ]
+2023-07-04 09:53:49 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.768411 117898 153431
+GNNmini::Running.Epoch[15]:Times[0.397591(s)]:loss	1.49235
+[ CUDAFloatType{} ]
+2023-07-04 09:53:49 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.774146 118778 153431
+GNNmini::Running.Epoch[16]:Times[0.395878(s)]:loss	1.53008
+[ CUDAFloatType{} ]
+2023-07-04 09:53:50 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.776414 119126 153431
+GNNmini::Running.Epoch[17]:Times[0.398182(s)]:loss	1.48059
+[ CUDAFloatType{} ]
+2023-07-04 09:53:50 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.781719 119940 153431
+GNNmini::Running.Epoch[18]:Times[0.405336(s)]:loss	1.37062
+[ CUDAFloatType{} ]
+2023-07-04 09:53:50 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.778226 119404 153431
+GNNmini::Running.Epoch[19]:Times[0.405492(s)]:loss	1.42574
+[ CUDAFloatType{} ]
+2023-07-04 09:53:51 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.756711 116103 153431
+GNNmini::Running.Epoch[20]:Times[0.409303(s)]:loss	2.3926
+[ CUDAFloatType{} ]
+2023-07-04 09:53:51 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.771617 118390 153431
+GNNmini::Running.Epoch[21]:Times[0.409315(s)]:loss	1.48897
+[ CUDAFloatType{} ]
+2023-07-04 09:53:52 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.778519 119449 153431
+GNNmini::Running.Epoch[22]:Times[0.400414(s)]:loss	1.35
+[ CUDAFloatType{} ]
+2023-07-04 09:53:52 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.782502 120060 153431
+GNNmini::Running.Epoch[23]:Times[0.406972(s)]:loss	1.24432
+[ CUDAFloatType{} ]
+2023-07-04 09:53:52 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.788257 120943 153431
+GNNmini::Running.Epoch[24]:Times[0.402328(s)]:loss	1.21698
+[ CUDAFloatType{} ]
+2023-07-04 09:53:53 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.785793 120565 153431
+GNNmini::Running.Epoch[25]:Times[0.405394(s)]:loss	1.53079
+[ CUDAFloatType{} ]
+2023-07-04 09:53:53 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.788400 120965 153431
+GNNmini::Running.Epoch[26]:Times[0.399635(s)]:loss	1.46586
+[ CUDAFloatType{} ]
+2023-07-04 09:53:54 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.792193 121547 153431
+GNNmini::Running.Epoch[27]:Times[0.395378(s)]:loss	1.46568
+[ CUDAFloatType{} ]
+2023-07-04 09:53:54 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.795921 122119 153431
+GNNmini::Running.Epoch[28]:Times[0.395634(s)]:loss	1.52387
+[ CUDAFloatType{} ]
+2023-07-04 09:53:54 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.795061 121987 153431
+GNNmini::Running.Epoch[29]:Times[0.396505(s)]:loss	1.41605
+[ CUDAFloatType{} ]
+2023-07-04 09:53:55 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.797590 122375 153431
+GNNmini::Running.Epoch[30]:Times[0.398959(s)]:loss	1.10465
+[ CUDAFloatType{} ]
+2023-07-04 09:53:55 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.794233 121860 153431
+GNNmini::Running.Epoch[31]:Times[0.405321(s)]:loss	1.07299
+[ CUDAFloatType{} ]
+2023-07-04 09:53:56 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.797368 122341 153431
+GNNmini::Running.Epoch[32]:Times[0.395985(s)]:loss	1.06429
+[ CUDAFloatType{} ]
+2023-07-04 09:53:56 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.798378 122496 153431
+GNNmini::Running.Epoch[33]:Times[0.399976(s)]:loss	1.34402
+[ CUDAFloatType{} ]
+2023-07-04 09:53:56 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.800444 122813 153431
+GNNmini::Running.Epoch[34]:Times[0.398484(s)]:loss	1.03785
+[ CUDAFloatType{} ]
+2023-07-04 09:53:57 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.800360 122800 153431
+GNNmini::Running.Epoch[35]:Times[0.399504(s)]:loss	1.10523
+[ CUDAFloatType{} ]
+2023-07-04 09:53:57 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.799956 122738 153431
+GNNmini::Running.Epoch[36]:Times[0.402402(s)]:loss	1.06745
+[ CUDAFloatType{} ]
+2023-07-04 09:53:58 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.801194 122928 153431
+GNNmini::Running.Epoch[37]:Times[0.404484(s)]:loss	1.12002
+[ CUDAFloatType{} ]
+2023-07-04 09:53:58 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.803025 123209 153431
+GNNmini::Running.Epoch[38]:Times[0.400214(s)]:loss	0.952229
+[ CUDAFloatType{} ]
+2023-07-04 09:53:58 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.803241 123242 153431
+GNNmini::Running.Epoch[39]:Times[0.405482(s)]:loss	1.34162
+[ CUDAFloatType{} ]
+2023-07-04 09:53:59 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.802491 123127 153431
+GNNmini::Running.Epoch[40]:Times[0.398105(s)]:loss	1.29433
+[ CUDAFloatType{} ]
+2023-07-04 09:53:59 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.804524 123439 153431
+GNNmini::Running.Epoch[41]:Times[0.400299(s)]:loss	1.26857
+[ CUDAFloatType{} ]
+2023-07-04 09:54:00 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.805326 123562 153431
+GNNmini::Running.Epoch[42]:Times[0.39737(s)]:loss	1.03615
+[ CUDAFloatType{} ]
+2023-07-04 09:54:00 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.802524 123132 153431
+GNNmini::Running.Epoch[43]:Times[0.402175(s)]:loss	1.06965
+[ CUDAFloatType{} ]
+2023-07-04 09:54:00 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.804133 123379 153431
+GNNmini::Running.Epoch[44]:Times[0.404379(s)]:loss	1.01978
+[ CUDAFloatType{} ]
+2023-07-04 09:54:01 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.804479 123432 153431
+GNNmini::Running.Epoch[45]:Times[0.403318(s)]:loss	1.03111
+[ CUDAFloatType{} ]
+2023-07-04 09:54:01 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.804655 123459 153431
+GNNmini::Running.Epoch[46]:Times[0.400193(s)]:loss	0.969227
+[ CUDAFloatType{} ]
+2023-07-04 09:54:02 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.803593 123296 153431
+GNNmini::Running.Epoch[47]:Times[0.398347(s)]:loss	0.989618
+[ CUDAFloatType{} ]
+2023-07-04 09:54:02 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.807666 123921 153431
+GNNmini::Running.Epoch[48]:Times[0.403909(s)]:loss	1.0228
+[ CUDAFloatType{} ]
+2023-07-04 09:54:02 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.803886 123341 153431
+GNNmini::Running.Epoch[49]:Times[0.404555(s)]:loss	0.96721
+[ CUDAFloatType{} ]
+2023-07-04 09:54:03 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.806669 123768 153431
+GNNmini::Running.Epoch[50]:Times[0.39924(s)]:loss	0.965814
+[ CUDAFloatType{} ]
+2023-07-04 09:54:03 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.805541 123595 153431
+GNNmini::Running.Epoch[51]:Times[0.400876(s)]:loss	1.26514
+[ CUDAFloatType{} ]
+2023-07-04 09:54:04 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.803782 123325 153431
+GNNmini::Running.Epoch[52]:Times[0.398718(s)]:loss	1.28347
+[ CUDAFloatType{} ]
+2023-07-04 09:54:04 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.808337 124024 153431
+GNNmini::Running.Epoch[53]:Times[0.395827(s)]:loss	0.915056
+[ CUDAFloatType{} ]
+2023-07-04 09:54:04 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.808846 124102 153431
+GNNmini::Running.Epoch[54]:Times[0.41025(s)]:loss	1.21662
+[ CUDAFloatType{} ]
+2023-07-04 09:54:05 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.807353 123873 153431
+GNNmini::Running.Epoch[55]:Times[0.400479(s)]:loss	1.21848
+[ CUDAFloatType{} ]
+2023-07-04 09:54:05 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.804590 123449 153431
+GNNmini::Running.Epoch[56]:Times[0.401316(s)]:loss	1.2644
+[ CUDAFloatType{} ]
+2023-07-04 09:54:06 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.807686 123924 153431
+GNNmini::Running.Epoch[57]:Times[0.397201(s)]:loss	1.23614
+[ CUDAFloatType{} ]
+2023-07-04 09:54:06 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.806369 123722 153431
+GNNmini::Running.Epoch[58]:Times[0.400449(s)]:loss	1.31795
+[ CUDAFloatType{} ]
+2023-07-04 09:54:06 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809080 124138 153431
+GNNmini::Running.Epoch[59]:Times[0.404315(s)]:loss	2.11777
+[ CUDAFloatType{} ]
+2023-07-04 09:54:07 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.797629 122381 153431
+GNNmini::Running.Epoch[60]:Times[0.397677(s)]:loss	1.44076
+[ CUDAFloatType{} ]
+2023-07-04 09:54:07 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.805756 123628 153431
+GNNmini::Running.Epoch[61]:Times[0.399835(s)]:loss	0.985854
+[ CUDAFloatType{} ]
+2023-07-04 09:54:08 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.801957 123045 153431
+GNNmini::Running.Epoch[62]:Times[0.397388(s)]:loss	0.999401
+[ CUDAFloatType{} ]
+2023-07-04 09:54:08 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.804003 123359 153431
+GNNmini::Running.Epoch[63]:Times[0.409601(s)]:loss	1.24082
+[ CUDAFloatType{} ]
+2023-07-04 09:54:08 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.805945 123657 153431
+GNNmini::Running.Epoch[64]:Times[0.401779(s)]:loss	1.27948
+[ CUDAFloatType{} ]
+2023-07-04 09:54:09 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.808605 124065 153431
+GNNmini::Running.Epoch[65]:Times[0.399475(s)]:loss	1.21684
+[ CUDAFloatType{} ]
+2023-07-04 09:54:09 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809484 124200 153431
+GNNmini::Running.Epoch[66]:Times[0.393514(s)]:loss	1.21968
+[ CUDAFloatType{} ]
+2023-07-04 09:54:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.808891 124109 153431
+GNNmini::Running.Epoch[67]:Times[0.398616(s)]:loss	1.22694
+[ CUDAFloatType{} ]
+2023-07-04 09:54:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809256 124165 153431
+GNNmini::Running.Epoch[68]:Times[0.401925(s)]:loss	0.948078
+[ CUDAFloatType{} ]
+2023-07-04 09:54:10 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.810293 124324 153431
+GNNmini::Running.Epoch[69]:Times[0.398701(s)]:loss	0.914646
+[ CUDAFloatType{} ]
+2023-07-04 09:54:11 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.807933 123962 153431
+GNNmini::Running.Epoch[70]:Times[0.403272(s)]:loss	0.942854
+[ CUDAFloatType{} ]
+2023-07-04 09:54:11 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811642 124531 153431
+GNNmini::Running.Epoch[71]:Times[0.407213(s)]:loss	0.925235
+[ CUDAFloatType{} ]
+2023-07-04 09:54:12 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811479 124506 153431
+GNNmini::Running.Epoch[72]:Times[0.400374(s)]:loss	1.19146
+[ CUDAFloatType{} ]
+2023-07-04 09:54:12 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809380 124184 153431
+GNNmini::Running.Epoch[73]:Times[0.394316(s)]:loss	1.25818
+[ CUDAFloatType{} ]
+2023-07-04 09:54:12 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.810990 124431 153431
+GNNmini::Running.Epoch[74]:Times[0.397717(s)]:loss	1.20275
+[ CUDAFloatType{} ]
+2023-07-04 09:54:13 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809132 124146 153431
+GNNmini::Running.Epoch[75]:Times[0.406183(s)]:loss	1.23185
+[ CUDAFloatType{} ]
+2023-07-04 09:54:13 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.808741 124086 153431
+GNNmini::Running.Epoch[76]:Times[0.405028(s)]:loss	0.884923
+[ CUDAFloatType{} ]
+2023-07-04 09:54:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.807053 123827 153431
+GNNmini::Running.Epoch[77]:Times[0.399415(s)]:loss	0.941193
+[ CUDAFloatType{} ]
+2023-07-04 09:54:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.810038 124285 153431
+GNNmini::Running.Epoch[78]:Times[0.400635(s)]:loss	0.93027
+[ CUDAFloatType{} ]
+2023-07-04 09:54:14 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.806969 123814 153431
+GNNmini::Running.Epoch[79]:Times[0.398286(s)]:loss	0.968123
+[ CUDAFloatType{} ]
+2023-07-04 09:54:15 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.808767 124090 153431
+GNNmini::Running.Epoch[80]:Times[0.397374(s)]:loss	0.965474
+[ CUDAFloatType{} ]
+2023-07-04 09:54:15 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.812821 124712 153431
+GNNmini::Running.Epoch[81]:Times[0.412727(s)]:loss	0.907207
+[ CUDAFloatType{} ]
+2023-07-04 09:54:16 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811355 124487 153431
+GNNmini::Running.Epoch[82]:Times[0.401247(s)]:loss	0.899461
+[ CUDAFloatType{} ]
+2023-07-04 09:54:16 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811355 124487 153431
+GNNmini::Running.Epoch[83]:Times[0.400249(s)]:loss	0.912682
+[ CUDAFloatType{} ]
+2023-07-04 09:54:16 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.810977 124429 153431
+GNNmini::Running.Epoch[84]:Times[0.402019(s)]:loss	1.19578
+[ CUDAFloatType{} ]
+2023-07-04 09:54:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811563 124519 153431
+GNNmini::Running.Epoch[85]:Times[0.399397(s)]:loss	0.927076
+[ CUDAFloatType{} ]
+2023-07-04 09:54:17 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809132 124146 153431
+GNNmini::Running.Epoch[86]:Times[0.404725(s)]:loss	1.20181
+[ CUDAFloatType{} ]
+2023-07-04 09:54:18 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.812339 124638 153431
+GNNmini::Running.Epoch[87]:Times[0.414881(s)]:loss	1.29774
+[ CUDAFloatType{} ]
+2023-07-04 09:54:18 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809654 124226 153431
+GNNmini::Running.Epoch[88]:Times[0.400926(s)]:loss	0.926578
+[ CUDAFloatType{} ]
+2023-07-04 09:54:18 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809080 124138 153431
+GNNmini::Running.Epoch[89]:Times[0.400148(s)]:loss	0.921043
+[ CUDAFloatType{} ]
+2023-07-04 09:54:19 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.809432 124192 153431
+GNNmini::Running.Epoch[90]:Times[0.395376(s)]:loss	0.944575
+[ CUDAFloatType{} ]
+2023-07-04 09:54:19 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811374 124490 153431
+GNNmini::Running.Epoch[91]:Times[0.403515(s)]:loss	0.946052
+[ CUDAFloatType{} ]
+2023-07-04 09:54:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.810221 124313 153431
+GNNmini::Running.Epoch[92]:Times[0.405281(s)]:loss	0.909133
+[ CUDAFloatType{} ]
+2023-07-04 09:54:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811042 124439 153431
+GNNmini::Running.Epoch[93]:Times[0.404574(s)]:loss	0.928271
+[ CUDAFloatType{} ]
+2023-07-04 09:54:20 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.812039 124592 153431
+GNNmini::Running.Epoch[94]:Times[0.405503(s)]:loss	0.901737
+[ CUDAFloatType{} ]
+2023-07-04 09:54:21 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811902 124571 153431
+GNNmini::Running.Epoch[95]:Times[0.404249(s)]:loss	0.913631
+[ CUDAFloatType{} ]
+2023-07-04 09:54:21 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.811720 124543 153431
+GNNmini::Running.Epoch[96]:Times[0.396226(s)]:loss	1.157
+[ CUDAFloatType{} ]
+2023-07-04 09:54:22 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.812750 124701 153431
+GNNmini::Running.Epoch[97]:Times[0.402646(s)]:loss	0.910782
+[ CUDAFloatType{} ]
+2023-07-04 09:54:22 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.812606 124679 153431
+GNNmini::Running.Epoch[98]:Times[0.398921(s)]:loss	0.890923
+[ CUDAFloatType{} ]
+CPU线程已经结束
+最大线程数: 32
+2023-07-04 09:54:22 [home/toao/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:501:Train] INFO  - Train Acc: 0.812541 124669 153431
+GNNmini::Running.Epoch[99]:Times[0.403548(s)]:loss	0.931069
+[ CUDAFloatType{} ]
+#run_time=40.161765(s)
+all:13.007702(s) prepro:5.548145(s) pro:6.591738(s) post:0.866519(s) copy:0.000000(s)
+test_time:6.533472(s)
+#wait time: 37.344081(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.866138
+inclusiveTime: 0.000000
+init layer time: 0.047835
+init co time: 5.499566
+transfer share time: 0.000000 (s)
+update cache time: 0.974484 (s)
+cpu_total_time: 40.5567 (s)
+cpu_sample_time: 1.6746 (s)
+cpu_graph_time: 0.1694 (s)
+cpu_wait_time: 35.0095 (s)
+cpu_nn_time: 3.6864 (s)
+cpu_copy_time: 0.0160 (s)
+# gpu wait time: 0.0013 (s)
+# gpu round: 1600
+# pre sample time: 0.849382 (s)
+#sample_time= 13.4309 (s)
+#transfer_feature_time= 28.6322 (s)
+#training_time= 10.6863 (s)
+#average epoch time: 0.401618
+总传输节点数: 110497708
+1688435622799
+1688435662960
+exec_time=88.828865(s)

@@ -1,0 +1,24 @@
+CPU使用率:
+169678: 655.9168421052631
+GPU使用率: 
+11.582547169811317
+GNNmini::Running.Epoch[2]:Times[21.4387(s)]
+#run_time=65.107475(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 1.6638 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 5.6851 (s)
+init co time: 5.9464 (s)
+pro time: 6.9364 (s)
+post pro time: 1.0000 (s)
+#sample_time= 19.5753 (s)
+#transfer_feature_time= 46.7390 (s)
+#training_time= 44.1173 (s)
+#average epoch time: 21.7025 (s)
+#cpu wait time: 23.4357 (s)
+#gpu wait time: 0.0036 (s)
+总传输节点数: 271286645
+1697337653025
+1697337718133
+exec_time=191.224814(s)

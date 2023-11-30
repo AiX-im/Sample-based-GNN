@@ -1,0 +1,151 @@
+algorithm	:	GCNSAMPLEPCMULTI
+vertices	:	2449029
+epochs		:	3
+layers		:	100-64-64-47
+fanout		:	25-10-5
+batch_size	:	1024
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	/home/hdd/toao/dataset/products/reorder/reorder.edge.self
+feature_file	:	/home/hdd/toao/dataset/products/reorder/reorder.featuretable
+label_file	:	/home/hdd/toao/dataset/products/reorder/reorder.labeltable
+mask_file	:	/home/hdd/toao/dataset/products/reorder/reorder.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	1
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.6336 (s)
+load directed time: 15.4680 (s)
+pipeline num: 3
+2023-10-15 10:32:07 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:169:GCN_SAMPLE_PC_MULTI_impl] INFO  - config gpu num: 2
+2023-10-15 10:32:07 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:174:GCN_SAMPLE_PC_MULTI_impl] INFO  - GPU 数量: 2
+nts-server:149733:149733 [0] NCCL INFO cudaDriverVersion 11040
+nts-server:149733:149733 [0] NCCL INFO Bootstrap : Using eth0:172.29.232.209<0>
+nts-server:149733:149733 [0] NCCL INFO NET/Plugin : No plugin found (libnccl-net.so), using internal implementation
+NCCL version 2.14.3+cuda11.6
+nts-server:149733:150785 [0] NCCL INFO NET/IB : No device found.
+nts-server:149733:150785 [0] NCCL INFO NET/Socket : Using [0]eth0:172.29.232.209<0>
+nts-server:149733:150785 [0] NCCL INFO Using network Socket
+nts-server:149733:150786 [1] NCCL INFO Using network Socket
+nts-server:149733:150785 [0] NCCL INFO NCCL_P2P_LEVEL set by environment to NVL
+nts-server:149733:150785 [0] NCCL INFO Channel 00/04 :    0   1
+nts-server:149733:150785 [0] NCCL INFO Channel 01/04 :    0   1
+nts-server:149733:150785 [0] NCCL INFO Channel 02/04 :    0   1
+nts-server:149733:150785 [0] NCCL INFO Channel 03/04 :    0   1
+nts-server:149733:150786 [1] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] -1/-1/-1->1->0 [2] -1/-1/-1->1->0 [3] -1/-1/-1->1->0
+nts-server:149733:150785 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] 1/-1/-1->0->-1 [2] 1/-1/-1->0->-1 [3] 1/-1/-1->0->-1
+nts-server:149733:150785 [0] NCCL INFO Channel 00/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150786 [1] NCCL INFO Channel 00/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150785 [0] NCCL INFO Channel 01/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150786 [1] NCCL INFO Channel 01/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150785 [0] NCCL INFO Channel 02/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150786 [1] NCCL INFO Channel 02/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150785 [0] NCCL INFO Channel 03/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150786 [1] NCCL INFO Channel 03/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150785 [0] NCCL INFO Connected all rings
+nts-server:149733:150786 [1] NCCL INFO Connected all rings
+nts-server:149733:150785 [0] NCCL INFO Connected all trees
+nts-server:149733:150786 [1] NCCL INFO Connected all trees
+nts-server:149733:150786 [1] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:149733:150786 [1] NCCL INFO 4 coll channels, 4 p2p channels, 4 p2p channels per peer
+nts-server:149733:150785 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:149733:150785 [0] NCCL INFO 4 coll channels, 4 p2p channels, 4 p2p channels per peer
+nts-server:149733:150785 [0] NCCL INFO comm 0x599f5010 rank 0 nranks 2 cudaDev 0 busId 80 - Init COMPLETE
+nts-server:149733:150786 [1] NCCL INFO comm 0x5999a280 rank 1 nranks 2 cudaDev 1 busId 90 - Init COMPLETE
+nts-server:149733:150824 [0] NCCL INFO Using network Socket
+nts-server:149733:150825 [1] NCCL INFO Using network Socket
+nts-server:149733:150825 [1] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] -1/-1/-1->1->0 [2] -1/-1/-1->1->0 [3] -1/-1/-1->1->0
+nts-server:149733:150824 [0] NCCL INFO Channel 00/04 :    0   1
+nts-server:149733:150824 [0] NCCL INFO Channel 01/04 :    0   1
+nts-server:149733:150824 [0] NCCL INFO Channel 02/04 :    0   1
+nts-server:149733:150824 [0] NCCL INFO Channel 03/04 :    0   1
+nts-server:149733:150824 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] 1/-1/-1->0->-1 [2] 1/-1/-1->0->-1 [3] 1/-1/-1->0->-1
+nts-server:149733:150824 [0] NCCL INFO Channel 00/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150825 [1] NCCL INFO Channel 00/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150824 [0] NCCL INFO Channel 01/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150825 [1] NCCL INFO Channel 01/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150824 [0] NCCL INFO Channel 02/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150825 [1] NCCL INFO Channel 02/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150824 [0] NCCL INFO Channel 03/0 : 0[80] -> 1[90] via P2P/direct pointer
+nts-server:149733:150825 [1] NCCL INFO Channel 03/0 : 1[90] -> 0[80] via P2P/direct pointer
+nts-server:149733:150824 [0] NCCL INFO Connected all rings
+nts-server:149733:150825 [1] NCCL INFO Connected all rings
+nts-server:149733:150824 [0] NCCL INFO Connected all trees
+nts-server:149733:150825 [1] NCCL INFO Connected all trees
+nts-server:149733:150825 [1] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:149733:150825 [1] NCCL INFO 4 coll channels, 4 p2p channels, 4 p2p channels per peer
+nts-server:149733:150824 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+nts-server:149733:150824 [0] NCCL INFO 4 coll channels, 4 p2p channels, 4 p2p channels per peer
+nts-server:149733:150824 [0] NCCL INFO comm 0x599ea970 rank 0 nranks 2 cudaDev 0 busId 80 - Init COMPLETE
+nts-server:149733:150825 [1] NCCL INFO comm 0x599efc40 rank 1 nranks 2 cudaDev 1 busId 90 - Init COMPLETE
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [3] Epochs
+sample last layer neighs: 250
+train nids size: 196615
+pre sample filename: /home/hdd/toao/dataset/products/reorder/reorder.edge.pre_sample_b2048_f25-10-5_p3.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.0233
+cache ids size: 256111
+device 0 train num: 98307
+device 1 train num: 98308
+start: 196608, last_per_device: 3, num_devices: 2, last_batchsize: 7, total_batchsize: 2048, last_per_device_end: 4
+前者: 196615, 后者: 196615
+train id size: 98307
+sampler train id size: 98307
+train id size: 98308
+sampler train id size: 98308
+batch_cache_num: 7630, device_cache_offset: 7630, sg dst: 7630
+cache size: 2565632 byte
+cache size: 2565632 byte
+pipeline num: 3, batch size: 1024
+pipeline num: 3, batch size: 1024
+cache size: 2565632 byte
+cache size: 2565632 byte
+2023-10-15 10:33:31 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:349:TestMiniBatchAll] INFO  - Train Acc: 0.442657 87033 196615
+GNNmini::Running.Epoch[0]:Times[4.82208(s)]
+pipeline num: 3, batch size: 1024
+pipeline num: 3, batch size: 1024
+2023-10-15 10:33:36 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:349:TestMiniBatchAll] INFO  - Train Acc: 0.560451 110193 196615
+GNNmini::Running.Epoch[1]:Times[4.61484(s)]
+pipeline num: 3, batch size: 1024
+pipeline num: 3, batch size: 1024
+2023-10-15 10:33:41 [root/Sample-based-GNN/toolkits/GCN_SAMPLE_PC_MULTI.hpp:349:TestMiniBatchAll] INFO  - Train Acc: 0.705078 138629 196615
+GNNmini::Running.Epoch[2]:Times[4.59519(s)]
+#run_time=14.032213(s)
+#wait time: 0.000000(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.1676 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 1.3435 (s)
+init co time: 0.8870 (s)
+pro time: 2.3944 (s)
+post pro time: 0.4048 (s)
+cpu inclusiveTime: 0.1611 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 0.0054 (s)
+init co time: 0.4984 (s)
+pro time: 2.2981 (s)
+post pro time: 0.4318 (s)
+#sample_time= 8.2703 (s)
+#transfer_feature_time= 17.1391 (s)
+#training_time= 18.5491 (s)
+#average epoch time: 4.6774 (s)
+#cpu wait time: 8.4541 (s)
+#gpu wait time: 0.0014 (s)
+总传输节点数: 221564219
+1697337206981
+1697337221014
+exec_time=137.935436(s)

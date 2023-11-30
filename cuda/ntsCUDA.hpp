@@ -197,6 +197,8 @@ public:
   unsigned char* cpu_buffer = NULL;
   size_t cpu_buffer_size = 0;
 
+  void move_bytes_out(VertexId_CUDA* d_pointer, VertexId_CUDA* h_pointer, int size);
+
   void move_result_out(float *output, float *input, VertexId_CUDA src,
                        VertexId_CUDA dst, int feature_size, bool sync = true);
   void move_data_in(float *d_pointer, float *h_pointer, VertexId_CUDA start,
@@ -370,6 +372,15 @@ public:
 						VertexId_CUDA *src_vertex,
                         VertexId_CUDA feature_size,
 						VertexId_CUDA vertex_size);
+//   void init_cache_map(VertexId_CUDA *src_vertex, VertexId_CUDA *cache_node_hashmap, 
+//                       VertexId_CUDA* vertex_size, VertexId_CUDA *local_idx, 
+//                       VertexId_CUDA * local_idx_cache);                      
+  void zero_copy_feature_move_gpu_cache(float *dev_feature, float *host_pinned_feature, VertexId_CUDA *src_vertex,
+                                        VertexId_CUDA feature_size, VertexId_CUDA vertex_size,
+                                        VertexId_CUDA *local_idx);
+  void gather_feature_from_gpu_cache(float *dev_feature, float *dev_cache_feature, VertexId_CUDA *src_vertex,
+                                     VertexId_CUDA feature_size, VertexId_CUDA vertex_size, VertexId_CUDA *local_idx,
+                                     VertexId_CUDA *cache_node_hashmap);
   void global_copy_label_move_gpu(long *dev_label,
                     long *global_dev_label,
                     VertexId_CUDA *dst_vertex,

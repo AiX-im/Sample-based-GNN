@@ -91,6 +91,15 @@ public:
     std::mutex cache_set_mutex;
     std::vector<int> cache_set_batch;   // 用在多GPU之间确定该super_batch 运行到了第几个epoch
 
+    // for feature cache
+    std::vector<int> cache_node_idx_seq;
+    VertexId* cache_node_hashmap;
+    VertexId* dev_cache_node_hashmap;
+    int cache_node_num = 0;
+    float** dev_cache_feature;
+    VertexId **local_idx, **local_idx_cache, **dev_local_idx, **dev_local_idx_cache;
+    // VertexId *dev_cache_cnt, *local_cache_cnt;
+    VertexId **outmost_vertex;
 //    std::mutex sample_mutex;
 //    std::mutex transfer_mutex;
 //    std::mutex train_mutex;
@@ -543,10 +552,22 @@ public:
                     // sampler->load_feature_gpu(X[0],gnndatum->dev_local_feature);
                     sampler->load_label_gpu(&device_cuda_stream[device_id][thread_id], sg[thread_id],
                                             tmp_target_lab[thread_id],gnndatum->dev_local_label_multi[device_id]);
-//                    std::printf("device id %d thread %d debug 5\n", device_id, thread_id);
-                    sampler->load_feature_gpu(&device_cuda_stream[device_id][thread_id], sg[thread_id],
-                                              tmp_X0[thread_id],gnndatum->dev_local_feature_multi[device_id]);
-//                    std::printf("device id %d thread %d debug 6\n", device_id, thread_id);
+                    // std::printf("device id %d thread %d debug 5\n", device_id, thread_id);
+                    // sampler->load_feature_gpu(&device_cuda_stream[device_id][thread_id], sg[thread_id],
+                    //                           tmp_X0[thread_id],gnndatum->dev_local_feature_multi[device_id]);
+
+                    if (!graph->config->cacheflag) {  // trans feature use zero copy (omit gather feature)
+                        sampler->load_feature_gpu(&device_cuda_stream[device_id][thread_id], sg[thread_id],
+                         tmp_X0[thread_id],gnndatum->dev_local_feature_multi[device_id]);                        
+                        // get_gpu_mem(used_gpu_mem, total_gpu_mem);
+                    } else {  // trans freature which is not cache in gpu
+                        // epoch_transfer_feat_time -= get_time();
+                            sampler->load_feature_gpu_cache(
+                            &device_cuda_stream[device_id][thread_id], sg[thread_id], tmp_X0[thread_id], gnndatum->dev_local_feature_multi[device_id],
+                            dev_cache_feature[device_id], local_idx[device_id], local_idx_cache[device_id], cache_node_hashmap, dev_local_idx[device_id],
+                            dev_local_idx_cache[device_id], dev_cache_node_hashmap, outmost_vertex[device_id]);
+                    }
+                    // std::printf("device id %d thread %d debug 6\n", device_id, thread_id);
                     device_cuda_stream[device_id][thread_id].CUDA_DEVICE_SYNCHRONIZE();
 //                    std::printf("device id %d thread %d debug 7\n", device_id, thread_id);
                     write_add(&transfer_feature_time, get_time());
@@ -695,6 +716,7 @@ public:
         std::vector<int> fanout(1);
         fanout[0] = graph->gnnctx->fanout[graph->gnnctx->fanout.size() - 1];
         initCacheVariable();
+        determine_cache_node_idx(graph->vertices * graph->config->feature_cache_rate);
         std::printf("cache ids size: %d\n", cache_ids.size());
         nts::op::nts_local_shuffle(train_nids,  graph->config->batch_size * pipeline_num, cache_ids, batch_cache_num);
         initDeviceOffset();
@@ -912,6 +934,107 @@ public:
         memset(cache_set_batch.data(), -1, cache_set_batch.size() * sizeof(int));
 
     }
+
+     void mark_cache_node(std::vector<int>& cache_nodes) {
+        // init mask
+        // #pragma omp parallel for
+        // #pragma omp parallel for num_threads(threads)
+        // for (int i = 0; i < graph->vertices; ++i) {
+        //   cache_node_hashmap[i] = -1;
+        //   // assert(cache_node_hashmap[i] == -1);
+        // }
+
+        // mark cache nodes
+        int tmp_idx = 0;
+        for (int i = 0; i < cache_node_num; ++i) {
+        // LOG_DEBUG("cache_nodes[%d] = %d", i, cache_nodes[i]);
+        cache_node_hashmap[cache_nodes[i]] = tmp_idx++;
+        }
+        LOG_DEBUG("cache_node_num %d tmp_idx %d", cache_node_num, tmp_idx);
+        assert(cache_node_num == tmp_idx);
+    }
+
+    void cache_high_degree(std::vector<int>& node_idx) {
+        std::sort(node_idx.begin(), node_idx.end(), [&](const int x, const int y) {
+        return graph->out_degree_for_backward[x] > graph->out_degree_for_backward[y];
+        });
+        // #pragma omp parallel for num_threads(threads)
+        // for (int i = 1; i < graph->vertices; ++i) {
+        //   assert(graph->out_degree_for_backward[node_idx[i]] <= graph->out_degree_for_backward[node_idx[i - 1]]);
+        // }
+        mark_cache_node(node_idx);
+    }
+
+    void determine_cache_node_idx(int node_nums) {
+        if (node_nums > graph->vertices) 
+            node_nums = graph->vertices;
+        cache_node_num = node_nums;
+        LOG_DEBUG("cache_node_num %d (%.3f)", cache_node_num, 1.0 * cache_node_num / graph->vertices);
+
+        cache_node_idx_seq.resize(graph->vertices);
+        std::iota(cache_node_idx_seq.begin(), cache_node_idx_seq.end(), 0);
+        // cache_node_hashmap.resize(graph->vertices);
+        cache_node_hashmap = (VertexId*)cudaMallocPinned(1ll * graph->vertices * sizeof(VertexId));
+        dev_cache_node_hashmap = (VertexId*)getDevicePointer(cache_node_hashmap);
+
+        // #pragma omp parallel for
+        // #pragma omp parallel for num_threads(threads)
+        for (int i = 0; i < graph->vertices; ++i) {
+        cache_node_hashmap[i] = -1;
+        // assert(cache_node_hashmap[i] == -1);
+        }
+        cache_high_degree(cache_node_idx_seq);
+        gater_cpu_cache_feature_and_trans_to_gpu();
+    }
+
+    void gater_cpu_cache_feature_and_trans_to_gpu() {
+        long feat_dim = graph->gnnctx->layer_size[0];
+        dev_cache_feature = new float *[num_devices];
+        for(int i = 0; i < num_devices; i++) {
+            cudaSetUsingDevice(i);
+            dev_cache_feature[i] = (float*)cudaMallocGPU(cache_node_num * sizeof(float) * feat_dim);
+        }
+        // gather_cache_feature, prepare trans to gpu
+        LOG_DEBUG("start gather_cpu_cache_feature");
+        float* local_cache_feature_gather = new float[cache_node_num * feat_dim];
+    // std::cout << "###" << cache_node_num * sizeof(float) * feat_dim << " " << cache_node_num * feat_dim << std::endl;
+    // std::cout << "###" << graph->vertices * feat_dim << "l_v_num " << graph->gnnctx->l_v_num << " " << graph->vertices <<
+    // std::endl;
+    // #pragma omp parallel for
+    // omp_set_num_threads(threads);
+    auto max_threads = std::thread::hardware_concurrency();
+    #pragma omp parallel for num_threads(max_threads)
+        for (int i = 0; i < cache_node_num; ++i) {
+        int node_id = cache_node_idx_seq[i];
+        // assert(node_id < graph->vertices);
+        // assert(node_id < graph->gnnctx->l_v_num);
+        // LOG_DEBUG("copy node_id %d to", node_id);
+        // LOG_DEBUG("local_id %d", cache_node_hashmap[node_id]);
+
+        for (int j = 0; j < feat_dim; ++j) {
+            assert(cache_node_hashmap[node_id] < cache_node_num);
+            local_cache_feature_gather[cache_node_hashmap[node_id] * feat_dim + j] =
+                gnndatum->local_feature[node_id * feat_dim + j];
+        }
+        }
+        local_idx = new VertexId *[num_devices];
+        local_idx_cache = new VertexId *[num_devices];
+        dev_local_idx = new VertexId *[num_devices];
+        dev_local_idx_cache = new VertexId *[num_devices];
+        outmost_vertex = new VertexId *[num_devices];
+
+        LOG_DEBUG("start trans to gpu");
+        for(int i = 0; i < num_devices; i++) {
+            cudaSetUsingDevice(i);
+            move_data_in(dev_cache_feature[i], local_cache_feature_gather, 0, cache_node_num, feat_dim);
+            local_idx[i] = (VertexId*)cudaMallocPinned(1ll * graph->vertices * sizeof(VertexId));
+            local_idx_cache[i] = (VertexId*)cudaMallocPinned(1ll * graph->vertices * sizeof(VertexId));
+            outmost_vertex[i] = (VertexId*)malloc(graph->vertices * sizeof(VertexId));
+            dev_local_idx[i] = (VertexId*)getDevicePointer(local_idx[i]);
+            dev_local_idx_cache[i] = (VertexId*)getDevicePointer(local_idx_cache[i]);
+        }
+    }
+
 
     inline void initDeviceOffset(){
 
