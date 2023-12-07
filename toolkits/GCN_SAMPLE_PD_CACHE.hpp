@@ -713,6 +713,7 @@ public:
                 cpu_sample_time -= get_time();
                 CPU_sg = cpu_sampler->sample_fast(batch_cache_num[i%epoch_super_batch_num]);
                 // CPU_sg = cpu_sampler->sample_fast_allPD(batch_cache_num[i%epoch_super_batch_num]);
+                
                 cpu_sample_time += get_time();
                 // CPU采样完成，开始进行图计算
                 // TODO:解决下面的batch_start和batch_end分别是什么问题
