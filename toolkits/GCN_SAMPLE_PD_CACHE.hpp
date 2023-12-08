@@ -713,7 +713,7 @@ public:
                 cpu_sample_time -= get_time();
                 CPU_sg = cpu_sampler->sample_fast(batch_cache_num[i%epoch_super_batch_num]);
                 // CPU_sg = cpu_sampler->sample_fast_allPD(batch_cache_num[i%epoch_super_batch_num]);
-                
+
                 cpu_sample_time += get_time();
                 // CPU采样完成，开始进行图计算
                 // TODO:解决下面的batch_start和batch_end分别是什么问题
@@ -825,8 +825,8 @@ public:
         delete active;
         cpu_thread.join();
         printf("#average epoch time: %lf\n", exec_time/iterations);
-//        printf("总采样数:%llu, 总命中数:%llu\n", Cuda_Stream::total_sample_num, Cuda_Stream::total_cache_hit);
-//        printf("平均epoch采样数:%llu, 平均epoch命中数:%llu\n", Cuda_Stream::total_sample_num/iterations, Cuda_Stream::total_cache_hit/iterations);
+       printf("总采样数:%llu, 总命中数:%llu\n", Cuda_Stream::total_sample_num, Cuda_Stream::total_cache_hit);
+       printf("平均epoch采样数:%llu, 平均epoch命中数:%llu\n", Cuda_Stream::total_sample_num/iterations, Cuda_Stream::total_cache_hit/iterations);
         printf("总传输节点数: %llu\n", Cuda_Stream::total_transfer_node);
 //        printf("平均epoch传输节点数:%llu\n", Cuda_Stream::total_transfer_node/iterations);
         printf("%lu\n%lu\n", start_time, end_time);
@@ -909,7 +909,7 @@ public:
 
         cache_ids = nts::op::preSample(train_nids, graph->config->batch_size, batch_cache_num, cache_rate, top_cache_num,
                                        gnndatum->gnnctx->layer_size.size() - 1, fully_rep_graph,
-                                       cache_rate / 0.3, graph,  pipeline_num);
+                                       cache_rate / 0.8, graph,  pipeline_num);
         pre_sample_time += get_time();
         std::printf("预采样时间: %.4lf, cache num: %ld\n", pre_sample_time, cache_ids.size());
 

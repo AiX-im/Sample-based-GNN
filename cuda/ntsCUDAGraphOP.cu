@@ -61,7 +61,7 @@
 
 // TODO: Toao debug
 
-uint64_t  Cuda_Stream::total_cache_hit = 0;
+uint64_t Cuda_Stream::total_cache_hit = 0;
 uint64_t Cuda_Stream::total_sample_num = 0;
 uint64_t Cuda_Stream::total_transfer_node = 0;
 
@@ -1468,19 +1468,19 @@ void Cuda_Stream::sample_processing_get_co_gpu_omit(
 
     // NOTE: Toao用于检测cache点数量
     // TODO: Toao用于检测cache点的数量
-//    VertexId_CUDA* cache_count;
-//    cudaMallocAsync(&cache_count, sizeof(VertexId_CUDA), stream);
-//    cudaMemsetAsync(cache_count, 0, sizeof(VertexId_CUDA), stream);
-//    sample_processing_get_co_gpu_kernel_omit_lab<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
-//                            (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
-//                            src_index_size,src_count,src_index,fanout, cache_count);
-//    VertexId_CUDA* cache_count_cpu = new VertexId_CUDA[1]();
-//    cudaMemcpyAsync(cache_count_cpu, cache_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
-////    std::printf("采样总结点数: %u, cache点数量: %u\n", dst_size, cache_count_cpu[0]);
-//    total_sample_num += dst_size;
-//    total_cache_hit += cache_count_cpu[0];
-//    delete []cache_count_cpu;
-//    cudaFreeAsync(cache_count, stream);
+   VertexId_CUDA* cache_count;
+   cudaMallocAsync(&cache_count, sizeof(VertexId_CUDA), stream);
+   cudaMemsetAsync(cache_count, 0, sizeof(VertexId_CUDA), stream);
+   sample_processing_get_co_gpu_kernel_omit_lab<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS,0,stream>>>
+                           (CacheFlag,dst,tmp_data_buffer,global_column_offset,dst_size,
+                           src_index_size,src_count,src_index,fanout, cache_count, super_batch_id);
+   VertexId_CUDA* cache_count_cpu = new VertexId_CUDA[1]();
+   cudaMemcpyAsync(cache_count_cpu, cache_count, sizeof(VertexId_CUDA), cudaMemcpyDeviceToHost, stream);
+//    std::printf("采样总结点数: %u, cache点数量: %u\n", dst_size, cache_count_cpu[0]);
+   total_sample_num += dst_size;
+   total_cache_hit += cache_count_cpu[0];
+   delete []cache_count_cpu;
+   cudaFreeAsync(cache_count, stream);
 
 //    this->CUDA_DEVICE_SYNCHRONIZE();
 //    inclusiveTime -= get_time();
@@ -1714,8 +1714,9 @@ void Cuda_Stream::zero_copy_feature_move_gpu(float *dev_feature,
                                    	VertexId_CUDA feature_size,
 						VertexId_CUDA vertex_size){
 #if CUDA_ENABLE
-//    std::printf("传输feature大小数量: %u\n", vertex_size);
+    // std::printf("传输feature大小数量: %u\n", vertex_size);
     total_transfer_node += vertex_size;
+    // std::printf("total_transfer_node传输feature大小数量: %u\n", total_transfer_node);
     int block_num = ((vertex_size * WARP_SIZE)/CUDA_NUM_THREADS) + 1;
     block_num = std::min(CUDA_NUM_THREADS, block_num);
     zero_copy_feature_move_gpu_kernel<<<block_num/2,CUDA_NUM_THREADS,0,stream>>>
@@ -1744,6 +1745,7 @@ void Cuda_Stream::zero_copy_feature_move_gpu_cache(float* dev_feature, float* ho
                                                    VertexId_CUDA* src_vertex, VertexId_CUDA feature_size,
                                                    VertexId_CUDA vertex_size, VertexId_CUDA* local_idx) {
 #if CUDA_ENABLE
+    total_transfer_node += vertex_size;
   zero_copy_feature_move_gpu_cache_kernel<<<CUDA_NUM_BLOCKS, CUDA_NUM_THREADS, 0, stream>>>(
       dev_feature, host_pinned_feature, src_vertex, feature_size, vertex_size, local_idx);
   this->CUDA_DEVICE_SYNCHRONIZE();

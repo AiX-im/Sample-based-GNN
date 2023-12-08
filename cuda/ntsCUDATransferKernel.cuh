@@ -463,9 +463,9 @@ __global__ void dev_load_share_embedding_kernel(float *dev_embedding,
     size_t laneId =threadId%WARPSIZE;
     size_t warp_id=threadId/WARPSIZE;
 
-    for(long i=threadId;i<(long)vertex_size*WARPSIZE;i+=blockDim.x*gridDim.x){
-        VertexId_CUDA vtx_idx=i/WARPSIZE;   // 这里代表的是batch内的偏移id，所以取的目的地应该是这个
-        VertexId_CUDA vtx_id=destination_vertex[vtx_idx];   // 这里代表的是全局的id
+    for(long i = threadId; i < (long)vertex_size * WARPSIZE; i += blockDim.x * gridDim.x){
+        VertexId_CUDA vtx_idx = i / WARPSIZE;   // 这里代表的是batch内的偏移id，所以取的目的地应该是这个
+        VertexId_CUDA vtx_id = destination_vertex[vtx_idx];   // 这里代表的是全局的id
         // 检查cache flag中是否为相应的batch id，为的话则代表已经进行了缓存
         if(dev_cacheflag[vtx_id] == super_batch_id){    // 使用全局ID来判断是否相等
             // 从cache location中获取节点的本地位置
@@ -831,18 +831,18 @@ __global__ void sample_processing_get_co_gpu_kernel_omit_lab(
 									VertexId_CUDA* src_count,
 									VertexId_CUDA* src_index,
 									VertexId_CUDA fanout,
-                                    VertexId_CUDA* cache_count
+                                    VertexId_CUDA* cache_count,
+                                    VertexId_CUDA super_batch_id
 									)
 {
 	size_t threadId = blockIdx.x *blockDim.x + threadIdx.x;
 	for(long i = threadId; i < (long)dst_size; i += blockDim.x * gridDim.x){
 	   	VertexId_CUDA dst_vtx = dst[i];
-           // 这里为0的点也不采样
-        if(CacheFlag[dst_vtx] == -1 /*|| CacheFlag[dst_vtx] == 0*/){
-		    local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
-        }
-        else{
-            local_column_offset[i + 1] = 0;
+        if(CacheFlag[dst_vtx] == super_batch_id){
+		//     local_column_offset[i + 1] = fminf(global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx], fanout);
+        // }
+        // else{
+        //     local_column_offset[i + 1] = 0;
             atomicAdd(cache_count, 1u);
         }
 		//local_column_offset[i + 1] = global_column_offset[dst_vtx + 1] - global_column_offset[dst_vtx];

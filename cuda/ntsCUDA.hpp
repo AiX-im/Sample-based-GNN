@@ -178,7 +178,7 @@ class Cuda_Stream {
 public:
     // NOTE: Toao debug变量
     double cpu_inclusiveTime = 0.0;
-  double inclusiveTime = 0;
+    double inclusiveTime = 0;
     static uint64_t total_sample_num;
     static uint64_t total_cache_hit;
     static uint64_t total_transfer_node;
