@@ -172,9 +172,12 @@ public:
     }
 
     void shuffle_vec(std::vector<VertexId>& vec) {
-        unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count();
-        std::shuffle (vec.begin(), vec.end(), std::default_random_engine(seed));
+        // unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count();
+        // std::shuffle (vec.begin(), vec.end(), std::default_random_engine(seed));
+        static thread_local std::mt19937 generator(2000);
+        std::shuffle(vec.begin(), vec.end(), generator);
     }
+
 
     void Test(long s) { // 0 train, //1 eval //2 test
         NtsVar mask_train = MASK_gpu.eq(s);

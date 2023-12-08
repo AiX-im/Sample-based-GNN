@@ -100,9 +100,9 @@ public:
             sampled_sgs.push_back(new sampCSC(0));
         allocate_gpu_edge(&(src_index[i]), all_vertices);
         }
-        global_buffer_used=0;
+        global_buffer_used = 0;
 //        global_buffer_capacity=1024*1024*128*2;
-        global_buffer_capacity=1024*1024*10*2;
+        global_buffer_capacity = 1024*1024*10*2;
         global_value_used = 0;
 //        global_value_capacity = 1024*1024*128;
         global_value_capacity = 1024*1024*10;

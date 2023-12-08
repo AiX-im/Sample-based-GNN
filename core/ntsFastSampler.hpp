@@ -660,23 +660,8 @@ std::printf("load_aggresult 1 \n");
             init_layer_time -= MPI_Wtime();
             if(i == 0){
                 ssg->gpu_init_first_layer(&(sample_nids[work_offset]),actual_batch_size);
-//                std::printf("理论第0层采样节点:\n");
-//                for(int j = 0; j < actual_batch_size; j++) {
-//                    std::printf("%u ", sample_nids[work_offset + j]);
-//                }
-//                std::printf("\n");
             }else{
                 ssg->gpu_init_proceeding_layer(i);
-//                auto data_num = ssg->sampled_sgs[i]->v_size;
-//                VertexId * data = new VertexId[data_num];
-//                cudaMemcpy(data, ssg->sampled_sgs[i]->dev_destination, sizeof(VertexId) * data_num, cudaMemcpyDeviceToHost);
-//                std::printf("理论第%d层采样节点:\n", i);
-//                for(int j = 0; j < data_num; j++){
-//                    std::printf("%u ", data[j]);
-//                }
-//                std::printf("\n");
-//                delete[] data;
-
             }
             init_layer_time += MPI_Wtime();
             init_co_time -= MPI_Wtime();
@@ -1018,10 +1003,11 @@ std::printf("load_aggresult 1 \n");
                 if (ret == -1) {
                     ret = nbrs;
                 }
-                
+
                 return ret;
             },i);
             }
+
             tmp_pre_pro_time+=MPI_Wtime();
             pre_pro_time+=tmp_pre_pro_time;
 
@@ -1080,9 +1066,9 @@ std::printf("load_aggresult 1 \n");
                 ssg->sampled_sgs[i]->source.clear();
                 //ssg->sampled_sgs[i]->source = std::vector<VertexId>(src_size + 1 , 0)
                 // 下面是将bitmap标记的src顶点放进source中
-                for(VertexId i_src=0;i_src<samp_bitmap->size;i_src+=64){
-                    unsigned long word= samp_bitmap->data[WORD_OFFSET(i_src)];
-                    VertexId vtx=i_src;
+                for(VertexId i_src = 0; i_src < samp_bitmap->size; i_src += 64){
+                    unsigned long word = samp_bitmap->data[WORD_OFFSET(i_src)];
+                    VertexId vtx = i_src;
                     VertexId offset=0;
                     while(word != 0){
                         if(word & 1){
@@ -1139,6 +1125,8 @@ std::printf("load_aggresult 1 \n");
             if(to_gpu){                 
                 ssg->sampled_sgs[i]->allocate_dev_array_async(ssg->cs->stream);
                 ssg->sampled_sgs[i]->copy_data_to_device_async(ssg->cs->stream);
+                // ssg->sampled_sgs[i]->allocate_dev_array();
+                // ssg->sampled_sgs[i]->copy_data_to_device();
             }
             tmp_copy_gpu_time+=MPI_Wtime();
             copy_gpu_time+=tmp_copy_gpu_time;
