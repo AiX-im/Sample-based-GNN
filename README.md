@@ -60,7 +60,7 @@ make -j4
 
 ### To run NeutronOrch:
 ```
-./nts_run.sh ${cfg_file} 
+./nto_run.sh ${cfg_file} 
 ```
 
 ENGINE TYPE:
