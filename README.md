@@ -67,4 +67,4 @@ ENGINE TYPE:
 We list serveral example in the root dir for your reference
 GCN:
 gcn_reddit_sample.cfg
-gcn_orkut_sample.cfg
+gcn_cora_sample.cfg

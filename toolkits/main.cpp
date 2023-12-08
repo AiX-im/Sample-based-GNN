@@ -291,6 +291,14 @@ int main(int argc, char **argv) {
               new GS_SAMPLE_PD_CACHE_impl(graph, iterations);
       ntsGCN->init_graph();
       ntsGCN->init_nn();
+      ntsGCN->run();  
+  } else if (graph->config->algorithm == std::string("GSSAMPLEALLMULTI")) {
+      graph->load_directed(graph->config->edge_file, graph->config->vertices);
+      graph->generate_backward_structure();
+      auto *ntsGCN =
+              new GS_SAMPLE_ALL_MULTI_impl(graph, iterations);
+      ntsGCN->init_graph();
+      ntsGCN->init_nn();
       ntsGCN->run();
   } else if (graph->config->algorithm == std::string("GATSAMPLEPDCACHE")) {
       graph->load_directed(graph->config->edge_file, graph->config->vertices);
