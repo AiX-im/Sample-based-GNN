@@ -120,7 +120,7 @@ set(NEUTRONSTAR_SRC_FILES
 )
 
 set(NEUTRONSTAR_TEST_SRC_FILES
-	"test/testcsr.cpp"
+        "toolkits/main.cpp"
         "core/GraphSegment.cpp"
         "comm/network.cpp"
 )

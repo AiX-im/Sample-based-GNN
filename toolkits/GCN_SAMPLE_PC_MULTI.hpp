@@ -8,29 +8,6 @@
 #include "core/ntsPeerRPC.hpp"
 #include <pthread.h>
 
-void setScheduling(std::thread &th, int policy, int priority) {
-    sched_param sch_params;
-    sch_params.sched_priority = priority;
-    if(pthread_setschedparam(th.native_handle(), policy, &(sch_params))) {
-        std::cerr << "Failed to set Thread scheduling : " << std::strerror(errno) << std::endl;
-    }
-}
-
-void setPriority(int priority) {
-    int policy = SCHED_FIFO; // 设置为FIFO调度策略
-    struct sched_param param;
-    param.sched_priority = priority; // 设置线程优先级
-
-    int result = sched_setscheduler(0, policy, &param);
-    if (result == -1) {
-        std::cerr << "Failed to set thread priority." << std::endl;
-        return;
-    }
-
-    // 在这里执行线程工作
-    // std::this_thread::sleep_for(std::chrono::seconds(5));
-}
-
 class GCN_SAMPLE_PC_MULTI_impl {
 public:
     int iterations;
@@ -1239,7 +1216,28 @@ public:
         return torch::dropout(torch::relu(a), drop_rate, device_ctx[device_id]->is_train());
     }
 
+    void setScheduling(std::thread &th, int policy, int priority) {
+        sched_param sch_params;
+        sch_params.sched_priority = priority;
+        if(pthread_setschedparam(th.native_handle(), policy, &(sch_params))) {
+            std::cerr << "Failed to set Thread scheduling : " << std::strerror(errno) << std::endl;
+        }
+    }
 
+    void setPriority(int priority) {
+        int policy = SCHED_FIFO; // 设置为FIFO调度策略
+        struct sched_param param;
+        param.sched_priority = priority; // 设置线程优先级
+
+        int result = sched_setscheduler(0, policy, &param);
+        if (result == -1) {
+            std::cerr << "Failed to set thread priority." << std::endl;
+            return;
+        }
+
+        // 在这里执行线程工作
+        // std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
 };
 
 #endif //GNNMINI_GCN_SAMPLE_PC_MULTI_HPP
