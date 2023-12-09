@@ -94,6 +94,9 @@ public:
     VertexId *local_idx, *local_idx_cache, *dev_local_idx, *dev_local_idx_cache;
     // VertexId *dev_cache_cnt, *local_cache_cnt;
     VertexId *outmost_vertex;
+    FastSampler* train_sampler = nullptr;
+    double used_gpu_mem, total_gpu_mem;
+
 
     SampledSubgraph *CPU_sg;
     std::thread cpu_thread;
@@ -589,25 +592,14 @@ public:
         std::printf("train:%d\n",train_nids.size());
         std::printf("val_nids:%d\n",val_nids.size());
         std::printf("test_nids:%d\n",test_nids.size());
-        //    std::printf("aggresult start \n");
-        //     PartitionedGraph *partitioned_graph;
-        //     partitioned_graph = new PartitionedGraph(graph, active);
-        //     std::printf("aggresult 1\n");
-        //     partitioned_graph->GenerateAll([&](VertexId src, VertexId dst) {
-        //     return nts::op::nts_norm_degree(graph, src, dst);
-        //     },CPU_T);
-        //     std::printf("aggresult 2 \n");
-        //     ctx->eval();
-        //     std::printf("aggresult 3 \n");
-        //     Y_PD = ctx->runGraphOp<nts::op::ForwardCPUfuseOp>(partitioned_graph,active,X[0]);
-        //     std::printf("aggresult 4 \n");
-        //     delete partitioned_graph;
-        //     std::printf("aggresult 5 \n");  
 
-            
-        // shuffle_vec(train_nids);
-        // shuffle_vec(val_nids);
-        // shuffle_vec(test_nids);
+        InitStream();
+
+        int layer = graph->gnnctx->layer_size.size()-1;
+
+        train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        // FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
+        // FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
         initCacheVariable();
         determine_cache_node_idx(graph->vertices * graph->config->feature_cache_rate);
         LOG_DEBUG("feature_cache_rate %f", graph->config->feature_cache_rate);
@@ -752,13 +744,7 @@ public:
 
 
 
-        InitStream();
 
-        int layer = graph->gnnctx->layer_size.size()-1;
-
-        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-        // FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-        // FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
 
 
         auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -963,6 +949,21 @@ void determine_cache_node_idx(int node_nums) {
     cache_node_num = node_nums;
     LOG_DEBUG("cache_node_num %d (%.3f)", cache_node_num, 1.0 * cache_node_num / graph->vertices);
 
+    LOG_DEBUG("start get_gpu_idle_mem_pipe()");
+    double max_gpu_mem = get_gpu_idle_mem_pipe();
+    LOG_DEBUG("release gpu memory");
+    empty_gpu_cache();
+    get_gpu_mem(used_gpu_mem, total_gpu_mem);
+    LOG_DEBUG("used %.3f total %.3f (after emptyCache)", used_gpu_mem, total_gpu_mem);
+    // double free_memory = total_gpu_mem - max_gpu_mem - 200;
+    double free_memory = total_gpu_mem - max_gpu_mem - 100;
+    int memory_nodes = free_memory * 1024 * 1024 / sizeof(ValueType) / graph->gnnctx->layer_size[0];
+    cache_node_num = memory_nodes;
+    LOG_DEBUG("cache_node_num %d (%.3f)", cache_node_num, 1.0 * cache_node_num / graph->vertices);
+    if (cache_node_num > graph->vertices) 
+        cache_node_num = graph->vertices;
+
+
     cache_node_idx_seq.resize(graph->vertices);
     std::iota(cache_node_idx_seq.begin(), cache_node_idx_seq.end(), 0);
     // cache_node_hashmap.resize(graph->vertices);
@@ -1018,7 +1019,121 @@ auto max_threads = std::thread::hardware_concurrency();
     dev_local_idx_cache = (VertexId*)getDevicePointer(local_idx_cache);
   }
 
+         // pre train some epochs to get idle memory of GPU when training
+  double get_gpu_idle_mem_pipe() {
+        double max_gpu_used = 0;
+        SampledSubgraph *sg[pipeline_num];
+        NtsVar tmp_X0[pipeline_num];
+        NtsVar tmp_target_lab[pipeline_num];
+        for(int i = 0; i < pipeline_num; i++) {
+            tmp_X0[i] = graph->Nts->NewLeafTensor({1000,F.size(1)},
+                                                  torch::DeviceType::CUDA);
+            tmp_target_lab[i] = graph->Nts->NewLabelTensor({graph->config->batch_size},
+                                                           torch::DeviceType::CUDA);
+        }
+        std::thread threads[pipeline_num];
+        for(int tid = 0; tid < pipeline_num; tid++) {
+            threads[tid] = std::thread([&](int thread_id){
+                std::unique_lock<std::mutex> sample_lock(sample_mutex, std::defer_lock);
+                sample_lock.lock();
+                while(train_sampler->sample_not_finished()){
+                    sg[thread_id]=train_sampler->sample_gpu_fast(graph->config->batch_size, thread_id);
+                    //sg=sampler->sample_fast(graph->config->batch_size);
+                    cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                    sample_lock.unlock();
 
+                    std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
+                    transfer_lock.lock();
+                    train_sampler->load_label_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_target_lab[thread_id],gnndatum->dev_local_label);
+                    train_sampler->load_feature_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_X0[thread_id],gnndatum->dev_local_feature);
+                    cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                    transfer_lock.unlock();
+                    std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);
+                    train_lock.lock();
+                    at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
+                    for(int l = 0; l < (graph->gnnctx->layer_size.size()-1); l++){//forward
+                        graph->rtminfo->curr_layer = l;
+                        int hop = (graph->gnnctx->layer_size.size()-2) - l;
+                        if(l == 0) {
+                            NtsVar Y_i=ctx->runGraphOp<nts::op::SingleGPUAllSampleGraphOp>(sg[thread_id],graph,hop,tmp_X0[thread_id],&cuda_stream[thread_id]);
+                            X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
+                                                                 return vertexForward(n_i, v_i);
+                                                             },
+                                                             Y_i,
+                                                             tmp_X0[thread_id]);
+                        } else {
+                            NtsVar Y_i = ctx->runGraphOp<nts::op::SingleGPUAllSampleGraphOp>(sg[thread_id],graph,hop,X[l],&cuda_stream[thread_id]);
+                            X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
+                                                                 return vertexForward(n_i, v_i);
+                                                             },
+                                                             Y_i,
+                                                             X[l]);
+                        }
+                    }
+
+                    Loss(X[graph->gnnctx->layer_size.size()-1],tmp_target_lab[thread_id]);
+                    if (ctx->training) {
+                        ctx->self_backward(false);
+                        for (int i = 0; i < P.size(); i++) {
+                            P[i]->zero_grad();
+                        }
+                    }
+                    cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                    train_lock.unlock();
+                    sample_lock.lock();
+
+                }
+                sample_lock.unlock();
+            }, tid);
+        }
+        for(int i = 0; i < pipeline_num; i++) {
+            threads[i].join();
+        }
+        train_sampler->restart();
+
+        get_gpu_mem(used_gpu_mem, total_gpu_mem);
+        max_gpu_used = std::max(used_gpu_mem, max_gpu_used);
+        LOG_DEBUG("get_gpu_idle_mem_pipe(): used %.3f max_used %.3f total %.3f", used_gpu_mem, max_gpu_used,
+                    total_gpu_mem);
+
+        return max_gpu_used;
+    }
+
+    void get_gpu_mem(double &used, double &total) {
+            int deviceCount = 0;
+            cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+            if (deviceCount == 0) {
+                std::cout << "当前PC没有支持CUDA的显卡硬件设备" << std::endl;
+                assert(false);
+            }
+
+            size_t gpu_total_size;
+            size_t gpu_free_size;
+
+            cudaError_t cuda_status = cudaMemGetInfo(&gpu_free_size, &gpu_total_size);
+
+            if (cudaSuccess != cuda_status) {
+                std::cout << "Error: cudaMemGetInfo fails : " << cudaGetErrorString(cuda_status) << std::endl;
+                assert(false);
+                // gpu_free_size = 0, gpu_total_size = 0;
+            }
+
+            double total_memory = double(gpu_total_size) / (1024.0 * 1024.0);
+            double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
+            double used_memory = total_memory - free_memory;
+            used = used_memory;
+            total = total_memory;
+            // return {used_memory, total_memory};
+            // std::cout << "\n"
+            //     << "当前显卡总共有显存" << total_memory << "m \n"
+            //     << "已使用显存" << used_memory << "m \n"
+            //     << "剩余显存" << free_memory << "m \n" << std::endl;
+    }
+    void empty_gpu_cache() {
+        for (int ti = 0; ti < 5; ++ti) {  // clear gpu cache memory
+        c10::cuda::CUDACachingAllocator::emptyCache();
+        }
+    }
 };
 
 #endif //GNNMINI_GS_SAMPLE_PD_CACHE_HPP
