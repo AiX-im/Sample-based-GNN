@@ -442,7 +442,7 @@ public:
 
         InitStream();
         int layer = graph->gnnctx->layer_size.size() - 1;
-        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
         train_sampler->set_merge_src_dst(pipeline_num);
 
         exec_time -= get_time();

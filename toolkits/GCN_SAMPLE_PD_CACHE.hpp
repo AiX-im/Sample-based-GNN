@@ -354,6 +354,102 @@ public:
         return y;
     }
 
+    void Forward_test(FastSampler* sampler, int type=0) {
+        graph->rtminfo->forward = true;
+        correct = 0;
+        batch = 0;
+        // NtsVar target_lab;
+        // X[0]=graph->Nts->NewLeafTensor({1000,F.size(1)},
+        //   torch::DeviceType::CUDA);
+        // target_lab=graph->Nts->NewLabelTensor({graph->config->batch_size},
+        //       torch::DeviceType::CUDA);
+        SampledSubgraph *sg[pipeline_num];
+        NtsVar tmp_X0[pipeline_num];
+        NtsVar tmp_target_lab[pipeline_num];
+        for(int i = 0; i < pipeline_num; i++) {
+            tmp_X0[i] = graph->Nts->NewLeafTensor({1000,F.size(1)},
+                                                  torch::DeviceType::CUDA);
+            tmp_target_lab[i] = graph->Nts->NewLabelTensor({graph->config->batch_size},
+                                                           torch::DeviceType::CUDA);
+        }
+        std::thread threads[pipeline_num];
+        for(int tid = 0; tid < pipeline_num; tid++) {
+            threads[tid] = std::thread([&](int thread_id){
+                std::unique_lock<std::mutex> sample_lock(sample_mutex, std::defer_lock);
+                sample_lock.lock();
+                while(sampler->sample_not_finished()){
+                    sg[thread_id]=sampler->sample_gpu_fast(graph->config->batch_size, thread_id);
+                    //sg=sampler->sample_fast(graph->config->batch_size);
+                    cudaStreamSynchronize(cuda_stream[thread_id].stream);
+                    sample_lock.unlock();
+
+              std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
+              transfer_lock.lock();
+                    // sampler->load_label_gpu(target_lab,gnndatum->dev_local_label);
+                    // sampler->load_feature_gpu(X[0],gnndatum->dev_local_feature);
+                    sampler->load_label_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_target_lab[thread_id],gnndatum->dev_local_label);
+                    sampler->load_feature_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_X0[thread_id],gnndatum->dev_local_feature);
+                    cudaStreamSynchronize(cuda_stream[thread_id].stream);
+              transfer_lock.unlock();
+
+                    std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);
+                    train_lock.lock();
+                    double training_time_step = 0;
+
+
+                    at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
+                    // std::printf("after setCurrentCUDAStream\n");
+                    for(int l = 0; l < (graph->gnnctx->layer_size.size()-1); l++){//forward
+                        graph->rtminfo->curr_layer = l;
+                        int hop = (graph->gnnctx->layer_size.size()-2) - l;
+                        if(l == 0) {
+                            NtsVar Y_i=ctx->runGraphOp<nts::op::SingleGPUAllSampleGraphOp>(sg[thread_id],graph,hop,tmp_X0[thread_id],&cuda_stream[thread_id]);
+                            X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
+                                                                 return vertexForward(n_i, v_i);
+                                                             },
+                                                             Y_i,
+                                                             tmp_X0[thread_id]);
+//                            cudaDeviceSynchronize();
+//                            auto Y1_sum = Y_i.abs().sum().item<double>();
+//                            std::printf("X1数量: %d, X1 sum: %lf, X1 avg: %lf\n", Y_i.size(0), Y1_sum, Y1_sum/Y_i.size(0));
+                        } else {
+                            NtsVar Y_i = ctx->runGraphOp<nts::op::SingleGPUAllSampleGraphOp>(sg[thread_id],graph,hop,X[l],&cuda_stream[thread_id]);
+                            X[l + 1] = ctx->runVertexForward([&](NtsVar n_i,NtsVar v_i){
+                                                                 return vertexForward(n_i, v_i);
+                                                             },
+                                                             Y_i,
+                                                             X[l]);
+                        }
+                    }
+
+                    Loss(X[graph->gnnctx->layer_size.size()-1],tmp_target_lab[thread_id]);
+                    cudaStreamSynchronize(cuda_stream[thread_id].stream);
+
+                    correct += getCorrect(X[graph->gnnctx->layer_size.size()-1], tmp_target_lab[thread_id]);
+                    batch++;
+
+                    train_lock.unlock();
+                    sample_lock.lock();
+
+                }
+                sample_lock.unlock();
+            }, tid);
+        }
+        for(int i = 0; i < pipeline_num; i++) {
+            threads[i].join();
+        }
+        sampler->restart();
+        acc = 1.0 * correct / sampler->work_range[1];
+        if (type == 0) {
+            LOG_INFO("Train Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+        } else if (type == 1) {
+            LOG_INFO("Eval Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+        } else if (type == 2) {
+            LOG_INFO("Test Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+        }
+    }
+
+
     /**
      * @description: 执行前向计算
      * @param {FastSampler*} sampler 训练采样器
@@ -597,9 +693,9 @@ public:
 
         int layer = graph->gnnctx->layer_size.size()-1;
 
-        train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-        // FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-        // FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
+        train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size, graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
 
         initCacheVariable();
         determine_cache_node_idx(graph->vertices * graph->config->feature_cache_rate);
@@ -613,10 +709,10 @@ public:
         std::printf("before shuffle sum: %ld, total cache: %ld\n", batch_sum, cache_ids.size());
 
 //         nts::op::nts_local_shuffle(train_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
-//        nts::op::nts_local_shuffle(val_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
-//        nts::op::nts_local_shuffle(test_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
-        nts::op::nts_local_shuffle(train_nids,  graph->config->batch_size * pipeline_num, cache_ids, batch_cache_num);
-
+        nts::op::nts_local_shuffle(val_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
+        shuffle_vec(val_nids);
+        shuffle_vec(test_nids); 
+        
         batch_sum = 0;
         for(int i = 0; i < batch_cache_num.size(); i++) {
             batch_sum += batch_cache_num[i];
@@ -758,11 +854,11 @@ public:
             }
             ctx->train();
             Train(train_sampler, 0);
-            // ctx->eval();
-            // Forward(eval_sampler, 1);
-            // Forward(test_sampler, 2);
             per_epoch_time += get_time();
 
+            ctx->eval();
+            Forward_test(eval_sampler, 1);
+            Forward_test(test_sampler, 2);
             std::cout << "GNNmini::Running.Epoch[" << i_i << "]:Times["
                       << per_epoch_time << "(s)]:loss\t" << loss << std::endl;
         }
@@ -808,8 +904,8 @@ public:
         delete active;
         cpu_thread.join();
         printf("#average epoch time: %lf\n", exec_time/iterations);
-       printf("总采样数:%llu, 总命中数:%llu\n", Cuda_Stream::total_sample_num, Cuda_Stream::total_cache_hit);
-       printf("平均epoch采样数:%llu, 平均epoch命中数:%llu\n", Cuda_Stream::total_sample_num/iterations, Cuda_Stream::total_cache_hit/iterations);
+        printf("总采样数:%llu, 总命中数:%llu\n", Cuda_Stream::total_sample_num, Cuda_Stream::total_cache_hit);
+        printf("平均epoch采样数:%llu, 平均epoch命中数:%llu\n", Cuda_Stream::total_sample_num/iterations, Cuda_Stream::total_cache_hit/iterations);
         printf("总传输节点数: %llu\n", Cuda_Stream::total_transfer_node);
 //        printf("平均epoch传输节点数:%llu\n", Cuda_Stream::total_transfer_node/iterations);
         printf("%lu\n%lu\n", start_time, end_time);

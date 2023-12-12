@@ -552,7 +552,7 @@ public:
             train_nids.resize(graph->config->batch_size * test_batch_num);
             iterations = 1;
         }
-        train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
         train_sampler->set_merge_src_dst(pipeline_num);
 
         determine_cache_node_idx(graph->vertices * graph->config->feature_cache_rate);

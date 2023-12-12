@@ -1123,8 +1123,8 @@ public:
         for(int i = 0; i < num_devices; i++) {
             cudaSetUsingDevice(i);
             std::printf("train id size: %d\n", multi_train_nids[i].size());
-            device_train_sampler[i] = new FastSampler(fully_rep_graph,multi_train_nids[i],layer,
-                                                      graph->gnnctx->fanout, pipeline_num, device_cuda_stream[i]);
+            device_train_sampler[i] = new FastSampler(fully_rep_graph,multi_train_nids[i],layer, graph->config->batch_size,
+                                                      graph->gnnctx->fanout, pipeline_num, device_cuda_stream[i]);                     
             std::printf("sampler train id size: %d\n", device_train_sampler[i]->work_range[1]);
         }
         std::printf("finish new device sampler\n");

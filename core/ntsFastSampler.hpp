@@ -123,7 +123,7 @@ public:
     }
 
     FastSampler(FullyRepGraph* whole_graph_, std::vector<VertexId>& index,//GPU
-            int layers_,std::vector<int> fanout_, int pipeline_num = 1, Cuda_Stream* cuda_stream = nullptr){
+            int layers_, int batch_size_, std::vector<int> fanout_, int pipeline_num = 1, Cuda_Stream* cuda_stream = nullptr){
         assert(index.size() > 0);
         sample_nids.assign(index.begin(), index.end());
         assert(sample_nids.size() == index.size());
@@ -146,7 +146,7 @@ public:
         }
         ssgs = new SampledSubgraph*[pipeline_num];
         for(int i = 0; i < pipeline_num; i++){
-            ssgs[i] = new SampledSubgraph(layer,fanout,whole_graph->global_vertices,&cuda_stream[i]);//gpu sampler
+            ssgs[i] = new SampledSubgraph(layer,batch_size_,fanout,whole_graph->global_vertices,&cuda_stream[i]);//gpu sampler
             ssgs[i]->move_degree_to_gpu(graph->in_degree_for_backward, graph->out_degree_for_backward, graph->vertices);
         }
         ssg = ssgs[0];
@@ -199,7 +199,7 @@ public:
 
     int random_uniform_int(const int min = 0, const int max = 1) {
         // thread_local std::default_random_engine generator;
-        static thread_local std::mt19937 generator;
+        static thread_local std::mt19937 generator(2000);
         std::uniform_int_distribution<int> distribution(min, max);
         return distribution(generator);
     }
@@ -922,7 +922,7 @@ std::printf("load_aggresult 1 \n");
         ssgs = new SampledSubgraph*[num];
         delete ssg;
         for(int i = 0; i < num; i++) {
-            ssgs[i] = new SampledSubgraph(layer,fanout,whole_graph->global_vertices, &cudaStreamArray[i]);
+            ssgs[i] = new SampledSubgraph(layer, fanout, whole_graph->global_vertices, &cudaStreamArray[i]);
             ssgs[i]->threads = std::max(ssgs[i]->threads - num, 1);
 //            ssgs[i]->threads = ssgs[i]->threads;
         }

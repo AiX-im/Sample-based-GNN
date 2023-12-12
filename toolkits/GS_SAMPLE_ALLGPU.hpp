@@ -444,9 +444,9 @@ public:
         int layer = graph->gnnctx->layer_size.size()-1;
         if(graph->config->pushdown)
             layer--;
-        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
+        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->config->batch_size,graph->gnnctx->fanout);
+        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->config->batch_size,graph->gnnctx->fanout);
 
         // FastSampler* train_sampler = new FastSampler(graph,fully_rep_graph,
         //     train_nids,layer,

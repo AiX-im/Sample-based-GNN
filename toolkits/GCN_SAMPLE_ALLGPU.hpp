@@ -408,8 +408,8 @@ public:
             }
         }
         shuffle_vec(train_nids);
-        shuffle_vec(val_nids);
-        shuffle_vec(test_nids);
+        // shuffle_vec(val_nids);
+        // shuffle_vec(test_nids);
         
 
         //  nts::op::nts_local_shuffle(train_nids, graph->config->batch_size, graph->config->batch_size * pipeline_num);
@@ -443,9 +443,9 @@ public:
         int layer = graph->gnnctx->layer_size.size()-1;
         if(graph->config->pushdown)
             layer--;
-        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-//        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-//        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
+       FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+       FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+       FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
 
         // FastSampler* train_sampler = new FastSampler(graph,fully_rep_graph,
         //     train_nids,layer,
@@ -472,9 +472,9 @@ public:
             }
             ctx->train();
             Forward(train_sampler, 0);
-            // ctx->eval();
-            // Forward(eval_sampler, 1);
-            // Forward(test_sampler, 2);
+            ctx->eval();
+            Forward(eval_sampler, 1);
+            Forward(test_sampler, 2);
             per_epoch_time += get_time();
 
             std::cout << "GNNmini::Running.Epoch[" << i_i << "]:Times["

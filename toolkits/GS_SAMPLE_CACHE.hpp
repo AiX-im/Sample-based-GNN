@@ -613,7 +613,7 @@ public:
 
 
 
-        FastSampler* cache_gpu_sampler = new FastSampler(fully_rep_graph,cache_ids,1,graph->gnnctx->fanout, 1, cudaStream_p);
+        FastSampler* cache_gpu_sampler = new FastSampler(fully_rep_graph,cache_ids,1,graph->config->batch_size,graph->gnnctx->fanout, 1, cudaStream_p);
         GPU_sg = cache_gpu_sampler->sample_gpu_fast(cpu_batch_size, WeightType::Mean);
         VertexId batch_start = 0;
         VertexId batch_end = std::min((VertexId)cache_ids.size(), batch_start + cpu_batch_size);
@@ -700,9 +700,9 @@ public:
 
         int layer = graph->gnnctx->layer_size.size()-1;
 
-        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->gnnctx->fanout, pipeline_num, cuda_stream);
-        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->gnnctx->fanout);
-        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->gnnctx->fanout);
+        FastSampler* train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->config->batch_size,graph->gnnctx->fanout);
+        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->config->batch_size,graph->gnnctx->fanout);
 
 
         auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(

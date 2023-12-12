@@ -88,10 +88,17 @@ public:
         double used_db_1 = (total_db - free_db) / 1024.0 / 1024.0;
         std::cout << "Now used GPU memory " << used_db_1 << "  MB\n";
     }
-    SampledSubgraph(int layers_,std::vector<int>& fanout_,VertexId all_vertices_,Cuda_Stream* cs_){
+    SampledSubgraph(int layers_, int batch_size_, std::vector<int>& fanout_,VertexId all_vertices_,Cuda_Stream* cs_){
         layers=layers_;
         fanout=fanout_;
         all_vertices = all_vertices_;
+        int edge_total_num = 0;
+        int tmp_size = batch_size_;
+        for(int i = 0; i < fanout.size(); i++){
+            tmp_size *= fanout[i];
+            edge_total_num += tmp_size;
+        }
+
         cs = cs_;
         sampled_sgs.clear();
         curr_layer=0;
@@ -101,10 +108,44 @@ public:
         allocate_gpu_edge(&(src_index[i]), all_vertices);
         }
         global_buffer_used = 0;
-//        global_buffer_capacity=1024*1024*128*2;
+        global_value_used = 0;
+
+        global_buffer_capacity=edge_total_num*2;
+        global_value_capacity = edge_total_num;
+        global_value_capacity = 1024*1024*10;
+        global_buffer_capacity = 1024*1024*10*2;
+
+        // std::printf("线程: %d 分配了1：%ld, stream: %p\n", omp_get_thread_num(), sizeof(float)*(global_value_capacity), cs->stream);
+        allocate_gpu_buffer_async(&global_value_buffer, global_value_capacity, cs->stream);//for weight
+        // std::printf("线程: %d 分配了2：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(global_buffer_capacity));
+        allocate_gpu_edge_async(&global_data_buffer, global_buffer_capacity, cs->stream);
+        allocate_gpu_edge_async(&queue_count, 1, cs->stream);
+
+
+        // std::printf("线程: %d 分配了3：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(all_vertices));
+        allocate_gpu_edge_async(&outdegree, all_vertices, cs->stream);
+        // std::printf("线程: %d 分配了4：%ld\n", omp_get_thread_num(), sizeof(VertexId_CUDA)*(all_vertices));
+        allocate_gpu_edge_async(&indegree, all_vertices, cs->stream);
+        threads = std::max(numa_num_configured_cpus() - 1, 1);
+
+    }
+
+ SampledSubgraph(int layers_, std::vector<int>& fanout_,VertexId all_vertices_,Cuda_Stream* cs_){
+        layers=layers_;
+        fanout=fanout_;
+        all_vertices = all_vertices_;
+
+        cs = cs_;
+        sampled_sgs.clear();
+        curr_layer=0;
+        src_index.resize(layers,0);
+        for(int i = 0; i < layers; i++){
+            sampled_sgs.push_back(new sampCSC(0));
+        allocate_gpu_edge(&(src_index[i]), all_vertices);
+        }
+        global_buffer_used = 0;
         global_buffer_capacity = 1024*1024*10*2;
         global_value_used = 0;
-//        global_value_capacity = 1024*1024*128;
         global_value_capacity = 1024*1024*10;
 
         // std::printf("线程: %d 分配了1：%ld, stream: %p\n", omp_get_thread_num(), sizeof(float)*(global_value_capacity), cs->stream);
