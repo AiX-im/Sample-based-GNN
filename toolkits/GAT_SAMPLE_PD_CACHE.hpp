@@ -482,6 +482,171 @@ public:
         }
 
     }
+        void Train_test(FastSampler* sampler, int type = 0) {
+        graph->rtminfo->forward = true;
+        correct = 0;
+        batch = 0;
+
+        SampledSubgraph *sg[pipeline_num];
+        NtsVar tmp_X0[pipeline_num];
+        NtsVar tmp_target_lab[pipeline_num];
+
+        for(int i = 0; i < pipeline_num; i++) {
+            tmp_X0[i] = graph->Nts->NewLeafTensor({graph->config->batch_size,F.size(1)},
+                                                  torch::DeviceType::CUDA);
+            tmp_target_lab[i] = graph->Nts->NewLabelTensor({graph->config->batch_size}, torch::DeviceType::CUDA);
+        }
+
+        std::thread threads[pipeline_num];
+        std::vector<unsigned int> super_batch_countdown(epoch_super_batch_num);
+        std::vector<unsigned int> super_batch_ready(epoch_super_batch_num);
+
+        for(int tid = 0; tid < pipeline_num; tid++) {
+            threads[tid] = std::thread([&](int thread_id) {
+                std::unique_lock<std::mutex> sample_lock(sample_mutex, std::defer_lock);
+                sample_lock.lock();
+                int local_batch;
+
+                while(sampler->sample_not_finished()) {
+                    batch++;
+                    // 如果是super batch的第一个batch
+                    sg[thread_id] = sampler->sample_gpu_fast(graph->config->batch_size, thread_id,
+                                                             WeightType::None);
+                    gpu_round++;
+                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+                    sample_lock.unlock();
+
+                    std::unique_lock<std::mutex> transfer_lock(transfer_mutex, std::defer_lock);
+                    transfer_lock.lock();
+                    sampler->load_label_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_target_lab[thread_id],gnndatum->dev_local_label);
+                    // load feature of cacheflag -1 0, 不需要cacheflag，在sample step已经包含cacheflag信息。
+                    sampler->load_feature_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_X0[thread_id],gnndatum->dev_local_feature);
+//                    sampler->load_dst_src_feature_gpu(&cuda_stream[thread_id], sg[thread_id], tmp_X0[thread_id], gnndatum->dev_local_feature);
+                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+                    transfer_lock.unlock();
+
+                    std::unique_lock<std::mutex> train_lock(train_mutex, std::defer_lock);
+                    train_lock.lock();
+
+                    at::cuda::setCurrentCUDAStream(torch_stream[thread_id]);
+                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+                    Forward_test(sampler, tmp_X0[thread_id], sg[thread_id], &cuda_stream[thread_id]);
+                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+                    Loss(X[graph->gnnctx->layer_size.size()-1],tmp_target_lab[thread_id]);
+                    // BackwardAndUpdate();
+                    correct += getCorrect(X[graph->gnnctx->layer_size.size()-1], tmp_target_lab[thread_id]);
+                    cuda_stream[thread_id].CUDA_DEVICE_SYNCHRONIZE();
+                    train_lock.unlock();
+
+                    sample_lock.lock();
+                }
+                sample_lock.unlock();
+
+            }, tid);
+        }
+
+        // 多流等待
+        for(int i = 0; i < pipeline_num; i++) {
+            threads[i].join();
+        }
+        sampler->restart();
+        auto acc = 1.0 * correct / sampler->work_range[1];
+        if (type == 0) {
+            LOG_INFO("Train Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+        } else if (type == 1) {
+            LOG_INFO("Eval Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+        } else if (type == 2) {
+            LOG_INFO("Test Acc: %f %d %d", acc, correct, sampler->work_range[1]);
+        }
+
+    }
+    inline void Forward_test(FastSampler* sampler, NtsVar& tmp_X0, SampledSubgraph* sg, Cuda_Stream* cudaStream){
+
+        graph->rtminfo->forward = true;
+
+        for (int i = 0; i < graph->gnnctx->layer_size.size() - 1; i++) {
+            graph->rtminfo->curr_layer = i;
+
+//            for (int i = 0; i < graph->gnnctx->layer_size.size() - 1; i++) {
+//                P.push_back(new Parameter(graph->gnnctx->layer_size[i],
+//                                          graph->gnnctx->layer_size[i + 1], alpha, beta1,
+//                                          beta2, epsilon, weight_decay));
+//                P.push_back(new Parameter(graph->gnnctx->layer_size[i + 1] * 2, 1, alpha,
+//                                          beta1, beta2, epsilon, weight_decay));
+//            }
+            int hop = (graph->gnnctx->layer_size.size()-2) - i;
+            NtsVar  X_trans;
+            if(i == 0) {
+                // 计算W*h，乘的是上面的第一个，相当于GCN的vertexForward
+                X_trans=ctx->runVertexForward([&](NtsVar x_i_){
+                                                  int layer = graph->rtminfo->curr_layer;
+                                                  return P[2 * layer]->forward(x_i_);
+                                              },
+                                              tmp_X0);
+            } else {
+                // 计算W*h，乘的是上面的第一个，相当于GCN的vertexForward
+                X_trans=ctx->runVertexForward([&](NtsVar x_i_){
+                                                  int layer = graph->rtminfo->curr_layer;
+                                                  return P[2 * layer]->forward(x_i_);
+                                              },
+                                              X[i]);
+            }
+//            std::printf("X trans sum: %.4lf\n", X_trans.abs().sum().item<double>());
+            cudaStream->CUDA_DEVICE_SYNCHRONIZE();
+            // TODO: 下面这一步在单机中可以去掉
+//            NtsVar mirror= ctx->runGraphOp<nts::op::DistGPUGetDepNbrOp>(partitioned_graph,active,X_trans);
+            // TODO： 下面这两步都不涉及到通信，改起来比较容易
+//            print_tensor_size(X_trans);
+//            NtsVar edge_src= ctx->runGraphOp<nts::op::BatchGPUScatterSrc>(sg, graph, hop,X_trans,
+//                                                                          cudaStream);
+//            cudaStream->CUDA_DEVICE_SYNCHRONIZE();
+////            LOG_DEBUG("1");
+//            NtsVar edge_dst= ctx->runGraphOp<nts::op::BatchGPUScatterDst>(sg, graph, hop,X_trans, cudaStream);
+//            cudaStream->CUDA_DEVICE_SYNCHRONIZE();
+////            LOG_DEBUG("2");
+//            NtsVar e_msg=torch::cat({edge_src,edge_dst},1);
+
+            NtsVar e_msg = ctx->runGraphOp<nts::op::BatchGPUSrcDstScatterOp>(sg, graph, hop, X_trans,
+                                                                         cudaStream);
+
+//            std::printf("e_msg sum: %.4lf\n", e_msg.abs().sum().item<double>());
+            // Note：下面这个函数也不涉及通信
+            NtsVar m=ctx->runEdgeForward([&](NtsVar e_msg_){
+                                             int layer = graph->rtminfo->curr_layer;
+                                             return torch::leaky_relu(P[2 * layer + 1]->forward(e_msg_),0.2);
+                                         },
+                                         e_msg);//edge NN
+//            std::printf("m sum: %.4lf\n", m.abs().sum().item<double>());
+            //  partitioned_graph->SyncAndLog("e_msg_in");
+            // Note: 下面这个函数也不涉及通信
+            // a的大小为e_size，总和为src顶点的数量
+            NtsVar a=ctx->runGraphOp<nts::op::BatchGPUEdgeSoftMax>(sg, graph, hop,m, cudaStream);// edge NN
+//            std::cout << "a的行求和：\n" << a.sum(1) <<std::endl;
+//            print_tensor_size(a);
+//            std::printf("src size: %d, dst size: %d\n", sg->sampled_sgs[i]->src_size, sg->sampled_sgs[i]->v_size);
+            cudaStream->CUDA_DEVICE_SYNCHRONIZE();
+//            std::printf("a sum: %.4lf\n", a.abs().sum().item<double>());
+            // Note: 下面这个函数不涉及通信
+            NtsVar e_msg_out=ctx->runEdgeForward([&](NtsVar a_){
+//                                                     return edge_src*a_;
+                                                    return e_msg.slice(1, 0, e_msg.size(1)/2, 1)*a;
+                                                 },
+                                                 a);//Edge NN
+            //            partitioned_graph->SyncAndLog("e_msg_out");
+//            std::printf("e_msg_out sum: %.4lf\n", e_msg_out.abs().sum().item<double>());
+            // Note: 该函数也不涉及通信
+            NtsVar nbr= ctx->runGraphOp<nts::op::BatchGPUAggregateDst>(sg, graph, hop,e_msg_out, cudaStream);
+//            std::printf("nbr sum: %.4lf\n", nbr.abs().sum().item<double>());
+            // Note: 下面的函数也不涉及通信
+            X[i+1]=ctx->runVertexForward([&](NtsVar nbr_){
+                return torch::relu(nbr_);
+            },nbr);
+//            partitioned_graph->SyncAndLog("hello 2");
+        }
+
+    }
+
+
     void Loss(NtsVar &left,NtsVar &right) {
         //  return torch::nll_loss(a,L_GT_C);
         torch::Tensor a = left.log_softmax(1);
@@ -554,7 +719,10 @@ public:
         }
         train_sampler = new FastSampler(fully_rep_graph,train_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
         train_sampler->set_merge_src_dst(pipeline_num);
-
+        FastSampler* eval_sampler = new FastSampler(fully_rep_graph,val_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        FastSampler* test_sampler = new FastSampler(fully_rep_graph,test_nids,layer,graph->config->batch_size,graph->gnnctx->fanout, pipeline_num, cuda_stream);
+        eval_sampler->set_merge_src_dst(pipeline_num);
+        test_sampler->set_merge_src_dst(pipeline_num);
         determine_cache_node_idx(graph->vertices * graph->config->feature_cache_rate);
         LOG_DEBUG("feature_cache_rate %f", graph->config->feature_cache_rate);
 
@@ -624,21 +792,13 @@ public:
                     P[i]->zero_grad();
                 }
             }
+             ctx->train();
             Train(train_sampler, 0);
-//            Forward();
-//
-//
-//            //      printf("sizeof %d",sizeof(__m256i));
-////      printf("sizeof %d",sizeof(int));
-//            Test(0);
-//            Test(1);
-//            Test(2);
-//            Loss();
-//
-//            ctx->self_backward(true);
-//            Update();
             per_epoch_time += get_time();
-            // ctx->debug();
+
+            ctx->eval();
+            Train_test(eval_sampler, 1);
+            Train_test(test_sampler, 2);
             if (graph->partition_id == 0)
                 std::cout << "Nts::Running.Epoch[" << i_i << "]:Times["<< per_epoch_time
                             << "(s)]:loss\t" << loss.item<float>() << std::endl;
