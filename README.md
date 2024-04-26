@@ -68,3 +68,26 @@ We list serveral example in the root dir for your reference
 GCN:
 gcn_reddit_sample.cfg
 gcn_cora_sample.cfg
+
+
+### Configurations in cfg file:
+NeutronOrch needs following configurations to run:
+- `ALGORITHM`: "xx_ALL_GPU" utilizes GPU exclusively for the sampling-gathering-training process, "xx_PDCACHE" offloads hot vertices computations to the CPU, and "xx_MULIT" means multi GPU version.
+- `VERTICES`: the number of total vertices.
+- `LAYERS`: the model depth and the dimensions of different layers.
+- `FANOUT`: the number of sampled neighbor.
+- `BATCH_SIZE`: the number of vertices in every batch.
+- `EPOCHS`: epoch number.
+- `EDGE_FILE`: an edge list file, used to store the graph structure.
+- `FEATURE_FILE`: a file containing the feature of each node, the first number in each line indicates the node number, followed by the feature of the node.
+- `LABEL_FILE`: a file containing the label of each node, the first number in each line indicates the node number, followed by the classification number of the node.
+- `MASK_FILE`: a file containing the mask of each node, the first number in each line indicates the node number, followed by the mask of node (train, val, test).
+- `model parameter` including `LEARN_RATE` ,`DECAY_EPOCH` ,`WEIGHT_DECAY` ,`DECAY_RATE` , and `DROP_RATE`.
+- `PIPELINE_NUM`: represents the number of batches contained in each super-batch in super-batch pipelining.
+- `CACHE_RATE`: represents the proportion of hot vertices computed by the CPU to all vertices in the initial state.
+- `CACHE`: indicates whether GPU memory caching of vertex features is used
+- `FEATURE_CACHE_RATE`: represents the number of vertex features cached by the GPU in the initial state.
+
+We provide a python script to convert some commonly used data sets, please refer to [`data/generate_nts_dataset.py`](https://github.com/iDC-NEU/NeutronStarLite/blob/master/data/generate_nts_dataset.py) for details.
+
+
