@@ -856,9 +856,9 @@ public:
             Train(train_sampler, 0);
             per_epoch_time += get_time();
 
-            ctx->eval();
-            Forward_test(eval_sampler, 1);
-            Forward_test(test_sampler, 2);
+            // ctx->eval();
+            // Forward_test(eval_sampler, 1);
+            // Forward_test(test_sampler, 2);
             std::cout << "GNNmini::Running.Epoch[" << i_i << "]:Times["
                       << per_epoch_time << "(s)]:loss\t" << loss << std::endl;
         }
