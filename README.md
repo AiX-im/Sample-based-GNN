@@ -91,3 +91,8 @@ NeutronOrch needs following configurations to run:
 We provide a python script to convert some commonly used data sets, please refer to [`data/generate_nts_dataset.py`](https://github.com/iDC-NEU/NeutronStarLite/blob/master/data/generate_nts_dataset.py) for details.
 
 
+### Cora code structure:
+NeutronOrch is developed on NeutronStar, a distributed GNN training system, and provides minibatch GNN training support under CPU-GPU heterogeneous environments.
+- `cora`: it provides support for graph operations and NN operations for different algorithms and provides support for sampling algorithms.
+- `cuda`: it contains all the kernel functions executed inside the GPU, including graph operations, NN operations, data transfer operations, and cache operations.
+- `toolkits`: it contain different algorithms implemented using the operators provided by cora and cuda.
