@@ -435,8 +435,8 @@ inline void nts_local_shuffle(std::vector<VertexId>& vertex_ids, int batch_size,
             pre_filename = graph->config->edge_file.substr(0, last_point+1);
             pre_filename += "pre_sample_b" + std::to_string(graph->config->batch_size) + "_f"
                     + graph->config->fanout_string+ "_p"+ std::to_string(pipeline_num) + ".bin";
-            cache_rate = 0.8; //Initialize large hot vertices raito to reduce subsequent pre-sampling overheads
             graph->config->cache_rate = 0.8;
+            cache_rate = 0.8; //Initialize large hot vertices raito to reduce subsequent pre-sampling overheads
         }
 
         int super_batch_num = train_ids.size()/(batch_size*pipeline_num);
