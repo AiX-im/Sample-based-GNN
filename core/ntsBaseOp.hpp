@@ -428,6 +428,16 @@ inline void nts_local_shuffle(std::vector<VertexId>& vertex_ids, int batch_size,
                                     float cache_rate, VertexId& top_cache_num ,int layers,
                                     FullyRepGraph* fully_rep_graph, float of_rate,
                                     Graph<Empty>* graph, int pipeline_num = 1) {
+        
+        std::string pre_filename = graph->config->pre_sample_file;
+        if(pre_filename.length() < 1 || !file_exists(pre_filename)) {
+            size_t last_point = graph->config->edge_file.find_last_of('.');
+            pre_filename = graph->config->edge_file.substr(0, last_point+1);
+            pre_filename += "pre_sample_b" + std::to_string(graph->config->batch_size) + "_f"
+                    + graph->config->fanout_string+ "_p"+ std::to_string(pipeline_num) + ".bin";
+            graph->config->cache_rate = 0.8;
+            cache_rate = 0.8; //Initialize large hot vertices raito to reduce subsequent pre-sampling overheads
+        }
 
         int super_batch_num = train_ids.size()/(batch_size*pipeline_num);
         if(super_batch_num * batch_size * pipeline_num < train_ids.size()) {
@@ -438,13 +448,6 @@ inline void nts_local_shuffle(std::vector<VertexId>& vertex_ids, int batch_size,
         batch_cache_num.resize(super_batch_num);
         std::vector<VertexId> batch_cache_ids(cache_rate * fully_rep_graph->global_vertices * super_batch_num);
 
-        std::string pre_filename = graph->config->pre_sample_file;
-        if(pre_filename.length() < 1 || !file_exists(pre_filename)) {
-            size_t last_point = graph->config->edge_file.find_last_of('.');
-            pre_filename = graph->config->edge_file.substr(0, last_point+1);
-            pre_filename += "pre_sample_b" + std::to_string(graph->config->batch_size) + "_f"
-                    + graph->config->fanout_string+ "_p"+ std::to_string(pipeline_num) + ".bin";
-        }
         std::printf("pre sample filename: %s\n", pre_filename.c_str());
         const char* filename = pre_filename.c_str();
         std::ifstream checkFile(filename);

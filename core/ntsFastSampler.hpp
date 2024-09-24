@@ -969,6 +969,7 @@ std::printf("load_aggresult 1 \n");
         // ssg = new SampledSubgraph(layer,fanout,whole_graph->global_vertices,cs);//gpu sampler
         // std::printf("\t线程: %d开始分配子图内存完毕\n", omp_get_thread_num());
 
+        std::printf("work_offerset:%d   work_range:%d\n",work_offset,work_range[1]);
         assert(work_offset<work_range[1]);
         int actual_batch_size=std::min((VertexId)batch_size_,work_range[1]-work_offset);
         //ssg->layer_size[0] = actual_batch_size;

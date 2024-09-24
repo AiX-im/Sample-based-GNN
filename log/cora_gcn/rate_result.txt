@@ -1,0 +1,20 @@
+transfer share time: 0.000000 (s)
+update cache time: 0.005193 (s)
+cpu_total_time: 4.2698 (s)
+cpu_sample_time: 0.3348 (s)
+cpu_graph_time: 0.0759 (s)
+cpu_wait_time: 0.1155 (s)
+cpu_nn_time: 3.7398 (s)
+cpu_copy_time: 0.0036 (s)
+# gpu wait time: 2.5935 (s)
+# gpu round: 260
+#sample_time= 0.1458 (s)
+#transfer_feature_time= 0.1239 (s)
+#training_time= 3.0895 (s)
+#average epoch time: 0.428045
+总采样数:64776, 总命中数:12172
+平均epoch采样数:6477, 平均epoch命中数:1217
+总传输节点数: 171752
+1727163988491
+1727163992771
+exec_time=9.849251(s)

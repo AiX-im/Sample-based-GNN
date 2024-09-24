@@ -1,0 +1,191 @@
+algorithm	:	GCNSAMPLEPDCACHE
+vertices	:	2708
+epochs		:	10
+layers		:	1433-256-7
+fanout		:	25-10
+batch_size	:	64
+batch_type	:	shuffle
+del_frac	:	0
+edge_file	:	./data/cora.2708.edge.self
+feature_file	:	./data/cora.featuretable
+label_file	:	./data/cora.labeltable
+mask_file	:	./data/cora.mask
+proc_overlap	:	0
+proc_local	:	0
+proc_cuda	:	0
+proc_rep	:	0
+lock_free	:	0
+optim_kernel	:	0
+learn_rate	:	0.01
+weight_decay	:	0.0001
+decay_rate	:	0.97
+decay_epoch	:	100
+drop_rate	:	0.5
+classes		:	1
+batch_norm	:	0
+------------------input info--------------
+first read time: 0.0131 (s)
+load directed time: 0.1456 (s)
+pipeline num: 4, cache rate: 0.200 
+NeutronStar::Preprocessing[Generate Full Replicated Graph Topo]
+------------------finish graph preprocessing--------------
+
+read_finish
+GNNmini::Engine[Dist.GPU.GCNimpl] running [10] Epochs
+train:1605
+val_nids:566
+test_nids:537
+sample last layer neighs: 25
+edge_filename: ./data/cora.2708.edge.self
+pre sample filename: ./data/cora.2708.edge.pre_sample_b64_f25-10_p4.bin
+loading data from file to batch_cache_ids
+预采样时间: 0.0002, cache num: 1034
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1043:determine_cache_node_idx] DEBUG - cache_node_num 0 (0.000)
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1047:determine_cache_node_idx] DEBUG - start get_gpu_idle_mem_pipe()
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1190:get_gpu_idle_mem_pipe] DEBUG - get_gpu_idle_mem_pipe(): used 3391.188 max_used 3391.188 total 24247.750
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1049:determine_cache_node_idx] DEBUG - release gpu memory
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1052:determine_cache_node_idx] DEBUG - used 3303.188 total 24247.750 (after emptyCache)
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1057:determine_cache_node_idx] DEBUG - cache_node_num 3797074 (1402.169)
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1024:mark_cache_node] DEBUG - cache_node_num 2708 tmp_idx 2708
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:1105:gater_cpu_cache_feature_and_trans_to_gpu] DEBUG - start trans to gpu
+2024-09-24 15:46:28 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:702:run] DEBUG - feature_cache_rate 0.000000
+before shuffle sum: 1034, total cache: 1034
+before shuffle sum: 1034, total cache: 1034
+work_offerset:0   work_range:1034
+CPU创建了新的nnVars
+cache size: 194560 byte
+work_offerset:190   work_range:1034
+创建了新的CacheVar
+CPU创建了新的nnVars
+cache size: 194560 byte
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:29 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.765109 1228 1605
+GNNmini::Running.Epoch[0]:Times[0.552062(s)]:loss	0.771676
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:29 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.862305 1384 1605
+GNNmini::Running.Epoch[1]:Times[0.549358(s)]:loss	0.79932
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:29 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.901558 1447 1605
+GNNmini::Running.Epoch[2]:Times[0.371932(s)]:loss	0.428634
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:30 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.912773 1465 1605
+GNNmini::Running.Epoch[3]:Times[0.39425(s)]:loss	0.309524
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:30 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.917134 1472 1605
+GNNmini::Running.Epoch[4]:Times[0.431081(s)]:loss	0.41338
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:31 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.919003 1475 1605
+GNNmini::Running.Epoch[5]:Times[0.378092(s)]:loss	0.418773
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:31 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.917134 1472 1605
+GNNmini::Running.Epoch[6]:Times[0.446425(s)]:loss	0.0066846
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:32 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.923364 1482 1605
+GNNmini::Running.Epoch[7]:Times[0.413299(s)]:loss	0.187817
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+work_offerset:0   work_range:1034
+2024-09-24 15:46:32 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.926480 1487 1605
+GNNmini::Running.Epoch[8]:Times[0.368535(s)]:loss	0.18984
+[ CUDAFloatType{} ]
+work_offerset:190   work_range:1034
+work_offerset:380   work_range:1034
+work_offerset:539   work_range:1034
+work_offerset:705   work_range:1034
+work_offerset:849   work_range:1034
+work_offerset:990   work_range:1034
+CPU线程已经结束
+最大线程数: 80
+2024-09-24 15:46:32 [home/aix/Sample-based-GNN/toolkits/GCN_SAMPLE_PD_CACHE.hpp:631:Train] INFO  - Train Acc: 0.928972 1491 1605
+GNNmini::Running.Epoch[9]:Times[0.373983(s)]:loss	0.30382
+[ CUDAFloatType{} ]
+#run_time=4.280446(s)
+all:0.152788(s) prepro:0.110818(s) pro:0.031752(s) post:0.010058(s) copy:0.000000(s)
+test_time:0.028433(s)
+#wait time: 11.058534(s)
+#gather_feature_time=0.000000(s)
+cpu inclusiveTime: 0.0029 (s)
+inclusiveTime: 0.0000 (s)
+init layer time: 0.0834 (s)
+init co time: 0.0273 (s)
+pro time: 0.0318 (s)
+post pro time: 0.0101 (s)
+transfer share time: 0.000000 (s)
+update cache time: 0.005193 (s)
+cpu_total_time: 4.2698 (s)
+cpu_sample_time: 0.3348 (s)
+cpu_graph_time: 0.0759 (s)
+cpu_wait_time: 0.1155 (s)
+cpu_nn_time: 3.7398 (s)
+cpu_copy_time: 0.0036 (s)
+# gpu wait time: 2.5935 (s)
+# gpu round: 260
+#sample_time= 0.1458 (s)
+#transfer_feature_time= 0.1239 (s)
+#training_time= 3.0895 (s)
+#average epoch time: 0.428045
+总采样数:64776, 总命中数:12172
+平均epoch采样数:6477, 平均epoch命中数:1217
+总传输节点数: 171752
+1727163988491
+1727163992771
+exec_time=9.849251(s)
