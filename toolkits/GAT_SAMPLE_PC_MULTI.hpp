@@ -771,9 +771,9 @@ public:
 
         auto pre_sample_time = -get_time();
         std::printf("train nids size: %d\n", train_nids.size());
-        cache_ids = nts::op::preSample(train_nids, graph->config->batch_size, batch_cache_num, cache_rate, top_cache_num,
+        cache_ids = nts::op::preSample(train_nids, graph->config->batch_size, batch_cache_num, graph->config->cache_rate, top_cache_num,
                                        gnndatum->gnnctx->layer_size.size() - 1, fully_rep_graph,
-                                       cache_rate / 0.3, graph,  pipeline_num);
+                                       graph->config->cache_rate / 0.8, graph,  pipeline_num);
         pre_sample_time += get_time();
         std::printf("预采样时间: %.4lf\n", pre_sample_time);
 

@@ -577,7 +577,7 @@ public:
             sample_neighs *= graph->gnnctx->fanout[i];
         }
         std::printf("sample last layer neighs: %u\n", sample_neighs);
-        batch_cache_num = graph->config->batch_size * pipeline_num * cache_rate * sample_neighs;
+        batch_cache_num = graph->config->batch_size * pipeline_num * graph->config->cache_rate * sample_neighs;
         std::printf("batch cache num: %u\n", batch_cache_num);
         auto super_batchsize = graph->config->batch_size * pipeline_num;
         auto cpu_batch_size = batch_cache_num;
