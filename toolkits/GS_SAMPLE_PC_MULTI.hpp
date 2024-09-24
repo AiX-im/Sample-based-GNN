@@ -855,7 +855,7 @@ public:
 
         NtsVar W;
         cpu_wait_time -= get_time();
-        while(!shared_W_queue.try_pop(W)){
+        while(!shared_W_queue.try_pop(W)){ 
             std::this_thread::yield();
         }
         cpu_wait_time += get_time();
@@ -871,7 +871,7 @@ public:
         for(int i = 0; i < graph->gnnctx->fanout.size() - 1; i++) {
             sample_neighs *= graph->gnnctx->fanout[i];
         }
-        std::printf("sample last layer neighs: %u\n", sample_neighs);
+        std::printf("sample last layer neighs: %u\n", sample_neighs); 
 //        batch_cache_num = graph->config->batch_size * pipeline_num * cache_rate * sample_neighs;
 //        std::printf("batch cache num: %u\n", batch_cache_num);
         super_batchsize = graph->config->batch_size * pipeline_num;
